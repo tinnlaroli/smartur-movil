@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class SmarturStyle {
-  // --- TOKENS DE COLOR (Dashboard) ---
+  // --- COLORES ---
   static const Color pink = Color(0xFFFC478E);
   static const Color purple = Color(0xFF984EFD);
   static const Color blue = Color(0xFF4DB9CA);
@@ -12,11 +12,16 @@ class SmarturStyle {
   static const Color textSecondary = Color(0xFF6B7280);
   static const Color bgSecondary = Color(0xFFF9FAFB);
 
-  // --- MEDIDAS DE UX (Ley de Fitts y Proximidad) ---
-  static const double spacingMd = 16.0;
-  static const double touchTargetComfortable = 56.0; // Altura ideal para botones
+  // TAMAÑO TÁCTIL 
+  static const double touchTargetComfortable = 56.0;
+  
+  // MEDIDAS 
+  static const double spacingSm = 12.0;  // 0.75rem
+  static const double spacingMd = 16.0;  // 1rem
+  static const double spacingLg = 24.0;  // 1.5rem
+  static const double spacingXl = 32.0;  // 2rem
 
-  // --- ESTILOS DE TEXTO ESPECÍFICOS ---
+  // TEXTO 
   static const TextStyle calSansTitle = TextStyle(
     fontFamily: 'CalSans', // Fuente para títulos
     fontSize: 28,
