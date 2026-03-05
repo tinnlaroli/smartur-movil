@@ -59,7 +59,7 @@ class _SplashGateState extends State<_SplashGate> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        const WelcomeScreen(),
+        WelcomeScreen(),
         if (_loading)
           SmartURLoader(
             onFinished: () => setState(() => _loading = false),

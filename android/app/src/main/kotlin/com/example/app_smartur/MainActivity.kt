@@ -1,5 +1,8 @@
 package com.example.app_smartur
 
-import io.flutter.embedding.android.FlutterActivity
+// IMPORTANTE: Debe ser este import específico
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+class MainActivity: FlutterFragmentActivity() {
+    // No necesitas escribir nada aquí adentro
+}

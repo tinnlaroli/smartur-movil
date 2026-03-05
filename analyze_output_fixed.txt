@@ -1,0 +1,23 @@
+Analyzing welcome_screen.dart...                                
+
+   info - The local variable '_isExpanded' starts with an underscore - lib\presentation\screens\welcome_screen.dart:64:10 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_isWaitingOTP' starts with an underscore - lib\presentation\screens\welcome_screen.dart:65:10 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_isLoading' starts with an underscore - lib\presentation\screens\welcome_screen.dart:66:10 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_authService' starts with an underscore - lib\presentation\screens\welcome_screen.dart:69:23 - no_leading_underscores_for_local_identifiers
+warning - The value of the local variable '_authService' isn't used - lib\presentation\screens\welcome_screen.dart:69:23 - unused_local_variable
+   info - The local variable '_emailController' starts with an underscore - lib\presentation\screens\welcome_screen.dart:71:33 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_passwordController' starts with an underscore - lib\presentation\screens\welcome_screen.dart:72:33 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_nameController' starts with an underscore - lib\presentation\screens\welcome_screen.dart:73:33 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_otpController' starts with an underscore - lib\presentation\screens\welcome_screen.dart:74:33 - no_leading_underscores_for_local_identifiers
+   info - Don't use 'BuildContext's across async gaps - lib\presentation\screens\welcome_screen.dart:220:43 - use_build_context_synchronously
+   info - Don't invoke 'print' in production code - lib\presentation\screens\welcome_screen.dart:237:41 - avoid_print
+   info - Don't use 'BuildContext's across async gaps - lib\presentation\screens\welcome_screen.dart:240:55 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\presentation\screens\welcome_screen.dart:245:43 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\presentation\screens\welcome_screen.dart:253:43 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\presentation\screens\welcome_screen.dart:271:41 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\presentation\screens\welcome_screen.dart:283:56 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\welcome_screen.dart:295:32 - deprecated_member_use
+warning - The declaration '_checkBiometrics' isn't referenced - lib\presentation\screens\welcome_screen.dart:411:16 - unused_element
+   info - Don't invoke 'print' in production code - lib\presentation\screens\welcome_screen.dart:420:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\presentation\screens\welcome_screen.dart:424:7 - avoid_print
+

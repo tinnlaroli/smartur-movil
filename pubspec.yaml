@@ -1,5 +1,5 @@
 # esto vendria a ser el package del node 
-name: SMARTUR
+name: smartur
 description: "A new Flutter project."
 publish_to: 'none'
 version: 0.1.0+1
@@ -11,6 +11,8 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_svg: ^2.0.10+1
+  local_auth: ^2.1.6
+  local_auth_android: any
 
 dev_dependencies:
   flutter_test:
