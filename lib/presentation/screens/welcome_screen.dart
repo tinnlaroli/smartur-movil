@@ -1,3 +1,5 @@
+import 'package:SMARTUR/data/services/auth_service.dart';
+import 'package:SMARTUR/presentation/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import '../../core/style_guide.dart';
 
@@ -53,8 +55,17 @@ Widget build(BuildContext context) {
 }
 
 void _showAuthModal(BuildContext context, {bool isLogin = false}) {
-// Variable local para controlar si mostramos los inputs o solo los botones
+
 bool _isExpanded = false; 
+bool _isWaitingOTP = false;
+bool _isLoading = false;
+
+// inicializamos las variables
+final AuthService _authService = AuthService(); // es para llamar a los metodos de auth Service
+final TextEditingController _emailController = TextEditingController();
+final TextEditingController _passwordController = TextEditingController();
+final TextEditingController _nameController = TextEditingController();
+final TextEditingController _otpController = TextEditingController();
 
 showModalBottomSheet(
     context: context,
@@ -115,15 +126,116 @@ showModalBottomSheet(
                     icon: const Icon(Icons.g_mobiledata, size: 30),
                     label: const Text('Continuar con Google'),
                     ),
-                ] else ...[
-                    // FORMULARIO EXPANDIDO (3/4 de pantalla)
-                    _buildAuthFields(isLogin),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                    onPressed: () => print("Enviando datos..."),
-                    style: ElevatedButton.styleFrom(backgroundColor: SmarturStyle.purple),
-                    child: Text(isLogin ? 'ENTRAR' : 'CREAR CUENTA'),
-                    ),
+                  ] else ...[
+
+                    if (_isWaitingOTP)
+                    // Mostramos SOLO el campo del código cuando estamos verificando
+                    TextField(
+                      controller: _otpController,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
+                      decoration: InputDecoration(
+                        hintText: "000000",
+                        helperText: "Ingresa el código enviado a tu correo",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    )
+                  else
+                    // Mostramos el formulario normal de registro/login
+                    _buildAuthFields(isLogin, _nameController, _emailController, _passwordController), 
+                  
+                  const SizedBox(height: 24),
+                  
+                  // --------------------------------------------------------------------
+                  // 2. Botón de Acción Principal
+                  ElevatedButton(
+                    onPressed: _isLoading 
+                    ? null 
+                    : () async {
+                      // Iniciamos la carga
+                      setModalState(() => _isLoading = true);
+
+                      try {
+                        final authService = AuthService();
+
+                        if (isLogin) {
+                          if (!_isWaitingOTP) {
+                            // --- PASO 1: LOGIN (CREDENCIALES) ---
+                            final response = await authService.loginStep1(
+                              _emailController.text.trim(), 
+                              _passwordController.text.trim()
+                            );
+
+                            if (response != null && response['requiresVerification'] == true) {
+                              setModalState(() => _isWaitingOTP = true);
+                            } else {
+                              // Si el API no responde con éxito, podrías mostrar un aviso aquí
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Credenciales incorrectas o error en servidor"))
+                              );
+                            }
+                          } else {
+                            // --- PASO 2: VERIFICAR CÓDIGO (OTP) ---
+                            final token = await authService.verifyOTP(
+                              _emailController.text.trim(), 
+                              _otpController.text.trim()
+                            );
+
+                            if (token != null) {
+                              print("¡Éxito! Token: $token");
+
+                              // 1. Cerramos el modal (el BottomSheet) para que no se quede encimado
+                              Navigator.pop(context);
+
+                              // 2. Navegamos a la pantalla principal
+                              // Usamos pushReplacement para que el usuario no pueda "regresar" al login con el botón de atrás
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (context) => const HomeScreen()),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Código inválido"))
+                              );
+                            }
+                          }
+                        } else {
+                          // --- FLUJO DE REGISTRO ---
+                          bool success = await authService.register(
+                            _nameController.text.trim(), 
+                            _emailController.text.trim(), 
+                            _passwordController.text.trim()
+                          );
+                          if (success) {
+                            setModalState(() => isLogin = true);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Cuenta creada. Por favor inicia sesión."))
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        // Si el servidor está apagado o no hay internet
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Error de conexión: $e"))
+                        );
+                      } finally {
+                        setModalState(() => _isLoading = false);
+                      }
+                    },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SmarturStyle.purple,
+                  disabledBackgroundColor: SmarturStyle.purple.withOpacity(0.6), 
+                ),
+                child: _isLoading 
+                  ? const SizedBox(
+                      height: 20, 
+                      width: 20, 
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : Text(_isWaitingOTP ? 'VERIFICAR' : (isLogin ? 'ENTRAR' : 'CREAR CUENTA')),
+                  ),
+                  // --------------------------------------------------------------------
                 ],
 
                 const SizedBox(height: 32),
@@ -154,11 +266,17 @@ showModalBottomSheet(
 );
 }
 
-Widget _buildAuthFields(bool isLogin) {
+Widget _buildAuthFields(
+    bool isLogin, 
+    TextEditingController nameCtrl, 
+    TextEditingController emailCtrl, 
+    TextEditingController passCtrl
+  ){
 return Column(
     children: [
     if (!isLogin) ...[
         TextField(
+        controller: nameCtrl, // es para guardar el nombre completo del formulario
         decoration: InputDecoration(
             labelText: 'Nombre completo',
             prefixIcon: const Icon(Icons.person_outline, color: SmarturStyle.purple),
@@ -169,6 +287,7 @@ return Column(
     ],
     // Correo electrónico
     TextField(
+        controller: emailCtrl, // es para guardar el correo electrónico del formulario
         decoration: InputDecoration(
         labelText: 'Correo electrónico',
         prefixIcon: const Icon(Icons.email_outlined, color: SmarturStyle.purple),
@@ -178,6 +297,7 @@ return Column(
     
     const SizedBox(height: 16),
     TextField(
+        controller: passCtrl, // es para guardar la contraseña del formulario
         obscureText: true,
         decoration: InputDecoration(
         labelText: 'Contraseña',
