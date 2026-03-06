@@ -1,16 +1,16 @@
-
-
-import 'package:smartur/data/services/auth_service.dart';
-import 'package:smartur/presentation/screens/home_screen.dart';
 import 'package:flutter/material.dart';
-import '../../core/style_guide.dart';
-
-// pa la huella
 import 'package:local_auth/local_auth.dart';
-import 'package:local_auth_android/local_auth_android.dart'; // Mantén este import
+import 'package:local_auth_android/local_auth_android.dart';
+
+import '../../core/style_guide.dart';
+import '../../data/services/auth_service.dart';
+import 'home_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   WelcomeScreen({super.key});
+
+  final LocalAuthentication _auth = LocalAuthentication();
+  final AuthService _authService = AuthService();
 
   @override
   Widget build(BuildContext context) {
@@ -100,9 +100,6 @@ class WelcomeScreen extends StatelessWidget {
     bool _isWaitingOTP = false;
     bool _isLoading = false;
 
-    // inicializamos las variables
-    final AuthService _authService =
-        AuthService(); // es para llamar a los metodos de auth Service
     final TextEditingController _emailController = TextEditingController();
     final TextEditingController _passwordController = TextEditingController();
     final TextEditingController _nameController = TextEditingController();
@@ -232,12 +229,9 @@ class WelcomeScreen extends StatelessWidget {
                                 setModalState(() => _isLoading = true);
 
                                 try {
-                                  final authService = AuthService();
-
                                   if (isLogin) {
                                     if (!_isWaitingOTP) {
-                                      // --- PASO 1: LOGIN (CREDENCIALES) ---
-                                      final response = await authService
+                                      final response = await _authService
                                           .loginStep1(
                                             _emailController.text.trim(),
                                             _passwordController.text.trim(),
@@ -250,7 +244,6 @@ class WelcomeScreen extends StatelessWidget {
                                           () => _isWaitingOTP = true,
                                         );
                                       } else {
-                                        // Si el API no responde con éxito, podrías mostrar un aviso aquí
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
@@ -262,27 +255,22 @@ class WelcomeScreen extends StatelessWidget {
                                         );
                                       }
                                     } else {
-                                      // --- PASO 2: VERIFICAR CÓDIGO (OTP) ---
-                                      final token = await authService.verifyOTP(
+                                      final token = await _authService.verifyOTP(
                                         _emailController.text.trim(),
                                         _otpController.text.trim(),
                                       );
 
                                       if (token != null) {
-                                        print("¡Éxito! Token: $token");
-
-                                        // 1. Cerramos el modal (el BottomSheet) para que no se quede encimado
-                                        Navigator.pop(context);
-
-                                        // 2. Navegamos a la pantalla principal
-                                        // Usamos pushReplacement para que el usuario no pueda "regresar" al login con el botón de atrás
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const HomeScreen(),
-                                          ),
-                                        );
+                                        if (context.mounted) {
+                                          Navigator.pop(context);
+                                          Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const HomeScreen(),
+                                            ),
+                                          );
+                                        }
                                       } else {
                                         ScaffoldMessenger.of(
                                           context,
@@ -294,8 +282,7 @@ class WelcomeScreen extends StatelessWidget {
                                       }
                                     }
                                   } else {
-                                    // --- FLUJO DE REGISTRO ---
-                                    bool success = await authService.register(
+                                    bool success = await _authService.register(
                                       _nameController.text.trim(),
                                       _emailController.text.trim(),
                                       _passwordController.text.trim(),
@@ -441,11 +428,23 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
-  final LocalAuthentication auth = LocalAuthentication();
-
   Future<void> _checkBiometrics(BuildContext context) async {
     try {
-      final bool canAuth = await auth.canCheckBiometrics || await auth.isDeviceSupported();
+      // 1. Verificar que la biometría esté activada
+      final bool biometricOn = await _authService.isBiometricEnabled();
+      if (!biometricOn) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Inicia sesión y activa el acceso con huella desde tu perfil'),
+            ),
+          );
+        }
+        return;
+      }
+
+      // 2. Verificar que el dispositivo soporte biometría
+      final bool canAuth = await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
       if (!canAuth) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -455,7 +454,7 @@ class WelcomeScreen extends StatelessWidget {
         return;
       }
 
-      final List<BiometricType> available = await auth.getAvailableBiometrics();
+      final List<BiometricType> available = await _auth.getAvailableBiometrics();
       if (available.isEmpty) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -465,7 +464,8 @@ class WelcomeScreen extends StatelessWidget {
         return;
       }
 
-      final bool didAuthenticate = await auth.authenticate(
+      // 3. Pedir la huella
+      final bool didAuthenticate = await _auth.authenticate(
         localizedReason: 'Accede a tus rutas de SMARTUR',
         authMessages: const <AuthMessages>[
           AndroidAuthMessages(
@@ -480,10 +480,19 @@ class WelcomeScreen extends StatelessWidget {
         ),
       );
 
-      if (didAuthenticate && context.mounted) {
+      if (!didAuthenticate) return;
+
+      // 4. Huella OK → leer el token y entrar
+      final String? token = await _authService.getToken();
+      if (token != null && context.mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      } else if (context.mounted) {
+        await _authService.clearSession();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sesión expirada. Inicia sesión de nuevo.')),
         );
       }
     } catch (e) {
