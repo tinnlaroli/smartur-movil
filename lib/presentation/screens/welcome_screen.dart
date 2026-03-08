@@ -3,6 +3,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 
 import '../../core/style_guide.dart';
+import '../../core/utils/notifications.dart';
 import '../../data/services/auth_service.dart';
 import 'home_screen.dart';
 
@@ -211,15 +212,6 @@ class WelcomeScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Ingresa el código';
-                              }
-                              if (value.length != 6) {
-                                return 'El código debe tener 6 dígitos';
-                              }
-                              return null;
-                            },
                           )
                         else
                           // Mostramos el formulario normal de registro/login
@@ -258,14 +250,9 @@ class WelcomeScreen extends StatelessWidget {
                                               () => _isWaitingOTP = true,
                                             );
                                           } else {
-                                            ScaffoldMessenger.of(
+                                            SmarturNotifications.showError(
                                               context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  "Credenciales incorrectas o error en servidor",
-                                                ),
-                                              ),
+                                              "Credenciales incorrectas o problema de servidor.",
                                             );
                                           }
                                         } else {
@@ -286,12 +273,9 @@ class WelcomeScreen extends StatelessWidget {
                                               );
                                             }
                                           } else {
-                                            ScaffoldMessenger.of(
+                                            SmarturNotifications.showError(
                                               context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text("Código inválido"),
-                                              ),
+                                              "El código de verificación es inválido o ha expirado.",
                                             );
                                           }
                                         }
@@ -303,23 +287,17 @@ class WelcomeScreen extends StatelessWidget {
                                         );
                                         if (success) {
                                           setModalState(() => isLogin = true);
-                                          ScaffoldMessenger.of(
+                                          SmarturNotifications.showSuccess(
                                             context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                "Cuenta creada. Por favor inicia sesión.",
-                                              ),
-                                            ),
+                                            "Cuenta creada exitosamente. Por favor, inicia sesión.",
                                           );
                                         }
                                       }
                                     } catch (e) {
                                       // Si el servidor está apagado o no hay internet
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text("Error de conexión: $e"),
-                                        ),
+                                      SmarturNotifications.showError(
+                                        context,
+                                        "Error de conexión. Verifica tu internet e intenta de nuevo.",
                                       );
                                     } finally {
                                       setModalState(() => _isLoading = false);
@@ -436,6 +414,7 @@ class WelcomeScreen extends StatelessWidget {
             if (value == null || value.isEmpty) {
               return 'Ingresa tu correo';
             }
+            if (isLogin) return null; // Skip strict validation on login
             final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
             if (!emailRegex.hasMatch(value)) {
               return 'Ingresa un correo válido';
@@ -460,6 +439,7 @@ class WelcomeScreen extends StatelessWidget {
             if (value == null || value.isEmpty) {
               return 'Ingresa tu contraseña';
             }
+            if (isLogin) return null; // Skip strict validation on login
             if (value.length < 8) {
               return 'Mínimo 8 caracteres';
             }
@@ -489,11 +469,7 @@ class WelcomeScreen extends StatelessWidget {
       final bool biometricOn = await _authService.isBiometricEnabled();
       if (!biometricOn) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Inicia sesión y activa el acceso con huella desde tu perfil'),
-            ),
-          );
+          SmarturNotifications.showWarning(context, 'Inicia sesión y activa el acceso con huella desde tu perfil');
         }
         return;
       }
@@ -502,9 +478,7 @@ class WelcomeScreen extends StatelessWidget {
       final bool canAuth = await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
       if (!canAuth) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tu dispositivo no soporta biometría')),
-          );
+          SmarturNotifications.showWarning(context, 'Tu dispositivo no soporta autenticación biométrica');
         }
         return;
       }
@@ -512,9 +486,7 @@ class WelcomeScreen extends StatelessWidget {
       final List<BiometricType> available = await _auth.getAvailableBiometrics();
       if (available.isEmpty) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No hay huellas registradas en este dispositivo')),
-          );
+          SmarturNotifications.showInfo(context, 'No hay huellas registradas en tu dispositivo');
         }
         return;
       }
@@ -546,15 +518,11 @@ class WelcomeScreen extends StatelessWidget {
         );
       } else if (context.mounted) {
         await _authService.clearSession();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sesión expirada. Inicia sesión de nuevo.')),
-        );
+        SmarturNotifications.showInfo(context, 'Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error de biometría: $e')),
-        );
+        SmarturNotifications.showError(context, 'Hubo un error al intentar leer tu huella. Intenta de nuevo.');
       }
     }
   }

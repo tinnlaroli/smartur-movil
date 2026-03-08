@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:toastification/toastification.dart';
 import 'core/style_guide.dart';
 import 'presentation/screens/welcome_screen.dart';
 import 'presentation/widgets/smartur_loader.dart';
@@ -11,9 +11,12 @@ void main() {
 class SmarturApp extends StatelessWidget {
   const SmarturApp({super.key});
 
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+
+return ToastificationWrapper(
+    child: MaterialApp(
       title: 'SMARTUR',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -41,6 +44,7 @@ class SmarturApp extends StatelessWidget {
         ),
       ),
       home: const _SplashGate(),
+    )
     );
   }
 }
