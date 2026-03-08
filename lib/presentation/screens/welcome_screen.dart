@@ -99,6 +99,7 @@ class WelcomeScreen extends StatelessWidget {
     bool _isExpanded = false;
     bool _isWaitingOTP = false;
     bool _isLoading = false;
+    final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
     final TextEditingController _emailController = TextEditingController();
     final TextEditingController _passwordController = TextEditingController();
@@ -135,234 +136,249 @@ class WelcomeScreen extends StatelessWidget {
                 bottom: MediaQuery.of(context).viewInsets.bottom + 20,
               ),
               child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize:
-                      MainAxisSize.min, // Se ajusta al contenido inicialmente
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    Text(
-                      isLogin ? 'Bienvenido de nuevo' : 'Empezar ahora',
-                      style: SmarturStyle.calSansTitle,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      isLogin
-                          ? 'Ingresa tus credenciales para continuar.'
-                          : 'Regístrate para descubrir rutas personalizadas.',
-                      style: const TextStyle(
-                        fontFamily: 'Outfit',
-                        color: SmarturStyle.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // --- LÓGICA DE INTERFAZ DINÁMICA ---
-                    if (!_isExpanded) ...[
-                      ElevatedButton(
-                        onPressed: () =>
-                            setModalState(() => _isExpanded = true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: SmarturStyle.purple,
-                        ),
-                        child: Text(
-                          isLogin
-                              ? 'Continuar con Email'
-                              : 'Registrarse con Email',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: () {}, // Aquí iría la lógica de Google
-                        icon: const Icon(Icons.g_mobiledata, size: 30),
-                        label: const Text('Continuar con Google'),
-                      ),
-                    ] else ...[
-                      if (_isWaitingOTP)
-                        // Mostramos SOLO el campo del código cuando estamos verificando
-                        TextField(
-                          controller: _otpController,
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            letterSpacing: 8,
-                            fontWeight: FontWeight.bold,
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    mainAxisSize:
+                        MainAxisSize.min, // Se ajusta al contenido inicialmente
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
                           ),
-                          decoration: InputDecoration(
-                            hintText: "000000",
-                            helperText: "Ingresa el código enviado a tu correo",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        )
-                      else
-                        // Mostramos el formulario normal de registro/login
-                        _buildAuthFields(
-                          isLogin,
-                          _nameController,
-                          _emailController,
-                          _passwordController,
                         ),
-
+                      ),
                       const SizedBox(height: 24),
 
-                      // --------------------------------------------------------------------
-                      // 2. Botón de Acción Principal
-                      ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () async {
-                                // Iniciamos la carga
-                                setModalState(() => _isLoading = true);
+                      Text(
+                        isLogin ? 'Bienvenido de nuevo' : 'Empezar ahora',
+                        style: SmarturStyle.calSansTitle,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        isLogin
+                            ? 'Ingresa tus credenciales para continuar.'
+                            : 'Regístrate para descubrir rutas personalizadas.',
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          color: SmarturStyle.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
 
-                                try {
-                                  if (isLogin) {
-                                    if (!_isWaitingOTP) {
-                                      final response = await _authService
-                                          .loginStep1(
+                      // --- LÓGICA DE INTERFAZ DINÁMICA ---
+                      if (!_isExpanded) ...[
+                        ElevatedButton(
+                          onPressed: () =>
+                              setModalState(() => _isExpanded = true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: SmarturStyle.purple,
+                          ),
+                          child: Text(
+                            isLogin
+                                ? 'Continuar con Email'
+                                : 'Registrarse con Email',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () {}, // Aquí iría la lógica de Google
+                          icon: const Icon(Icons.g_mobiledata, size: 30),
+                          label: const Text('Continuar con Google'),
+                        ),
+                      ] else ...[
+                        if (_isWaitingOTP)
+                          // Mostramos SOLO el campo del código cuando estamos verificando
+                          TextFormField(
+                            controller: _otpController,
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              letterSpacing: 8,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: "000000",
+                              helperText: "Ingresa el código enviado a tu correo",
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Ingresa el código';
+                              }
+                              if (value.length != 6) {
+                                return 'El código debe tener 6 dígitos';
+                              }
+                              return null;
+                            },
+                          )
+                        else
+                          // Mostramos el formulario normal de registro/login
+                          _buildAuthFields(
+                            isLogin,
+                            _nameController,
+                            _emailController,
+                            _passwordController,
+                          ),
+
+                        const SizedBox(height: 24),
+
+                        // --------------------------------------------------------------------
+                        // 2. Botón de Acción Principal
+                        ElevatedButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () async {
+                                  if (_formKey.currentState!.validate()) {
+                                    // Iniciamos la carga
+                                    setModalState(() => _isLoading = true);
+
+                                    try {
+                                      if (isLogin) {
+                                        if (!_isWaitingOTP) {
+                                          final response = await _authService
+                                              .loginStep1(
+                                                _emailController.text.trim(),
+                                                _passwordController.text.trim(),
+                                              );
+
+                                          if (response != null &&
+                                              response['requiresVerification'] ==
+                                                  true) {
+                                            setModalState(
+                                              () => _isWaitingOTP = true,
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  "Credenciales incorrectas o error en servidor",
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        } else {
+                                          final token = await _authService.verifyOTP(
                                             _emailController.text.trim(),
-                                            _passwordController.text.trim(),
+                                            _otpController.text.trim(),
                                           );
 
-                                      if (response != null &&
-                                          response['requiresVerification'] ==
-                                              true) {
-                                        setModalState(
-                                          () => _isWaitingOTP = true,
-                                        );
+                                          if (token != null) {
+                                            if (context.mounted) {
+                                              Navigator.pop(context);
+                                              Navigator.pushReplacement(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      const HomeScreen(),
+                                                ),
+                                              );
+                                            }
+                                          } else {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text("Código inválido"),
+                                              ),
+                                            );
+                                          }
+                                        }
                                       } else {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              "Credenciales incorrectas o error en servidor",
-                                            ),
-                                          ),
+                                        bool success = await _authService.register(
+                                          _nameController.text.trim(),
+                                          _emailController.text.trim(),
+                                          _passwordController.text.trim(),
                                         );
-                                      }
-                                    } else {
-                                      final token = await _authService.verifyOTP(
-                                        _emailController.text.trim(),
-                                        _otpController.text.trim(),
-                                      );
-
-                                      if (token != null) {
-                                        if (context.mounted) {
-                                          Navigator.pop(context);
-                                          Navigator.pushReplacement(
+                                        if (success) {
+                                          setModalState(() => isLogin = true);
+                                          ScaffoldMessenger.of(
                                             context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  const HomeScreen(),
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                "Cuenta creada. Por favor inicia sesión.",
+                                              ),
                                             ),
                                           );
                                         }
-                                      } else {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text("Código inválido"),
-                                          ),
-                                        );
                                       }
-                                    }
-                                  } else {
-                                    bool success = await _authService.register(
-                                      _nameController.text.trim(),
-                                      _emailController.text.trim(),
-                                      _passwordController.text.trim(),
-                                    );
-                                    if (success) {
-                                      setModalState(() => isLogin = true);
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            "Cuenta creada. Por favor inicia sesión.",
-                                          ),
+                                    } catch (e) {
+                                      // Si el servidor está apagado o no hay internet
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text("Error de conexión: $e"),
                                         ),
                                       );
+                                    } finally {
+                                      setModalState(() => _isLoading = false);
                                     }
                                   }
-                                } catch (e) {
-                                  // Si el servidor está apagado o no hay internet
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text("Error de conexión: $e"),
-                                    ),
-                                  );
-                                } finally {
-                                  setModalState(() => _isLoading = false);
-                                }
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: SmarturStyle.purple,
-                          disabledBackgroundColor: SmarturStyle.purple
-                              .withOpacity(0.6),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                _isWaitingOTP
-                                    ? 'VERIFICAR'
-                                    : (isLogin ? 'ENTRAR' : 'CREAR CUENTA'),
-                              ),
-                      ),
-                      // --------------------------------------------------------------------
-                    ],
-
-                    const SizedBox(height: 32),
-
-                    // Link para alternar entre Login/Registro
-                    TextButton(
-                      onPressed: () => setModalState(() => isLogin = !isLogin),
-                      child: RichText(
-                        text: TextSpan(
-                          style: const TextStyle(
-                            fontFamily: 'Outfit',
-                            color: SmarturStyle.textPrimary,
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: SmarturStyle.purple,
+                            disabledBackgroundColor: SmarturStyle.purple
+                                .withOpacity(0.6),
                           ),
-                          children: [
-                            TextSpan(
-                              text: isLogin
-                                  ? '¿No tienes cuenta? '
-                                  : '¿Ya tienes una cuenta? ',
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  _isWaitingOTP
+                                      ? 'VERIFICAR'
+                                      : (isLogin ? 'ENTRAR' : 'CREAR CUENTA'),
+                                ),
+                        ),
+                        // --------------------------------------------------------------------
+                      ],
+
+                      const SizedBox(height: 32),
+
+                      // Link para alternar entre Login/Registro
+                      TextButton(
+                        onPressed: () => setModalState(() => isLogin = !isLogin),
+                        child: RichText(
+                          text: TextSpan(
+                            style: const TextStyle(
+                              fontFamily: 'Outfit',
+                              color: SmarturStyle.textPrimary,
                             ),
-                            TextSpan(
-                              text: isLogin ? 'Regístrate' : 'Inicia sesión',
-                              style: const TextStyle(
-                                color: SmarturStyle.purple,
-                                fontWeight: FontWeight.bold,
+                            children: [
+                              TextSpan(
+                                text: isLogin
+                                    ? '¿No tienes cuenta? '
+                                    : '¿Ya tienes una cuenta? ',
                               ),
-                            ),
-                          ],
+                              TextSpan(
+                                text: isLogin ? 'Regístrate' : 'Inicia sesión',
+                                style: const TextStyle(
+                                  color: SmarturStyle.purple,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -381,7 +397,7 @@ class WelcomeScreen extends StatelessWidget {
     return Column(
       children: [
         if (!isLogin) ...[
-          TextField(
+          TextFormField(
             controller:
                 nameCtrl, // es para guardar el nombre completo del formulario
             decoration: InputDecoration(
@@ -394,13 +410,20 @@ class WelcomeScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Ingresa tu nombre completo';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 16),
         ],
         // Correo electrónico
-        TextField(
+        TextFormField(
           controller:
               emailCtrl, // es para guardar el correo electrónico del formulario
+          keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
             labelText: 'Correo electrónico',
             prefixIcon: const Icon(
@@ -409,10 +432,20 @@ class WelcomeScreen extends StatelessWidget {
             ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Ingresa tu correo';
+            }
+            final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+            if (!emailRegex.hasMatch(value)) {
+              return 'Ingresa un correo válido';
+            }
+            return null;
+          },
         ),
 
         const SizedBox(height: 16),
-        TextField(
+        TextFormField(
           controller: passCtrl, // es para guardar la contraseña del formulario
           obscureText: true,
           decoration: InputDecoration(
@@ -423,10 +456,32 @@ class WelcomeScreen extends StatelessWidget {
             ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Ingresa tu contraseña';
+            }
+            if (value.length < 8) {
+              return 'Mínimo 8 caracteres';
+            }
+            if (!RegExp(r'[A-Z]').hasMatch(value)) {
+              return 'Al menos una mayúscula';
+            }
+            if (!RegExp(r'[a-z]').hasMatch(value)) {
+              return 'Al menos una minúscula';
+            }
+            if (!RegExp(r'[0-9]').hasMatch(value)) {
+              return 'Al menos un número';
+            }
+            if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
+              return 'Al menos un carácter especial';
+            }
+            return null;
+          },
         ),
       ],
     );
   }
+
 
   Future<void> _checkBiometrics(BuildContext context) async {
     try {
