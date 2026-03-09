@@ -11,8 +11,8 @@ void main() async {
   SharedPreferences prefs = await SharedPreferences.getInstance();
   
   // Leemos si ya vio el onboarding (por defecto es false)
-  // bool seenOnboarding = prefs.getBool('onboarding_seen') ?? false;
-  bool seenOnboarding = false; // TEMPORALMENTE DESACTIVADO PARA VER SIEMPRE EL ONBOARDING
+  bool seenOnboarding = prefs.getBool('onboarding_seen') ?? false;
+  // bool seenOnboarding = false; // TEMPORALMENTE DESACTIVADO PARA VER SIEMPRE EL ONBOARDING
 
   runApp(SmarturApp(seenOnboarding: seenOnboarding));
 }
@@ -73,11 +73,10 @@ class _SplashGateState extends State<_SplashGate> {
     return Stack(
       children: [
         widget.seenOnboarding ? WelcomeScreen() : OnboardingScreen(),
-        // TEMPORALMENTE DESACTIVADO EL LOADER
-        // if (_loading)
-        //   SmartURLoader(
-        //     onFinished: () => setState(() => _loading = false),
-        //   ),
+        if (_loading)
+          SmartURLoader(
+            onFinished: () => setState(() => _loading = false),
+          ),
       ],
     );
   }

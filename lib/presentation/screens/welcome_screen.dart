@@ -1,4 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 
@@ -16,9 +18,25 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: SmarturStyle.bgSecondary,
+      backgroundColor: const Color(0xFFFFFFFF), // Base clara para la tarjeta blanca flotante
       body: Stack(
         children: [
+          // CAPA 0: Fondo SVG
+          Positioned.fill(
+            child: SvgPicture.asset(
+              'assets/svg/bg.svg',
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Capa de desenfoque superior
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0), // Blur suave pero pronunciado
+              child: Container(
+                color: Colors.white.withOpacity(0.65), // Frosted glass claro
+              ),
+            ),
+          ),
           Positioned(
             bottom: 150,
             left: 0,
@@ -100,6 +118,7 @@ class WelcomeScreen extends StatelessWidget {
     bool _isExpanded = false;
     bool _isWaitingOTP = false;
     bool _isLoading = false;
+    bool _isPasswordVisible = false; // Estado para ver/ocultar contraseña
     final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
     final TextEditingController _emailController = TextEditingController();
@@ -220,6 +239,8 @@ class WelcomeScreen extends StatelessWidget {
                             _nameController,
                             _emailController,
                             _passwordController,
+                            _isPasswordVisible,
+                            (bool visible) => setModalState(() => _isPasswordVisible = visible),
                           ),
 
                         const SizedBox(height: 24),
@@ -371,6 +392,8 @@ class WelcomeScreen extends StatelessWidget {
     TextEditingController nameCtrl,
     TextEditingController emailCtrl,
     TextEditingController passCtrl,
+    bool isPasswordVisible,
+    Function(bool) onVisibilityChanged,
   ) {
     return Column(
       children: [
@@ -426,12 +449,21 @@ class WelcomeScreen extends StatelessWidget {
         const SizedBox(height: 16),
         TextFormField(
           controller: passCtrl, // es para guardar la contraseña del formulario
-          obscureText: true,
+          obscureText: !isPasswordVisible, // Controla si se oculta o no
           decoration: InputDecoration(
             labelText: 'Contraseña',
             prefixIcon: const Icon(
               Icons.lock_outline,
               color: SmarturStyle.purple,
+            ),
+            suffixIcon: IconButton(
+              icon: Icon(
+                isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                color: Colors.grey,
+              ),
+              onPressed: () {
+                onVisibilityChanged(!isPasswordVisible); // Alterna la visibilidad
+              },
             ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),

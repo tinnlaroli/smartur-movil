@@ -316,7 +316,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             height: 60,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: SmarturStyle.purple, // Botón morado
+                                backgroundColor: SmarturStyle.purple, 
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                               ),
                               child: const Text(
