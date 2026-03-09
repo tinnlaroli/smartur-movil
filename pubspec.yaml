@@ -15,6 +15,8 @@ dependencies:
   http: ^1.6.0
   local_auth: ^2.1.6
   local_auth_android: any
+  lottie: ^3.3.2
+  shared_preferences: ^2.5.4
   toastification: ^3.0.3
 
 dev_dependencies:
@@ -28,6 +30,9 @@ flutter:
 
   assets:
     - assets/imgs/
+    - assets/lottie/
+    - assets/svg/
+    - assets/fonts/
 
   fonts:
       - family: CalSans
