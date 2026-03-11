@@ -5,6 +5,8 @@ import 'package:local_auth_android/local_auth_android.dart';
 import '../../core/style_guide.dart';
 import '../../core/utils/notifications.dart';
 import '../../data/services/auth_service.dart';
+import '../../data/services/profile_service.dart';
+import 'preferences/preferences_screen.dart';
 import 'welcome_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -26,8 +28,21 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _showWelcome();
+      await _checkPreferences();
       await _offerBiometricSetup();
     });
+  }
+
+  Future<void> _checkPreferences() async {
+    final saved = await ProfileService.hasPreferencesSaved();
+    if (!saved && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PreferencesScreen(userName: widget.userName),
+        ),
+      );
+    }
   }
 
   Future<void> _showWelcome() async {
@@ -136,6 +151,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary),
               ),
               const SizedBox(height: 24),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.tune_outlined, color: SmarturStyle.blue),
+                title: const Text('Mis preferencias', style: TextStyle(fontFamily: 'Outfit')),
+                trailing: const Icon(Icons.chevron_right, color: SmarturStyle.textSecondary),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PreferencesScreen(userName: widget.userName),
+                    ),
+                  );
+                },
+              ),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.fingerprint, color: SmarturStyle.purple),

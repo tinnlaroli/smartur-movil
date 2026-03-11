@@ -5,4 +5,5 @@ class ApiConstants {
   static const String register = '/users/register';
   static const String login = '/login';
   static const String twoFactor = '/two-factor';
+  static const String preferences = '/profiles/preferences';
 }
