@@ -205,17 +205,12 @@ class WelcomeScreen extends StatelessWidget {
                           onPressed: isLoading
                               ? null
                               : () async {
-                                  setModalState(() => isLoading = true);
-                                  try {
-                                    final result =
-                                        await _authService.loginWithGoogle();
-                                    if (result != null) {
-                                      if (context.mounted) {
-                                        // Extrae el nombre del usuario de la respuesta del backend
-                                        final String? name =
-                                            result['name'] as String? ??
-                                                result['user']?['name']
-                                                    as String?;
+                                    setModalState(() => isLoading = true);
+                                    try {
+                                      final result = await _authService.loginWithGoogle();
+                                      if (result != null && context.mounted) {
+                                        final String? name = result['name'] as String? ??
+                                            result['user']?['name'] as String?;
                                         Navigator.pop(context);
                                         Navigator.pushReplacement(
                                           context,
@@ -227,18 +222,24 @@ class WelcomeScreen extends StatelessWidget {
                                           ),
                                         );
                                       }
-                                    } else {
+                                    } on AuthCancelledException {
                                       if (context.mounted) {
-                                        SmarturNotifications.showError(
-                                          context,
-                                          "No se pudo iniciar sesión con Google",
-                                        );
+                                        SmarturNotifications.showInfo(context, "Inicio de sesión cancelado");
+                                      }
+                                    } on AuthException catch (e) {
+                                      if (context.mounted) {
+                                        SmarturNotifications.showError(context, e.message);
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        SmarturNotifications.showError(context, "Error inesperado al conectar con Google");
+                                      }
+                                    } finally {
+                                      if (context.mounted) {
+                                        setModalState(() => isLoading = false);
                                       }
                                     }
-                                  } finally {
-                                    setModalState(() => isLoading = false);
-                                  }
-                                },
+                                  },
                           icon: isLoading
                               ? const SizedBox(
                                   height: 20,
@@ -302,16 +303,9 @@ class WelcomeScreen extends StatelessWidget {
                                           );
 
                                           if (response != null &&
-                                              response[
-                                                      'requiresVerification'] ==
-                                                  true) {
+                                              response['requiresVerification'] == true) {
                                             setModalState(
                                               () => isWaitingOTP = true,
-                                            );
-                                          } else {
-                                            SmarturNotifications.showError(
-                                              context,
-                                              "Credenciales incorrectas o problema de servidor.",
                                             );
                                           }
                                         } else {
@@ -343,6 +337,7 @@ class WelcomeScreen extends StatelessWidget {
                                           }
                                         }
                                       } else {
+                                        // ── REGISTER ───────────────────────────────────────
                                         bool success =
                                             await _authService.register(
                                           nameController.text.trim(),
@@ -357,13 +352,20 @@ class WelcomeScreen extends StatelessWidget {
                                           );
                                         }
                                       }
+                                    } on AuthException catch (e) {
+                                      if (context.mounted) {
+                                        SmarturNotifications.showError(
+                                            context, e.message);
+                                      }
                                     } catch (e) {
-                                      SmarturNotifications.showError(
-                                        context,
-                                        "Error de conexión. Verifica tu internet e intenta de nuevo.",
-                                      );
+                                      if (context.mounted) {
+                                        SmarturNotifications.showError(context,
+                                            "Error de conexión. Verifica tu internet e intenta de nuevo.");
+                                      }
                                     } finally {
-                                      setModalState(() => isLoading = false);
+                                      if (context.mounted) {
+                                        setModalState(() => isLoading = false);
+                                      }
                                     }
                                   }
                                 },

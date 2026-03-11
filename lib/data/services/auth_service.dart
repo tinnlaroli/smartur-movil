@@ -10,6 +10,16 @@ class AuthService {
   static const _tokenKey = 'auth_token';
   static const _biometricKey = 'biometric_enabled';
 
+  // ── Exceptions ─────────────────────────────────────────────────────────
+
+  static final _googleSignIn = GoogleSignIn.instance;
+
+  AuthService() {
+    unawaited(_googleSignIn.initialize(
+      serverClientId: '77253773974-b412uvcqhrqmchhtdq5rq6tl81hpados.apps.googleusercontent.com',
+    ));
+  }
+
   // ── Token persistence ───────────────────────────────────────────────────
 
   Future<void> saveToken(String token) async {
@@ -60,7 +70,12 @@ class AuthService {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({"name": name, "email": email, "password": password}),
     );
-    return response.statusCode == 201 || response.statusCode == 200;
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return true;
+    } else {
+      final errorMsg = jsonDecode(response.body)['message'] ?? 'Error al registrarse.';
+      throw AuthException(errorMsg);
+    }
   }
 
   // ── LOGIN PASO 1 (Credenciales) ────────────────────────────────────────
@@ -75,8 +90,10 @@ class AuthService {
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
+    } else {
+      final errorMsg = jsonDecode(response.body)['message'] ?? 'Credenciales incorrectas.';
+      throw AuthException(errorMsg);
     }
-    return null;
   }
 
   // ── LOGIN PASO 2 (OTP) — guarda el token automáticamente ───────────────
@@ -108,16 +125,6 @@ class AuthService {
 //   - initialize(serverClientId: ...)  → una sola vez
 //   - authenticate(scopeHint: [...])  → abre el selector de cuentas
 
-  late final GoogleSignIn _googleSignIn;
-
-  AuthService() {
-    _googleSignIn = GoogleSignIn.instance;
-    unawaited(_googleSignIn.initialize(
-      // Usa tu Client ID de tipo "Web application" de Google Cloud Console
-      serverClientId: '77253773974-b412uvcqhrqmchhtdq5rq6tl81hpados.apps.googleusercontent.com',
-    ));
-  }
-
   Future<Map<String, dynamic>?> loginWithGoogle() async {
     try {
       // authenticate() abre el selector de cuentas (equivale al viejo signIn())
@@ -126,19 +133,15 @@ class AuthService {
       );
 
       if (googleUser == null) {
-        print('El usuario canceló el inicio de sesión');
-        return null;
+        throw AuthCancelledException();
       }
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
       if (idToken == null) {
-        print('No se pudo obtener el ID Token de Google');
-        return null;
+        throw AuthException('No se pudo obtener la identidad de Google.');
       }
-
-      print('Token obtenido de Google correctamente');
 
       final url = Uri.parse('${ApiConstants.baseUrl}/google-login');
 
@@ -146,7 +149,7 @@ class AuthService {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({"idToken": idToken}),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -155,13 +158,34 @@ class AuthService {
           await saveToken(token);
         }
         return data;
+      } else if (response.statusCode == 401) {
+        throw AuthException('La sesión de Google ha expirado o es inválida.');
+      } else if (response.statusCode == 400) {
+        final errorMsg = jsonDecode(response.body)['message'] ?? 'Datos inválidos.';
+        throw AuthException(errorMsg);
       } else {
-        print('Error en el backend: ${response.statusCode} - ${response.body}');
-        return null;
+        throw AuthException('Error en el servidor (${response.statusCode}). Intenta más tarde.');
       }
+    } on AuthCancelledException {
+      rethrow;
+    } on TimeoutException {
+      throw AuthException('La conexión tardó demasiado. Verifica tu internet.');
     } catch (error) {
-      print('Error crítico en Google Sign-In: $error');
-      return null;
+      if (error is AuthException) rethrow;
+      throw AuthException('Error inesperado: $error');
     }
   }
+}
+
+// ── Custom Exceptions ────────────────────────────────────────────────────
+
+class AuthException implements Exception {
+  final String message;
+  AuthException(this.message);
+  @override
+  String toString() => message;
+}
+
+class AuthCancelledException extends AuthException {
+  AuthCancelledException() : super('Inicio de sesión cancelado por el usuario');
 }
