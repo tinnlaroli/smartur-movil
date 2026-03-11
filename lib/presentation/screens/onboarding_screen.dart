@@ -9,6 +9,8 @@ import 'package:smartur/core/style_guide.dart';
 import 'welcome_screen.dart'; 
 
 class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
   @override
   _OnboardingScreenState createState() => _OnboardingScreenState();
 }
@@ -35,7 +37,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   // FUNCIÓN CLAVE: Guarda que el usuario ya vio el onboarding
-  _storeOnboardingInfo() async {
+  Future<void> _storeOnboardingInfo() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_seen', true);
   }

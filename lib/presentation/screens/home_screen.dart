@@ -133,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     final enabled = snap.data ?? false;
                     return Switch(
                       value: enabled,
-                      activeColor: SmarturStyle.purple,
+                      activeThumbColor: SmarturStyle.purple,
                       onChanged: (val) async {
                         if (val) {
                           try {

@@ -115,16 +115,16 @@ class WelcomeScreen extends StatelessWidget {
   }
 
   void _showAuthModal(BuildContext context, {bool isLogin = false}) {
-    bool _isExpanded = false;
-    bool _isWaitingOTP = false;
-    bool _isLoading = false;
-    bool _isPasswordVisible = false; // Estado para ver/ocultar contraseña
-    final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+    bool isExpanded = false;
+    bool isWaitingOTP = false;
+    bool isLoading = false;
+    bool isPasswordVisible = false; // Estado para ver/ocultar contraseña
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-    final TextEditingController _emailController = TextEditingController();
-    final TextEditingController _passwordController = TextEditingController();
-    final TextEditingController _nameController = TextEditingController();
-    final TextEditingController _otpController = TextEditingController();
+    final TextEditingController emailController = TextEditingController();
+    final TextEditingController passwordController = TextEditingController();
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController otpController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -135,7 +135,7 @@ class WelcomeScreen extends StatelessWidget {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             // Si está expandido, usa 3/4 (0.75), si no, se ajusta al contenido (null)
-            double? height = _isExpanded
+            double? height = isExpanded
                 ? MediaQuery.of(context).size.height * 0.75
                 : null;
 
@@ -157,7 +157,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               child: SingleChildScrollView(
                 child: Form(
-                  key: _formKey,
+                  key: formKey,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     mainAxisSize:
@@ -193,10 +193,10 @@ class WelcomeScreen extends StatelessWidget {
                       const SizedBox(height: 32),
 
                       // --- LÓGICA DE INTERFAZ DINÁMICA ---
-                      if (!_isExpanded) ...[
+                      if (!isExpanded) ...[
                         ElevatedButton(
                           onPressed: () =>
-                              setModalState(() => _isExpanded = true),
+                              setModalState(() => isExpanded = true),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: SmarturStyle.purple,
                           ),
@@ -213,10 +213,10 @@ class WelcomeScreen extends StatelessWidget {
                           label: const Text('Continuar con Google'),
                         ),
                       ] else ...[
-                        if (_isWaitingOTP)
+                        if (isWaitingOTP)
                           // Mostramos SOLO el campo del código cuando estamos verificando
                           TextFormField(
-                            controller: _otpController,
+                            controller: otpController,
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
                             style: const TextStyle(
@@ -236,11 +236,11 @@ class WelcomeScreen extends StatelessWidget {
                           // Mostramos el formulario normal de registro/login
                           _buildAuthFields(
                             isLogin,
-                            _nameController,
-                            _emailController,
-                            _passwordController,
-                            _isPasswordVisible,
-                            (bool visible) => setModalState(() => _isPasswordVisible = visible),
+                            nameController,
+                            emailController,
+                            passwordController,
+                            isPasswordVisible,
+                            (bool visible) => setModalState(() => isPasswordVisible = visible),
                           ),
 
                         const SizedBox(height: 24),
@@ -248,27 +248,27 @@ class WelcomeScreen extends StatelessWidget {
                         // --------------------------------------------------------------------
                         // 2. Botón de Acción Principal
                         ElevatedButton(
-                          onPressed: _isLoading
+                          onPressed: isLoading
                               ? null
                               : () async {
-                                  if (_formKey.currentState!.validate()) {
+                                  if (formKey.currentState!.validate()) {
                                     // Iniciamos la carga
-                                    setModalState(() => _isLoading = true);
+                                    setModalState(() => isLoading = true);
 
                                     try {
                                       if (isLogin) {
-                                        if (!_isWaitingOTP) {
+                                        if (!isWaitingOTP) {
                                           final response = await _authService
                                               .loginStep1(
-                                                _emailController.text.trim(),
-                                                _passwordController.text.trim(),
+                                                emailController.text.trim(),
+                                                passwordController.text.trim(),
                                               );
 
                                           if (response != null &&
                                               response['requiresVerification'] ==
                                                   true) {
                                             setModalState(
-                                              () => _isWaitingOTP = true,
+                                              () => isWaitingOTP = true,
                                             );
                                           } else {
                                             SmarturNotifications.showError(
@@ -278,8 +278,8 @@ class WelcomeScreen extends StatelessWidget {
                                           }
                                         } else {
                                           final token = await _authService.verifyOTP(
-                                            _emailController.text.trim(),
-                                            _otpController.text.trim(),
+                                            emailController.text.trim(),
+                                            otpController.text.trim(),
                                           );
 
                                           if (token != null) {
@@ -302,9 +302,9 @@ class WelcomeScreen extends StatelessWidget {
                                         }
                                       } else {
                                         bool success = await _authService.register(
-                                          _nameController.text.trim(),
-                                          _emailController.text.trim(),
-                                          _passwordController.text.trim(),
+                                          nameController.text.trim(),
+                                          emailController.text.trim(),
+                                          passwordController.text.trim(),
                                         );
                                         if (success) {
                                           setModalState(() => isLogin = true);
@@ -321,7 +321,7 @@ class WelcomeScreen extends StatelessWidget {
                                         "Error de conexión. Verifica tu internet e intenta de nuevo.",
                                       );
                                     } finally {
-                                      setModalState(() => _isLoading = false);
+                                      setModalState(() => isLoading = false);
                                     }
                                   }
                                 },
@@ -330,7 +330,7 @@ class WelcomeScreen extends StatelessWidget {
                             disabledBackgroundColor: SmarturStyle.purple
                                 .withOpacity(0.6),
                           ),
-                          child: _isLoading
+                          child: isLoading
                               ? const SizedBox(
                                   height: 20,
                                   width: 20,
@@ -340,7 +340,7 @@ class WelcomeScreen extends StatelessWidget {
                                   ),
                                 )
                               : Text(
-                                  _isWaitingOTP
+                                  isWaitingOTP
                                       ? 'VERIFICAR'
                                       : (isLogin ? 'ENTRAR' : 'CREAR CUENTA'),
                                 ),
