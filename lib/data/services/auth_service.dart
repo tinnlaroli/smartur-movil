@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/constants/api_constants.dart';
@@ -96,5 +98,70 @@ class AuthService {
       return token;
     }
     return null;
+  }
+
+// ── LOGIN PASO 3 (Google) ───────────────────────────────────────────────
+//
+// google_sign_in ^7.x eliminó el constructor sin nombre y el método signIn().
+// La API correcta es:
+//   - GoogleSignIn.instance  → singleton
+//   - initialize(serverClientId: ...)  → una sola vez
+//   - authenticate(scopeHint: [...])  → abre el selector de cuentas
+
+  late final GoogleSignIn _googleSignIn;
+
+  AuthService() {
+    _googleSignIn = GoogleSignIn.instance;
+    unawaited(_googleSignIn.initialize(
+      // Usa tu Client ID de tipo "Web application" de Google Cloud Console
+      serverClientId: '77253773974-b412uvcqhrqmchhtdq5rq6tl81hpados.apps.googleusercontent.com',
+    ));
+  }
+
+  Future<Map<String, dynamic>?> loginWithGoogle() async {
+    try {
+      // authenticate() abre el selector de cuentas (equivale al viejo signIn())
+      final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate(
+        scopeHint: ['email', 'profile'],
+      );
+
+      if (googleUser == null) {
+        print('El usuario canceló el inicio de sesión');
+        return null;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+
+      if (idToken == null) {
+        print('No se pudo obtener el ID Token de Google');
+        return null;
+      }
+
+      print('Token obtenido de Google correctamente');
+
+      final url = Uri.parse('${ApiConstants.baseUrl}/google-login');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({"idToken": idToken}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final String? token = data['token'];
+        if (token != null) {
+          await saveToken(token);
+        }
+        return data;
+      } else {
+        print('Error en el backend: ${response.statusCode} - ${response.body}');
+        return null;
+      }
+    } catch (error) {
+      print('Error crítico en Google Sign-In: $error');
+      return null;
+    }
   }
 }

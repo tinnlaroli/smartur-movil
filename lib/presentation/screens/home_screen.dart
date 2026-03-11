@@ -3,11 +3,15 @@ import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 
 import '../../core/style_guide.dart';
+import '../../core/utils/notifications.dart';
 import '../../data/services/auth_service.dart';
 import 'welcome_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final String? userName;
+  final bool isNewLogin;
+
+  const HomeScreen({super.key, this.userName, this.isNewLogin = false});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -20,7 +24,20 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _offerBiometricSetup());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _showWelcome();
+      await _offerBiometricSetup();
+    });
+  }
+
+  Future<void> _showWelcome() async {
+    if (!mounted) return;
+    final name = widget.userName;
+    final greeting = widget.isNewLogin ? 'Bienvenido' : 'Bienvenido de vuelta';
+    final message = (name != null && name.isNotEmpty)
+        ? '$greeting, $name 👋'
+        : '$greeting 👋';
+    SmarturNotifications.showSuccess(context, message);
   }
 
   Future<void> _offerBiometricSetup() async {
@@ -79,16 +96,12 @@ class _HomeScreenState extends State<HomeScreen> {
       if (didAuth) {
         await _authService.setBiometricEnabled(true);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Acceso con huella activado')),
-          );
+          SmarturNotifications.showSuccess(context, 'Acceso con huella activado');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo activar: $e')),
-        );
+        SmarturNotifications.showError(context, 'No se pudo activar: $e');
       }
     }
   }

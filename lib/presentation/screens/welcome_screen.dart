@@ -18,7 +18,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFFFF), // Base clara para la tarjeta blanca flotante
+      backgroundColor: const Color(0xFFFFFFFF),
       body: Stack(
         children: [
           // CAPA 0: Fondo SVG
@@ -31,9 +31,9 @@ class WelcomeScreen extends StatelessWidget {
           // Capa de desenfoque superior
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0), // Blur suave pero pronunciado
+              filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
               child: Container(
-                color: Colors.white.withOpacity(0.65), // Frosted glass claro
+                color: Colors.white.withOpacity(0.65),
               ),
             ),
           ),
@@ -55,11 +55,11 @@ class WelcomeScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
               
-                const SizedBox(height: 40), // Espacio entre el texto y el botón
+                const SizedBox(height: 40),
 
                 // BOTÓN DE HUELLA DACTILAR
                 GestureDetector(
-                  onTap: () => _checkBiometrics(context), // Aquí disparamos el sensor
+                  onTap: () => _checkBiometrics(context),
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -83,7 +83,6 @@ class WelcomeScreen extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-              
               ],
             ),
           ),
@@ -98,7 +97,6 @@ class WelcomeScreen extends StatelessWidget {
                 backgroundColor: SmarturStyle.purple,
                 foregroundColor: Colors.white,
               ),
-
               child: const Text(
                 'Comenzar',
                 style: TextStyle(
@@ -118,7 +116,7 @@ class WelcomeScreen extends StatelessWidget {
     bool isExpanded = false;
     bool isWaitingOTP = false;
     bool isLoading = false;
-    bool isPasswordVisible = false; // Estado para ver/ocultar contraseña
+    bool isPasswordVisible = false;
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
     final TextEditingController emailController = TextEditingController();
@@ -134,15 +132,12 @@ class WelcomeScreen extends StatelessWidget {
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
-            // Si está expandido, usa 3/4 (0.75), si no, se ajusta al contenido (null)
             double? height = isExpanded
                 ? MediaQuery.of(context).size.height * 0.75
                 : null;
 
             return AnimatedContainer(
-              duration: const Duration(
-                milliseconds: 300,
-              ), // Animación suave al crecer
+              duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
               height: height,
               decoration: const BoxDecoration(
@@ -160,8 +155,7 @@ class WelcomeScreen extends StatelessWidget {
                   key: formKey,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
-                    mainAxisSize:
-                        MainAxisSize.min, // Se ajusta al contenido inicialmente
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Center(
@@ -192,7 +186,6 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 32),
 
-                      // --- LÓGICA DE INTERFAZ DINÁMICA ---
                       if (!isExpanded) ...[
                         ElevatedButton(
                           onPressed: () =>
@@ -207,14 +200,60 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 12),
+                        // ── GOOGLE LOGIN ────────────────────────────────────
                         OutlinedButton.icon(
-                          onPressed: () {}, // Aquí iría la lógica de Google
-                          icon: const Icon(Icons.g_mobiledata, size: 30),
-                          label: const Text('Continuar con Google'),
+                          onPressed: isLoading
+                              ? null
+                              : () async {
+                                  setModalState(() => isLoading = true);
+                                  try {
+                                    final result =
+                                        await _authService.loginWithGoogle();
+                                    if (result != null) {
+                                      if (context.mounted) {
+                                        // Extrae el nombre del usuario de la respuesta del backend
+                                        final String? name =
+                                            result['name'] as String? ??
+                                                result['user']?['name']
+                                                    as String?;
+                                        Navigator.pop(context);
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => HomeScreen(
+                                              userName: name,
+                                              isNewLogin: true,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } else {
+                                      if (context.mounted) {
+                                        SmarturNotifications.showError(
+                                          context,
+                                          "No se pudo iniciar sesión con Google",
+                                        );
+                                      }
+                                    }
+                                  } finally {
+                                    setModalState(() => isLoading = false);
+                                  }
+                                },
+                          icon: isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: SmarturStyle.purple,
+                                  ),
+                                )
+                              : const Icon(Icons.g_mobiledata, size: 30),
+                          label:
+                              Text(isLoading ? 'Cargando...' : 'Continuar con Google'),
                         ),
                       ] else ...[
                         if (isWaitingOTP)
-                          // Mostramos SOLO el campo del código cuando estamos verificando
                           TextFormField(
                             controller: otpController,
                             keyboardType: TextInputType.number,
@@ -226,46 +265,45 @@ class WelcomeScreen extends StatelessWidget {
                             ),
                             decoration: InputDecoration(
                               hintText: "000000",
-                              helperText: "Ingresa el código enviado a tu correo",
+                              helperText:
+                                  "Ingresa el código enviado a tu correo",
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                           )
                         else
-                          // Mostramos el formulario normal de registro/login
                           _buildAuthFields(
                             isLogin,
                             nameController,
                             emailController,
                             passwordController,
                             isPasswordVisible,
-                            (bool visible) => setModalState(() => isPasswordVisible = visible),
+                            (bool visible) =>
+                                setModalState(() => isPasswordVisible = visible),
                           ),
 
                         const SizedBox(height: 24),
 
-                        // --------------------------------------------------------------------
-                        // 2. Botón de Acción Principal
                         ElevatedButton(
                           onPressed: isLoading
                               ? null
                               : () async {
                                   if (formKey.currentState!.validate()) {
-                                    // Iniciamos la carga
                                     setModalState(() => isLoading = true);
 
                                     try {
                                       if (isLogin) {
                                         if (!isWaitingOTP) {
-                                          final response = await _authService
-                                              .loginStep1(
-                                                emailController.text.trim(),
-                                                passwordController.text.trim(),
-                                              );
+                                          final response =
+                                              await _authService.loginStep1(
+                                            emailController.text.trim(),
+                                            passwordController.text.trim(),
+                                          );
 
                                           if (response != null &&
-                                              response['requiresVerification'] ==
+                                              response[
+                                                      'requiresVerification'] ==
                                                   true) {
                                             setModalState(
                                               () => isWaitingOTP = true,
@@ -277,7 +315,9 @@ class WelcomeScreen extends StatelessWidget {
                                             );
                                           }
                                         } else {
-                                          final token = await _authService.verifyOTP(
+                                          // ── OTP LOGIN ──────────────────────────────────────
+                                          final token =
+                                              await _authService.verifyOTP(
                                             emailController.text.trim(),
                                             otpController.text.trim(),
                                           );
@@ -289,7 +329,9 @@ class WelcomeScreen extends StatelessWidget {
                                                 context,
                                                 MaterialPageRoute(
                                                   builder: (_) =>
-                                                      const HomeScreen(),
+                                                      const HomeScreen(
+                                                    isNewLogin: false,
+                                                  ),
                                                 ),
                                               );
                                             }
@@ -301,7 +343,8 @@ class WelcomeScreen extends StatelessWidget {
                                           }
                                         }
                                       } else {
-                                        bool success = await _authService.register(
+                                        bool success =
+                                            await _authService.register(
                                           nameController.text.trim(),
                                           emailController.text.trim(),
                                           passwordController.text.trim(),
@@ -315,7 +358,6 @@ class WelcomeScreen extends StatelessWidget {
                                         }
                                       }
                                     } catch (e) {
-                                      // Si el servidor está apagado o no hay internet
                                       SmarturNotifications.showError(
                                         context,
                                         "Error de conexión. Verifica tu internet e intenta de nuevo.",
@@ -327,8 +369,8 @@ class WelcomeScreen extends StatelessWidget {
                                 },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: SmarturStyle.purple,
-                            disabledBackgroundColor: SmarturStyle.purple
-                                .withOpacity(0.6),
+                            disabledBackgroundColor:
+                                SmarturStyle.purple.withOpacity(0.6),
                           ),
                           child: isLoading
                               ? const SizedBox(
@@ -345,14 +387,13 @@ class WelcomeScreen extends StatelessWidget {
                                       : (isLogin ? 'ENTRAR' : 'CREAR CUENTA'),
                                 ),
                         ),
-                        // --------------------------------------------------------------------
                       ],
 
                       const SizedBox(height: 32),
 
-                      // Link para alternar entre Login/Registro
                       TextButton(
-                        onPressed: () => setModalState(() => isLogin = !isLogin),
+                        onPressed: () =>
+                            setModalState(() => isLogin = !isLogin),
                         child: RichText(
                           text: TextSpan(
                             style: const TextStyle(
@@ -366,7 +407,8 @@ class WelcomeScreen extends StatelessWidget {
                                     : '¿Ya tienes una cuenta? ',
                               ),
                               TextSpan(
-                                text: isLogin ? 'Regístrate' : 'Inicia sesión',
+                                text:
+                                    isLogin ? 'Regístrate' : 'Inicia sesión',
                                 style: const TextStyle(
                                   color: SmarturStyle.purple,
                                   fontWeight: FontWeight.bold,
@@ -399,8 +441,7 @@ class WelcomeScreen extends StatelessWidget {
       children: [
         if (!isLogin) ...[
           TextFormField(
-            controller:
-                nameCtrl, // es para guardar el nombre completo del formulario
+            controller: nameCtrl,
             decoration: InputDecoration(
               labelText: 'Nombre completo',
               prefixIcon: const Icon(
@@ -420,10 +461,8 @@ class WelcomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
         ],
-        // Correo electrónico
         TextFormField(
-          controller:
-              emailCtrl, // es para guardar el correo electrónico del formulario
+          controller: emailCtrl,
           keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
             labelText: 'Correo electrónico',
@@ -437,7 +476,7 @@ class WelcomeScreen extends StatelessWidget {
             if (value == null || value.isEmpty) {
               return 'Ingresa tu correo';
             }
-            if (isLogin) return null; // Skip strict validation on login
+            if (isLogin) return null;
             final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
             if (!emailRegex.hasMatch(value)) {
               return 'Ingresa un correo válido';
@@ -448,8 +487,8 @@ class WelcomeScreen extends StatelessWidget {
 
         const SizedBox(height: 16),
         TextFormField(
-          controller: passCtrl, // es para guardar la contraseña del formulario
-          obscureText: !isPasswordVisible, // Controla si se oculta o no
+          controller: passCtrl,
+          obscureText: !isPasswordVisible,
           decoration: InputDecoration(
             labelText: 'Contraseña',
             prefixIcon: const Icon(
@@ -462,7 +501,7 @@ class WelcomeScreen extends StatelessWidget {
                 color: Colors.grey,
               ),
               onPressed: () {
-                onVisibilityChanged(!isPasswordVisible); // Alterna la visibilidad
+                onVisibilityChanged(!isPasswordVisible);
               },
             ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -471,7 +510,7 @@ class WelcomeScreen extends StatelessWidget {
             if (value == null || value.isEmpty) {
               return 'Ingresa tu contraseña';
             }
-            if (isLogin) return null; // Skip strict validation on login
+            if (isLogin) return null;
             if (value.length < 8) {
               return 'Mínimo 8 caracteres';
             }
@@ -494,36 +533,37 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
-
   Future<void> _checkBiometrics(BuildContext context) async {
     try {
-      // 1. Verificar que la biometría esté activada
       final bool biometricOn = await _authService.isBiometricEnabled();
       if (!biometricOn) {
         if (context.mounted) {
-          SmarturNotifications.showWarning(context, 'Inicia sesión y activa el acceso con huella desde tu perfil');
+          SmarturNotifications.showWarning(context,
+              'Inicia sesión y activa el acceso con huella desde tu perfil');
         }
         return;
       }
 
-      // 2. Verificar que el dispositivo soporte biometría
-      final bool canAuth = await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
+      final bool canAuth =
+          await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
       if (!canAuth) {
         if (context.mounted) {
-          SmarturNotifications.showWarning(context, 'Tu dispositivo no soporta autenticación biométrica');
+          SmarturNotifications.showWarning(context,
+              'Tu dispositivo no soporta autenticación biométrica');
         }
         return;
       }
 
-      final List<BiometricType> available = await _auth.getAvailableBiometrics();
+      final List<BiometricType> available =
+          await _auth.getAvailableBiometrics();
       if (available.isEmpty) {
         if (context.mounted) {
-          SmarturNotifications.showInfo(context, 'No hay huellas registradas en tu dispositivo');
+          SmarturNotifications.showInfo(
+              context, 'No hay huellas registradas en tu dispositivo');
         }
         return;
       }
 
-      // 3. Pedir la huella
       final bool didAuthenticate = await _auth.authenticate(
         localizedReason: 'Accede a tus rutas de SMARTUR',
         authMessages: const <AuthMessages>[
@@ -541,7 +581,6 @@ class WelcomeScreen extends StatelessWidget {
 
       if (!didAuthenticate) return;
 
-      // 4. Huella OK → leer el token y entrar
       final String? token = await _authService.getToken();
       if (token != null && context.mounted) {
         Navigator.pushReplacement(
@@ -550,13 +589,14 @@ class WelcomeScreen extends StatelessWidget {
         );
       } else if (context.mounted) {
         await _authService.clearSession();
-        SmarturNotifications.showInfo(context, 'Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
+        SmarturNotifications.showInfo(context,
+            'Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
       }
     } catch (e) {
       if (context.mounted) {
-        SmarturNotifications.showError(context, 'Hubo un error al intentar leer tu huella. Intenta de nuevo.');
+        SmarturNotifications.showError(context,
+            'Hubo un error al intentar leer tu huella. Intenta de nuevo.');
       }
     }
   }
-
 }

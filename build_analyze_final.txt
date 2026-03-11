@@ -1,0 +1,14 @@
+Analyzing 2 items...                                            
+
+   info - Don't use 'BuildContext's across async gaps - lib\presentation\screens\home_screen.dart:162:39 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\home_screen.dart:259:69 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\welcome_screen.dart:36:37 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\welcome_screen.dart:66:50 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\presentation\screens\welcome_screen.dart:313:47 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\presentation\screens\welcome_screen.dart:340:47 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\presentation\screens\welcome_screen.dart:355:45 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\presentation\screens\welcome_screen.dart:362:41 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\welcome_screen.dart:373:53 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\presentation\screens\welcome_screen.dart:592:39 - use_build_context_synchronously
+
+10 issues found. (ran in 2.1s)

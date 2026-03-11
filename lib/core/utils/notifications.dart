@@ -2,7 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:toastification/toastification.dart';
 
 class SmarturNotifications {
+  static final Map<String, DateTime> _lastShown = {};
+
+  static bool _canShow(String message) {
+    final now = DateTime.now();
+    final last = _lastShown[message];
+    if (last == null || now.difference(last).inSeconds >= 3) {
+      _lastShown[message] = now;
+      return true;
+    }
+    return false;
+  }
+
   static void showSuccess(BuildContext context, String message) {
+    if (!_canShow(message)) return;
     toastification.show(
       context: context,
       type: ToastificationType.success,
@@ -16,6 +29,7 @@ class SmarturNotifications {
   }
 
   static void showInfo(BuildContext context, String message) {
+    if (!_canShow(message)) return;
     toastification.show(
       context: context,
       type: ToastificationType.info,
@@ -29,6 +43,7 @@ class SmarturNotifications {
   }
 
   static void showWarning(BuildContext context, String message) {
+    if (!_canShow(message)) return;
     toastification.show(
       context: context,
       type: ToastificationType.warning,
@@ -42,6 +57,7 @@ class SmarturNotifications {
   }
 
   static void showError(BuildContext context, String message) {
+    if (!_canShow(message)) return;
     toastification.show(
       context: context,
       type: ToastificationType.error,

@@ -26,3 +26,8 @@ const AppBar() : Es la barra de la pantalla
 const Center() : Es el centro de la pantalla
 
 const Text() : Es el texto de la pantalla
+
+# logueo con google
+
+https://console.cloud.google.com/welcome/new?authuser=1&pli=1
+
