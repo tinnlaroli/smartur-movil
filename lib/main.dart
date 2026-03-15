@@ -9,10 +9,7 @@ import 'presentation/widgets/smartur_loader.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SharedPreferences prefs = await SharedPreferences.getInstance();
-  
-  // Leemos si ya vio el onboarding (por defecto es false)
   bool seenOnboarding = prefs.getBool('onboarding_seen') ?? false;
-  // bool seenOnboarding = false; // TEMPORALMENTE DESACTIVADO PARA VER SIEMPRE EL ONBOARDING
 
   runApp(SmarturApp(seenOnboarding: seenOnboarding));
 }
@@ -35,20 +32,72 @@ class SmarturApp extends StatelessWidget {
             primary: SmarturStyle.purple,
             secondary: SmarturStyle.pink,
             surface: Colors.white,
+            brightness: Brightness.light,
+          ),
+          textTheme: const TextTheme(
+            displayLarge: TextStyle(fontFamily: 'CalSans', fontWeight: FontWeight.bold),
+            displayMedium: TextStyle(fontFamily: 'CalSans', fontWeight: FontWeight.bold),
+            titleLarge: TextStyle(fontFamily: 'CalSans', fontWeight: FontWeight.w600),
+          ),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            centerTitle: true,
+            titleTextStyle: TextStyle(
+              fontFamily: 'CalSans',
+              fontSize: 20,
+              color: SmarturStyle.textPrimary,
+            ),
+            iconTheme: IconThemeData(color: SmarturStyle.textPrimary),
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
               backgroundColor: SmarturStyle.purple,
               foregroundColor: Colors.white,
-              minimumSize: const Size(
-                double.infinity,
-                SmarturStyle.touchTargetComfortable,
-              ),
+              elevation: 4,
+              shadowColor: SmarturStyle.purple.withValues(alpha: 0.3),
+              minimumSize: const Size(double.infinity, 56),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
-              textStyle: const TextStyle(fontFamily: 'CalSans', fontSize: 18),
+              textStyle: const TextStyle(
+                fontFamily: 'CalSans',
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: SmarturStyle.purple,
+              side: const BorderSide(color: SmarturStyle.purple, width: 2),
+              minimumSize: const Size(double.infinity, 56),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              textStyle: const TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: SmarturStyle.purple, width: 2),
+            ),
+            labelStyle: const TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary),
           ),
         ),
         home: _SplashGate(seenOnboarding: seenOnboarding),
@@ -66,18 +115,21 @@ class _SplashGate extends StatefulWidget {
 }
 
 class _SplashGateState extends State<_SplashGate> {
-  bool _loading = true;
+  bool _showLoader = true;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        widget.seenOnboarding ? WelcomeScreen() : OnboardingScreen(),
-        if (_loading)
-          SmartURLoader(
-            onFinished: () => setState(() => _loading = false),
-          ),
-      ],
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 800),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      child: _showLoader
+          ? SmartURLoader(
+              key: const ValueKey('loader'),
+              onFinished: () => setState(() => _showLoader = false),
+            )
+          : (widget.seenOnboarding ? const WelcomeScreen() : const OnboardingScreen()),
     );
   }
 }

@@ -1,12 +1,12 @@
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartur/models/onboarding_model.dart';
 import 'package:smartur/core/style_guide.dart';
 import 'welcome_screen.dart'; 
+import '../widgets/smartur_background.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -36,42 +36,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  // FUNCIÓN CLAVE: Guarda que el usuario ya vio el onboarding
   Future<void> _storeOnboardingInfo() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_seen', true);
   }
 
-  // --- FÍSICAS DEL AVIÓN DE PAPEL ---
-  // Calcula la T y posición (X, Y), Rotación y Escala basados en el offset 0 -> 2
-  
   double get _planeX {
     if (_pageOffset <= 1.0) {
-      // P1 -> P2: Comienza centro (0), va hacia arriba a la derecha (100)
       return _pageOffset * 60; 
     } else {
-      // P2 -> P3: De vuelta al centro (0), pero hacemos que haga un picado
       return 60 - ((_pageOffset - 1.0) * 60);
     }
   }
 
   double get _planeY {
     if (_pageOffset <= 1.0) {
-      // Sube ligeramente al ir a la esquina
       return -(_pageOffset * 100);
     } else {
-      // Hace un picado fuertemente hacia abajo en el mapa
       return -100 + ((_pageOffset - 1.0) * 150);
     }
   }
 
   double get _planeRotation {
-    // Rotación en Radianes
     if (_pageOffset <= 1.0) {
-      // Inclina la nariz hacia arriba 30 grados
       return -(_pageOffset * (30 * pi / 180));
     } else {
-      // Pica hacia abajo agresivamente 60 grados para "aterrizar"
       double current = -30 * pi / 180;
       double target = 60 * pi / 180;
       return current + ((_pageOffset - 1.0) * (target - current));
@@ -80,26 +69,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   double get _planeScale {
     if (_pageOffset <= 1.0) {
-      // Escala sutilmente para dar profundidad
-      return 1.0 - (_pageOffset * 0.2); // 1.0 -> 0.8
+      return 1.0 - (_pageOffset * 0.2); 
     } else {
-      // "Aterriza" reduciéndose hasta casi desaparecer
-      return 0.8 - ((_pageOffset - 1.0) * 0.6); // 0.8 -> 0.2
+      return 0.8 - ((_pageOffset - 1.0) * 0.6); 
     }
   }
 
   double get _planeOpacity {
     if (_pageOffset <= 1.5) return 1.0;
-    // Se desvanece más suave de 1.5 a 2.0
     return (1.0 - ((_pageOffset - 1.5) * 2)).clamp(0.0, 1.0);
   }
 
-  // --- UTILIDADES LOTTIE Y PARALLAX ---
-  
   Widget _buildLottieFile(String path, {ColorFilter? colorFilter}) {
     return _buildErrorHandledLottie(
       path, 
-      height: 380, // Aumentado para que los fondos sean más protagonistas
+      height: 380, 
       colorFilter: colorFilter,
     );
   }
@@ -121,7 +105,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           height: height,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
@@ -134,43 +118,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFFFF),
-      body: Stack(
-        alignment: Alignment.center,
-        children: [
-          // CAPA 0: Fondo SVG
-          Positioned.fill(
-            child: SvgPicture.asset(
-              'assets/svg/bg.svg',
-              fit: BoxFit.cover,
-            ),
-          ),
-          // Capa de desenfoque superior
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0), // Blur suave pero pronunciado
-              child: Container(
-                color: Colors.white.withOpacity(0.55), // Frosted glass claro para resaltar los colores sin asfixiarlos y que el texto oscuro sea muy legible
-              ),
-            ),
-          ),
-            // CAPA 1: Fondos y Textos Parallax
+      backgroundColor: Colors.white,
+      body: SmarturBackground(
+        opacity: 0.55,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
             PageView.builder(
               controller: _controller,
               itemCount: contents.length,
               itemBuilder: (_, i) {
-                // Cálculo de Parallax local para esta página
                 double localDelta = i - _pageOffset;
-                double parallaxOffset = localDelta * 150; // Mueve más suave que el scroll real
-                // Configura Fade In/Out progresivo más suave
+                double parallaxOffset = localDelta * 150; 
                 double itemOpacity = (1.0 - (localDelta.abs() * 1.5)).clamp(0.0, 1.0);
                 
-                // Colorización según la instrucción:
-                // Primero: Azul | Segundo: Rosa | Tercero: Verde
                 ColorFilter? filter;
                 if (i == 0) {
                   filter = const ColorFilter.mode(SmarturStyle.blue, BlendMode.srcIn);
@@ -197,7 +161,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             style: const TextStyle(
                               fontSize: 32, 
                               fontWeight: FontWeight.bold,
-                              color: SmarturStyle.textPrimary, // Oscuro para que resalte sobre el fondo claro
+                              color: SmarturStyle.textPrimary,
                               height: 1.2,
                               fontFamily: 'CalSans',
                             ),
@@ -213,7 +177,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               fontFamily: 'Outfit',
                             ),
                           ),
-                          const SizedBox(height: 120), // Espacio para botones y dots
+                          const SizedBox(height: 120), 
                         ],
                       ),
                     ),
@@ -222,7 +186,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               },
             ),
 
-            // CAPA 2: Actor Global -> El Avión de Papel en Antigravidad
             AnimatedBuilder(
               animation: _controller,
               builder: (context, child) {
@@ -245,20 +208,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: _buildErrorHandledLottie(
                   'assets/lottie/paper_plane.json', 
                   height: 150, 
-                  // Avión oscuro para que contraste elegantemente contra el fondo difuminado claro
                   colorFilter: const ColorFilter.mode(SmarturStyle.textPrimary, BlendMode.srcIn),
                 ),
               ),
             ),
 
-            // CAPA 3: Interfaz Fija Frontal (Botones, Puntos)
             Positioned(
               bottom: 40,
               left: 40,
               right: 40,
               child: Column(
                 children: [
-                  // Puntos de Progreso
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
@@ -271,18 +231,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           borderRadius: BorderRadius.circular(20),
                           color: (_pageOffset.round() == index) 
                               ? SmarturStyle.purple 
-                              : SmarturStyle.textSecondary.withOpacity(0.3), // Puntos inactivos oscuros
+                              : SmarturStyle.textSecondary.withValues(alpha: 0.3),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 30),
                   
-                  // Botón Dinámico
                   Stack(
                     alignment: Alignment.center,
                     children: [
-                      // Botón "Siguiente" regular
                       AnimatedOpacity(
                         duration: const Duration(milliseconds: 200),
                         opacity: (_pageOffset < 1.5) ? 1.0 : 0.0,
@@ -294,9 +252,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             );
                           },
                           child: const Text(
-                            "Continuar", // Suena más amigable
+                            "Continuar",
                             style: TextStyle(
-                              color: SmarturStyle.textPrimary, // Oscuro contra el fondo brillante
+                              color: SmarturStyle.textPrimary,
                               fontSize: 18, 
                               fontWeight: FontWeight.w600,
                               fontFamily: 'Outfit',
@@ -305,7 +263,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                       ),
 
-                      // Botón 'Comenzar Ahora' animado a Pop (escala desde 0) cuando llegas al frame 3
                       AnimatedScale(
                         duration: const Duration(milliseconds: 500),
                         scale: (_pageOffset > 1.5) ? 1.0 : 0.0,
@@ -324,17 +281,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               child: const Text(
                                 "¡Comenzar aventura!",
                                 style: TextStyle(
-                                  color: Colors.white, // Texto en blanco brillante
+                                  color: Colors.white,
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'CalSans'
                                 ),
                               ),
                               onPressed: () {
-                                _storeOnboardingInfo(); // Guardar preferencia
+                                _storeOnboardingInfo();
                                 Navigator.pushReplacement(
                                   context,
-                                  MaterialPageRoute(builder: (_) => WelcomeScreen()),
+                                  MaterialPageRoute(builder: (_) => const WelcomeScreen()),
                                 );
                               },
                             ),
@@ -346,10 +303,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ],
               ),
             ),
-            
           ],
         ),
+      ),
     );
   }
 }
-

@@ -44,4 +44,13 @@ class ProfileService {
       return false;
     }
   }
+  /// Obtiene los intereses guardados (simulado).
+  static Future<List<String>> getSavedInterests() async {
+    // En una implementación real, esto se extraería de SharedPreferences o del backend.
+    // Por ahora simulamos que el usuario tiene algunos intereses guardados si `hasPreferencesSaved` es true.
+    final saved = await hasPreferencesSaved();
+    if (!saved) return [];
+    
+    return ['Cultura', 'Naturaleza', 'Historia', 'Aventura'];
+  }
 }

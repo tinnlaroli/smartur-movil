@@ -15,9 +15,11 @@ class AuthService {
   static final _googleSignIn = GoogleSignIn.instance;
 
   AuthService() {
+    // OJO: ESTO DEBERIA IR EN .env
     unawaited(_googleSignIn.initialize(
-      serverClientId: '77253773974-b412uvcqhrqmchhtdq5rq6tl81hpados.apps.googleusercontent.com',
+      serverClientId: '77253773974-b412uvcqhrqmchhtdq5rq6tl81hpados.apps.googleusercontent.com', 
     ));
+
   }
 
   // ── Token persistence ───────────────────────────────────────────────────
@@ -128,15 +130,11 @@ class AuthService {
   Future<Map<String, dynamic>?> loginWithGoogle() async {
     try {
       // authenticate() abre el selector de cuentas (equivale al viejo signIn())
-      final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate(
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
         scopeHint: ['email', 'profile'],
       );
 
-      if (googleUser == null) {
-        throw AuthCancelledException();
-      }
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
       if (idToken == null) {

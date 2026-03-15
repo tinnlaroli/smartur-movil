@@ -7,6 +7,7 @@ import '../../core/utils/notifications.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/profile_service.dart';
 import 'preferences/preferences_screen.dart';
+import 'settings_screen.dart';
 import 'welcome_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -124,12 +125,18 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showProfile() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        return SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 24,
+            top: 16,
+            right: 24,
+            bottom: 32 + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -150,7 +157,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 'Configuración de tu cuenta',
                 style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              FutureBuilder<List<String>>(
+                future: ProfileService.getSavedInterests(),
+                builder: (context, snapshot) {
+                  final interests = snapshot.data ?? [];
+                  if (interests.isEmpty) return const SizedBox.shrink();
+                  return Column(
+                    children: [
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: interests.map((interest) => Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            child: Chip(
+                              label: Text(interest, style: const TextStyle(fontSize: 12, fontFamily: 'Outfit', color: SmarturStyle.purple)),
+                              backgroundColor: SmarturStyle.purple.withValues(alpha: 0.1),
+                              side: BorderSide.none,
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            ),
+                          )).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  );
+                },
+              ),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.tune_outlined, color: SmarturStyle.blue),
@@ -167,36 +201,63 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
               const Divider(),
-              ListTile(
-                leading: const Icon(Icons.fingerprint, color: SmarturStyle.purple),
-                title: const Text('Acceso con huella', style: TextStyle(fontFamily: 'Outfit')),
-                trailing: FutureBuilder<bool>(
-                  future: _authService.isBiometricEnabled(),
-                  builder: (_, snap) {
-                    final enabled = snap.data ?? false;
-                    return Switch(
-                      value: enabled,
-                      activeThumbColor: SmarturStyle.purple,
-                      onChanged: (val) async {
-                        if (val) {
-                          try {
-                            final didAuth = await _auth.authenticate(
-                              localizedReason: 'Confirma tu huella',
-                              options: const AuthenticationOptions(biometricOnly: true),
-                            );
-                            if (didAuth) await _authService.setBiometricEnabled(true);
-                          } catch (_) {}
-                        } else {
-                          await _authService.setBiometricEnabled(false);
+              FutureBuilder<bool>(
+                future: _authService.isBiometricEnabled(),
+                builder: (_, snap) {
+                  final enabled = snap.data ?? false;
+                  if (!enabled) {
+                    return ListTile(
+                      leading: const Icon(Icons.fingerprint, color: SmarturStyle.purple),
+                      title: const Text('Activar acceso con huella', style: TextStyle(fontFamily: 'Outfit')),
+                      trailing: const Icon(Icons.chevron_right, color: SmarturStyle.textSecondary),
+                      onTap: () async {
+                        try {
+                          final didAuth = await _auth.authenticate(
+                            localizedReason: 'Confirma tu huella',
+                            options: const AuthenticationOptions(biometricOnly: true),
+                          );
+                          if (didAuth) {
+                            await _authService.setBiometricEnabled(true);
+                            if (ctx.mounted) {
+                              SmarturNotifications.showSuccess(ctx, 'Acceso con huella activado');
+                              Navigator.pop(ctx);
+                              _showProfile();
+                            }
+                          }
+                        } catch (_) {
+                          if (ctx.mounted) SmarturNotifications.showError(ctx, 'No se pudo activar la huella');
                         }
-                        Navigator.pop(ctx);
-                        _showProfile();
                       },
                     );
-                  },
-                ),
+                  } else {
+                    return ListTile(
+                      leading: const Icon(Icons.fingerprint_outlined, color: SmarturStyle.pink),
+                      title: const Text('Dejar de recordar huella', style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.pink)),
+                      onTap: () async {
+                        await _authService.setBiometricEnabled(false);
+                        if (ctx.mounted) {
+                          SmarturNotifications.showSuccess(ctx, 'Ya no se solicitará tu huella');
+                          Navigator.pop(ctx);
+                          _showProfile();
+                        }
+                      },
+                    );
+                  }
+                },
               ),
               const Divider(),
+              ListTile(
+                leading: const Icon(Icons.settings_outlined, color: SmarturStyle.textPrimary),
+                title: const Text('Configuración', style: TextStyle(fontFamily: 'Outfit')),
+                trailing: const Icon(Icons.chevron_right, color: SmarturStyle.textSecondary),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                },
+              ),
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,

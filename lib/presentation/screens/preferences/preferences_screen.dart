@@ -1,12 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/profile_service.dart';
-import '../home_screen.dart';
+import '../main_screen.dart';
+import '../widgets/smartur_background.dart';
 import 'step1_personal_screen.dart';
 import 'step2_interests_screen.dart';
 import 'step3_extra_screen.dart';
@@ -85,7 +85,7 @@ class _PreferencesScreenState extends State<PreferencesScreen>
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => HomeScreen(userName: widget.userName, isNewLogin: true)),
+          MaterialPageRoute(builder: (_) => MainScreen(userName: widget.userName, isNewLogin: true)),
           (_) => false,
         );
       } else {
@@ -100,173 +100,164 @@ class _PreferencesScreenState extends State<PreferencesScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Fondo SVG desenfocado igual al WelcomeScreen
-          Positioned.fill(
-            child: SvgPicture.asset('assets/svg/bg.svg', fit: BoxFit.cover),
-          ),
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(color: Colors.white.withValues(alpha: 0.82)),
-            ),
-          ),
+      body: SmarturBackground(
+        opacity: 0.82,
+        child: SafeArea(
+          child: Column(
+            children: [
+              // ── Header con progreso ────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  SmarturStyle.spacingLg,
+                  SmarturStyle.spacingMd,
+                  SmarturStyle.spacingLg,
+                  0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Image.asset('assets/imgs/logo_costado.png', height: 32),
+                        const SizedBox(width: 8),
+                        const Text('SMARTUR', style: TextStyle(fontFamily: 'CalSans', fontSize: 18, color: SmarturStyle.textPrimary)),
+                        const Spacer(),
+                        Text(
+                          'Paso ${_currentStep + 1} de $_totalSteps',
+                          style: const TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary, fontSize: 13),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close, color: SmarturStyle.textSecondary, size: 20),
+                          constraints: const BoxConstraints(),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: SmarturStyle.spacingMd),
 
-          SafeArea(
-            child: Column(
-              children: [
-                // ── Header con progreso ────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    SmarturStyle.spacingLg,
-                    SmarturStyle.spacingMd,
-                    SmarturStyle.spacingLg,
-                    0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Image.asset('assets/imgs/logo_costado.png', height: 32),
-                          const SizedBox(width: 8),
-                          const Text('SMARTUR', style: TextStyle(fontFamily: 'CalSans', fontSize: 18, color: SmarturStyle.textPrimary)),
-                          const Spacer(),
-                          Text(
-                            'Paso ${_currentStep + 1} de $_totalSteps',
-                            style: const TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary, fontSize: 13),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close, color: SmarturStyle.textSecondary, size: 20),
-                            constraints: const BoxConstraints(),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: SmarturStyle.spacingMd),
-
-                      // Barra de progreso animada
-                      AnimatedBuilder(
-                        animation: _progressController,
-                        builder: (context, child) => ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            value: _progressController.value,
-                            minHeight: 6,
-                            backgroundColor: Colors.grey.shade200,
-                            valueColor: const AlwaysStoppedAnimation<Color>(SmarturStyle.purple),
-                          ),
+                    // Barra de progreso animada
+                    AnimatedBuilder(
+                      animation: _progressController,
+                      builder: (context, child) => ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: _progressController.value,
+                          minHeight: 6,
+                          backgroundColor: Colors.grey.shade200,
+                          valueColor: const AlwaysStoppedAnimation<Color>(SmarturStyle.purple),
                         ),
                       ),
-                      const SizedBox(height: SmarturStyle.spacingMd),
+                    ),
+                    const SizedBox(height: SmarturStyle.spacingMd),
 
-                      // Indicador de paso actual
-                      Row(
-                        children: List.generate(_totalSteps, (i) {
-                          final active = i == _currentStep;
-                          final done = i < _currentStep;
-                          return Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.only(right: i < _totalSteps - 1 ? 8 : 0),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                                decoration: BoxDecoration(
-                                  color: active
-                                      ? SmarturStyle.purple.withValues(alpha: 0.1)
-                                      : done
-                                          ? SmarturStyle.green.withValues(alpha: 0.1)
-                                          : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: active
-                                        ? SmarturStyle.purple
-                                        : done
-                                            ? SmarturStyle.green
-                                            : Colors.grey.shade300,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      done ? Icons.check_circle : _steps[i].icon,
-                                      size: 14,
-                                      color: active ? SmarturStyle.purple : done ? SmarturStyle.green : SmarturStyle.textSecondary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(
-                                        _steps[i].title,
-                                        style: TextStyle(
-                                          fontFamily: 'Outfit',
-                                          fontSize: 11,
-                                          fontWeight: active ? FontWeight.w700 : FontWeight.w400,
-                                          color: active ? SmarturStyle.purple : done ? SmarturStyle.green : SmarturStyle.textSecondary,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
+                    // Indicador de paso actual (solo iconos en círculos)
+                    Row(
+                      children: List.generate(_totalSteps, (i) {
+                        final active = i == _currentStep;
+                        final done = i < _currentStep;
+                        final isLast = i == _totalSteps - 1;
+
+                        Widget stepCircle = AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: active
+                                ? SmarturStyle.purple
+                                : done
+                                    ? SmarturStyle.green
+                                    : Colors.transparent,
+                            border: Border.all(
+                              color: active
+                                  ? SmarturStyle.purple
+                                  : done
+                                      ? SmarturStyle.green
+                                      : Colors.grey.shade300,
+                              width: 2,
+                            ),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              done ? Icons.check : _steps[i].icon,
+                              size: 20,
+                              color: active || done ? Colors.white : Colors.grey.shade400,
+                            ),
+                          ),
+                        );
+
+                        if (isLast) return stepCircle;
+
+                        return Expanded(
+                          child: Row(
+                            children: [
+                              stepCircle,
+                              Expanded(
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  height: 2,
+                                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                                  color: done ? SmarturStyle.green : Colors.grey.shade300,
                                 ),
                               ),
-                            ),
-                          );
-                        }),
-                      ),
-                      const SizedBox(height: SmarturStyle.spacingLg),
-
-                      // Título del paso actual
-                      Text(
-                        _steps[_currentStep].title,
-                        style: SmarturStyle.calSansTitle.copyWith(fontSize: 26),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _steps[_currentStep].subtitle,
-                        style: const TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: SmarturStyle.spacingMd),
-
-                // ── Contenido del paso activo ──────────────────────────────
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(
-                      SmarturStyle.spacingLg,
-                      0,
-                      SmarturStyle.spacingLg,
-                      SmarturStyle.spacingXl,
+                            ],
+                          ),
+                        );
+                      }),
                     ),
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      transitionBuilder: (child, animation) => FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0.05, 0),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      ),
-                      child: KeyedSubtree(
-                        key: ValueKey(_currentStep),
-                        child: _buildCurrentStep(),
+                    const SizedBox(height: SmarturStyle.spacingLg),
+
+                    // Título del paso actual
+                    Text(
+                      _steps[_currentStep].title,
+                      style: SmarturStyle.calSansTitle.copyWith(fontSize: 26),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _steps[_currentStep].subtitle,
+                      style: const TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: SmarturStyle.spacingMd),
+
+              // ── Contenido del paso activo ──────────────────────────────
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                    SmarturStyle.spacingLg,
+                    0,
+                    SmarturStyle.spacingLg,
+                    SmarturStyle.spacingXl,
+                  ),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    switchInCurve: Curves.easeOutBack,
+                    switchOutCurve: Curves.easeInCirc,
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0.1, 0),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
                       ),
                     ),
+                    child: KeyedSubtree(
+                      key: ValueKey(_currentStep),
+                      child: _buildCurrentStep(),
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

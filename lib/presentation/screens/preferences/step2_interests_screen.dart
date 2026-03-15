@@ -48,8 +48,9 @@ class _PreferencesStep2State extends State<PreferencesStep2> {
     }
     final rawActivity = widget.data['activity_level'];
     if (rawActivity is int) {
-      if (rawActivity <= 1) _activityLevel = 'Bajo';
-      else if (rawActivity <= 3) _activityLevel = 'Moderado';
+      if (rawActivity <= 1) {
+        _activityLevel = 'Bajo';
+      } else if (rawActivity <= 3) _activityLevel = 'Moderado';
       else if (rawActivity <= 4) _activityLevel = 'Alto';
       else _activityLevel = 'Extremo';
     } else {
@@ -69,8 +70,9 @@ class _PreferencesStep2State extends State<PreferencesStep2> {
       return;
     }
     int activityValue = 3; // Moderado por defecto
-    if (_activityLevel == 'Bajo') activityValue = 1;
-    else if (_activityLevel == 'Moderado') activityValue = 3;
+    if (_activityLevel == 'Bajo') {
+      activityValue = 1;
+    } else if (_activityLevel == 'Moderado') activityValue = 3;
     else activityValue = 5; // Alto o Extremo
 
     widget.data['interests'] = _selectedInterests.toList();

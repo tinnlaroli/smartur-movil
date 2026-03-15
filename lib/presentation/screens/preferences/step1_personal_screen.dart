@@ -13,7 +13,8 @@ class PreferencesStep1 extends StatefulWidget {
   State<PreferencesStep1> createState() => _PreferencesStep1State();
 }
 
-class _PreferencesStep1State extends State<PreferencesStep1> {
+class 
+_PreferencesStep1State extends State<PreferencesStep1> {
   final _formKey = GlobalKey<FormState>();
 
   final _ageController = TextEditingController();
