@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartur/models/onboarding_model.dart';
@@ -80,19 +81,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return (1.0 - ((_pageOffset - 1.5) * 2)).clamp(0.0, 1.0);
   }
 
-  Widget _buildLottieFile(String path, {ColorFilter? colorFilter}) {
-    return _buildErrorHandledLottie(
-      path, 
-      height: 380, 
-      colorFilter: colorFilter,
-    );
-  }
-
-  Widget _buildErrorHandledLottie(String path, {double height = 300, ColorFilter? colorFilter}) {
-    return colorFilter != null ? ColorFiltered(
-      colorFilter: colorFilter,
-      child: _rawLottie(path, height),
-    ) : _rawLottie(path, height);
+  Widget _buildImageAsset(String path, {double height = 300, ColorFilter? colorFilter}) {
+    if (path.endsWith('.svg')) {
+      return SvgPicture.asset(
+        path,
+        height: height,
+        fit: BoxFit.contain,
+        colorFilter: colorFilter,
+        placeholderBuilder: (context) => SizedBox(height: height, child: const Center(child: CircularProgressIndicator())),
+      );
+    } else {
+      return colorFilter != null ? ColorFiltered(
+        colorFilter: colorFilter,
+        child: _rawLottie(path, height),
+      ) : _rawLottie(path, height);
+    }
   }
 
   Widget _rawLottie(String path, double height) {
@@ -135,15 +138,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 double parallaxOffset = localDelta * 150; 
                 double itemOpacity = (1.0 - (localDelta.abs() * 1.5)).clamp(0.0, 1.0);
                 
-                ColorFilter? filter;
-                if (i == 0) {
-                  filter = const ColorFilter.mode(SmarturStyle.blue, BlendMode.srcIn);
-                } else if (i == 1) {
-                  filter = const ColorFilter.mode(SmarturStyle.pink, BlendMode.srcIn);
-                } else if (i == 2) {
-                  filter = const ColorFilter.mode(SmarturStyle.green, BlendMode.srcIn);
-                }
-
                 return Opacity(
                   opacity: itemOpacity,
                   child: Transform.translate(
@@ -153,7 +147,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildLottieFile(contents[i].lottiePath, colorFilter: filter),
+                          _buildImageAsset(contents[i].imagePath, height: 380),
                           const Spacer(),
                           Text(
                             contents[i].title,
@@ -205,7 +199,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               },
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 220), 
-                child: _buildErrorHandledLottie(
+                child: _buildImageAsset(
                   'assets/lottie/paper_plane.json', 
                   height: 150, 
                   colorFilter: const ColorFilter.mode(SmarturStyle.textPrimary, BlendMode.srcIn),

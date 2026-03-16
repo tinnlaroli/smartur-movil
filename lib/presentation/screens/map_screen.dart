@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../core/style_guide.dart';
 
-class MapScreen extends StatelessWidget {
+class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
+
+  @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  // Centro aproximado de la región de las Altas Montañas (Orizaba / Córdoba)
+  final LatLng _initialCenter = const LatLng(18.8654, -97.0864);
+  final double _initialZoom = 12.0;
 
   @override
   Widget build(BuildContext context) {
@@ -14,24 +24,53 @@ class MapScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.map_outlined, size: 80, color: SmarturStyle.purple),
-            const SizedBox(height: 16),
-            Text(
-              "Mapa de Exploración",
-              style: SmarturStyle.calSansTitle.copyWith(fontSize: 22),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Aquí se mostrarán los pines de los lugares\ncon la ficha resumen de la IA.",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary),
-            ),
-          ],
+      body: FlutterMap(
+        options: MapOptions(
+          initialCenter: _initialCenter,
+          initialZoom: _initialZoom,
+          minZoom: 8.0,
+          maxZoom: 18.0,
         ),
+        children: [
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.smartur.app',
+          ),
+          MarkerLayer(
+            markers: [
+              Marker(
+                point: _initialCenter,
+                width: 50,
+                height: 50,
+                child: const Icon(
+                  Icons.location_on,
+                  color: SmarturStyle.pink,
+                  size: 44,
+                ),
+              ),
+              Marker(
+                point: const LatLng(18.8496, -97.1036), // Orizaba Centro
+                width: 50,
+                height: 50,
+                child: const Icon(
+                  Icons.location_on,
+                  color: SmarturStyle.purple,
+                  size: 44,
+                ),
+              ),
+               Marker(
+                point: const LatLng(18.8841, -96.9242), // Córdoba Centro
+                width: 50,
+                height: 50,
+                child: const Icon(
+                  Icons.location_on,
+                  color: SmarturStyle.blue,
+                  size: 44,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

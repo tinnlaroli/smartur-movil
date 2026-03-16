@@ -1,12 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:smartur/presentation/widgets/smartur_background.dart';
 
 import '../../../core/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/profile_service.dart';
 import '../main_screen.dart';
-import '../widgets/smartur_background.dart';
 import 'step1_personal_screen.dart';
 import 'step2_interests_screen.dart';
 import 'step3_extra_screen.dart';

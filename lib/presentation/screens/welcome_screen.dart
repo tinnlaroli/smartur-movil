@@ -7,6 +7,7 @@ import '../../core/style_guide.dart';
 import '../../core/utils/notifications.dart';
 import '../../data/services/auth_service.dart';
 import '../widgets/smartur_background.dart';
+import 'home_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -65,12 +66,490 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     super.dispose();
   }
 
-  Future<void> _checkBiometrics(BuildContext context) async {
-    // ... logic for biometrics
+  // --- RESTORED AUTH MODAL LOGIC ---
+  void _showAuthModal(BuildContext context, {bool isLogin = false}) {
+    bool _isExpanded = false;
+    bool _isWaitingOTP = false;
+    bool _isLoadingEmail = false;
+    bool _isLoadingGoogle = false;
+    final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+    final TextEditingController _emailController = TextEditingController();
+    final TextEditingController _passwordController = TextEditingController();
+    final TextEditingController _nameController = TextEditingController();
+    final TextEditingController _otpController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            double? height = _isExpanded
+                ? MediaQuery.of(context).size.height * 0.75
+                : null;
+
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              height: height,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              padding: EdgeInsets.only(
+                left: SmarturStyle.spacingLg,
+                right: SmarturStyle.spacingLg,
+                top: 12,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        isLogin ? 'Bienvenido de nuevo' : 'Empezar ahora',
+                        style: SmarturStyle.calSansTitle,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        isLogin
+                            ? 'Ingresa tus credenciales para continuar.'
+                            : 'Regístrate para descubrir rutas personalizadas.',
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          color: SmarturStyle.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      if (!_isExpanded) ...[
+                        ElevatedButton(
+                          onPressed: () => setModalState(() => _isExpanded = true),
+                          child: Text(isLogin ? 'Continuar con Email' : 'Registrarse con Email'),
+                        ),
+                      ] else ...[
+                        if (_isWaitingOTP)
+                          Column(
+                            children: [
+                              Text(
+                                "Se envió un código a:",
+                                style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary, fontSize: 13),
+                              ),
+                              Text(
+                                _emailController.text,
+                                style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: SmarturStyle.textPrimary),
+                              ),
+                              const SizedBox(height: 20),
+                              TextFormField(
+                                controller: _otpController,
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  letterSpacing: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: "000000",
+                                  helperText: "Ingresa el código de 6 dígitos",
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => setModalState(() {
+                                  _isWaitingOTP = false;
+                                  _otpController.clear();
+                                }),
+                                child: const Text('Cambiar correo', style: TextStyle(color: SmarturStyle.purple)),
+                              ),
+                            ],
+                          )
+                        else
+                          _buildAuthFields(
+                            isLogin,
+                            _nameController,
+                            _emailController,
+                            _passwordController,
+                            setModalState,
+                          ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: (_isLoadingEmail || _isLoadingGoogle)
+                              ? null
+                              : () async {
+                                  if (_formKey.currentState!.validate()) {
+                                    setModalState(() => _isLoadingEmail = true);
+                                    try {
+                                      if (isLogin) {
+                                        if (!_isWaitingOTP) {
+                                          final response = await _authService.loginStep1(
+                                            _emailController.text.trim(),
+                                            _passwordController.text.trim(),
+                                          );
+                                          if (response != null && response['requiresVerification'] == true) {
+                                            setModalState(() => _isWaitingOTP = true);
+                                          } else {
+                                            if (context.mounted) {
+                                              SmarturNotifications.showError(context, "Credenciales incorrectas.");
+                                            }
+                                          }
+                                        } else {
+                                          final token = await _authService.verifyOTP(
+                                            _emailController.text.trim(),
+                                            _otpController.text.trim(),
+                                          );
+                                          if (token != null && context.mounted) {
+                                            Navigator.pop(context);
+                                            Navigator.pushReplacement(
+                                              context,
+                                              MaterialPageRoute(builder: (_) => const HomeScreen()),
+                                            );
+                                          } else {
+                                            if (context.mounted) {
+                                              SmarturNotifications.showError(context, "Código inválido o expirado.");
+                                            }
+                                          }
+                                        }
+                                      } else {
+                                        bool success = await _authService.register(
+                                          _nameController.text.trim(),
+                                          _emailController.text.trim(),
+                                          _passwordController.text.trim(),
+                                        );
+                                        if (success && context.mounted) {
+                                          setModalState(() => isLogin = true);
+                                          SmarturNotifications.showSuccess(context, "Cuenta creada exitosamente. Por favor, inicia sesión.");
+                                        }
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        SmarturNotifications.showError(context, "Error de conexión.");
+                                      }
+                                    } finally {
+                                      setModalState(() => _isLoadingEmail = false);
+                                    }
+                                  }
+                                },
+                          child: _isLoadingEmail
+                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : Text(_isWaitingOTP ? 'VERIFICAR' : (isLogin ? 'ENTRAR' : 'CREAR CUENTA')),
+                        ),
+                      ],
+                      if (!_isWaitingOTP) ...[
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: (_isLoadingEmail || _isLoadingGoogle)
+                              ? null
+                              : () async {
+                                  setModalState(() => _isLoadingGoogle = true);
+                                  try {
+                                    final response = await _authService.loginWithGoogle();
+                                    if (response != null && context.mounted) {
+                                      Navigator.pop(context);
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      SmarturNotifications.showError(context, e.toString());
+                                    }
+                                  } finally {
+                                    setModalState(() => _isLoadingGoogle = false);
+                                  }
+                                },
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.grey[300]!),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: _isLoadingGoogle
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: SmarturStyle.purple),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.network(
+                                      'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1024px-Google_%22G%22_logo.svg.png',
+                                      height: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Continuar con Google',
+                                      style: TextStyle(
+                                        color: SmarturStyle.textPrimary,
+                                        fontFamily: 'Outfit',
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ],
+                      const SizedBox(height: 32),
+                      TextButton(
+                        onPressed: () => setModalState(() {
+                          isLogin = !isLogin;
+                          _isWaitingOTP = false; // Reset OTP state when switching
+                          _otpController.clear();
+                        }),
+                        child: RichText(
+                          text: TextSpan(
+                            style: const TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textPrimary),
+                            children: [
+                              TextSpan(text: isLogin ? '¿No tienes cuenta? ' : '¿Ya tienes una cuenta? '),
+                              TextSpan(text: isLogin ? 'Regístrate' : 'Inicia sesión', style: const TextStyle(color: SmarturStyle.purple, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
-  void _showAuthModal(BuildContext context) {
-    // ... logic for auth modal
+  Widget _buildAuthFields(
+    bool isLogin,
+    TextEditingController nameCtrl,
+    TextEditingController emailCtrl,
+    TextEditingController passCtrl,
+    StateSetter setModalState,
+  ) {
+    String password = passCtrl.text;
+    double strength = _getPasswordStrength(password);
+    Color strengthColor = _getStrengthColor(strength);
+
+    // Regex checks for real-time feedback
+    bool hasMinLength = password.length >= 8;
+    bool hasUppercase = RegExp(r'[A-Z]').hasMatch(password);
+    bool hasLowercase = RegExp(r'[a-z]').hasMatch(password);
+    bool hasNumber = RegExp(r'[0-9]').hasMatch(password);
+    bool hasSpecial = RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+
+    return Column(
+      children: [
+        if (!isLogin) ...[
+          TextFormField(
+            controller: nameCtrl,
+            decoration: InputDecoration(
+              labelText: 'Nombre completo',
+              prefixIcon: const Icon(Icons.person_outline, color: SmarturStyle.purple),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            validator: (v) {
+              if (v == null || v.isEmpty) return 'Ingresa tu nombre completo';
+              if (v.length < 3) return 'Mínimo 3 letras';
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+        ],
+        TextFormField(
+          controller: emailCtrl,
+          keyboardType: TextInputType.emailAddress,
+          decoration: InputDecoration(
+            labelText: 'Correo electrónico',
+            prefixIcon: const Icon(Icons.email_outlined, color: SmarturStyle.purple),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          validator: (v) {
+            if (v == null || v.isEmpty) return 'Ingresa tu correo';
+            if (isLogin) return null;
+            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) return 'Ingresa un correo válido';
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: passCtrl,
+          obscureText: true,
+          onChanged: (value) => setModalState(() {}), // Trigger modal rebuild for real-time feedback
+          decoration: InputDecoration(
+            labelText: 'Contraseña',
+            prefixIcon: const Icon(Icons.lock_outline, color: SmarturStyle.purple),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          validator: (v) {
+            if (v == null || v.isEmpty) return 'Ingresa tu contraseña';
+            if (isLogin) return null;
+            if (v.length < 8) return 'Mínimo 8 caracteres';
+            if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Al menos una mayúscula';
+            if (!RegExp(r'[a-z]').hasMatch(v)) return 'Al menos una minúscula';
+            if (!RegExp(r'[0-9]').hasMatch(v)) return 'Al menos un número';
+            if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(v)) return 'Al menos un carácter especial';
+            return null;
+          },
+        ),
+        if (!isLogin) ...[
+          const SizedBox(height: 12),
+          // Strength Meter
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: strength,
+              backgroundColor: Colors.grey[200],
+              color: strengthColor,
+              minHeight: 6,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              _getStrengthText(strength),
+              style: TextStyle(
+                fontSize: 12,
+                color: strengthColor,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Outfit',
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Requirements Checklist
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'La contraseña debe tener:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+                ),
+                const SizedBox(height: 8),
+                _buildRequirementRow('Mínimo 8 caracteres', hasMinLength),
+                _buildRequirementRow('Al menos una mayúscula', hasUppercase),
+                _buildRequirementRow('Al menos una minúscula', hasLowercase),
+                _buildRequirementRow('Al menos un número', hasNumber),
+                _buildRequirementRow('Un carácter especial (!@#\$%^&*)', hasSpecial),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildRequirementRow(String text, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle : Icons.circle_outlined,
+            size: 16,
+            color: isMet ? Colors.green : Colors.grey[400],
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: isMet ? Colors.green[700] : Colors.grey[600],
+              fontFamily: 'Outfit',
+              decoration: isMet ? TextDecoration.lineThrough : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  double _getPasswordStrength(String password) {
+    if (password.isEmpty) return 0.1; // Show a tiny bit so bar isn't empty
+    double strength = 0;
+    if (password.length >= 8) strength += 0.2;
+    if (RegExp(r'[A-Z]').hasMatch(password)) strength += 0.2;
+    if (RegExp(r'[a-z]').hasMatch(password)) strength += 0.2;
+    if (RegExp(r'[0-9]').hasMatch(password)) strength += 0.2;
+    if (RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) strength += 0.2;
+    return strength;
+  }
+
+  Color _getStrengthColor(double strength) {
+    if (strength <= 0.2) return Colors.red;
+    if (strength <= 0.4) return Colors.orange;
+    if (strength <= 0.6) return Colors.amber;
+    if (strength <= 0.8) return Colors.lightGreen;
+    return Colors.green;
+  }
+
+  String _getStrengthText(double strength) {
+    if (strength <= 0.2) return 'Muy débil';
+    if (strength <= 0.4) return 'Débil';
+    if (strength <= 0.6) return 'Regular';
+    if (strength <= 0.8) return 'Fuerte';
+    return 'Muy fuerte';
+  }
+
+  // --- RESTORED BIOMETRICS LOGIC ---
+  Future<void> _checkBiometrics(BuildContext context) async {
+    try {
+      final bool biometricOn = await _authService.isBiometricEnabled();
+      if (!biometricOn) {
+        if (context.mounted) SmarturNotifications.showWarning(context, 'Inicia sesión y activa la huella en tu perfil');
+        return;
+      }
+
+      final bool canAuth = await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
+      if (!canAuth) {
+        if (context.mounted) SmarturNotifications.showWarning(context, 'Dispositivo no compatible');
+        return;
+      }
+
+      final List<BiometricType> available = await _auth.getAvailableBiometrics();
+      if (available.isEmpty) {
+        if (context.mounted) SmarturNotifications.showInfo(context, 'No hay huellas registradas');
+        return;
+      }
+
+      final bool didAuthenticate = await _auth.authenticate(
+        localizedReason: 'Accede a tus rutas de SMARTUR',
+        options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+      );
+
+      if (!didAuthenticate) return;
+
+      final String? token = await _authService.getToken();
+      if (token != null && context.mounted) {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+      } else if (context.mounted) {
+        await _authService.clearSession();
+        SmarturNotifications.showInfo(context, 'Sesión expirada. Inicia sesión de nuevo.');
+      }
+    } catch (e) {
+      if (context.mounted) SmarturNotifications.showError(context, 'Error al leer huella.');
+    }
   }
 
   @override
@@ -97,22 +576,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                       ),
                     ),
                   ),
-
                   SlideTransition(
                     position: _textSlide,
                     child: FadeTransition(
                       opacity: _fadeAnimation,
-                      child: const Text(
-                        'Experiencias Únicas\nEmpiezan Aquí',
-                        style: SmarturStyle.calSansTitle,
-                        textAlign: TextAlign.center,
-                      ),
+                      child: const Text('Experiencias Únicas\nEmpiezan Aquí', style: SmarturStyle.calSansTitle, textAlign: TextAlign.center),
                     ),
                   ),
-                
                   const SizedBox(height: 40),
-
-                  // BOTÓN DE HUELLA DACTILAR
                   FadeTransition(
                     opacity: _fadeAnimation,
                     child: ScaleTransition(
@@ -126,11 +597,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                             shape: BoxShape.circle,
                             border: Border.all(color: SmarturStyle.purple, width: 2),
                           ),
-                          child: const Icon(
-                            Icons.fingerprint,
-                            size: 40,
-                            color: SmarturStyle.purple,
-                          ),
+                          child: const Icon(Icons.fingerprint, size: 40, color: SmarturStyle.purple),
                         ),
                       ),
                     ),
@@ -138,19 +605,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                   const SizedBox(height: 12),
                   FadeTransition(
                     opacity: _fadeAnimation,
-                    child: const Text(
-                      'Ingresar con huella',
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        color: SmarturStyle.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    child: const Text('Ingresar con huella', style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary, fontWeight: FontWeight.w500)),
                   ),
                 ],
               ),
             ),
-
             Positioned(
               bottom: 50,
               left: SmarturStyle.spacingLg,

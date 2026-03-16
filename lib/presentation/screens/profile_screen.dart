@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/style_guide.dart';
+import 'settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -13,6 +14,17 @@ class ProfileScreen extends StatelessWidget {
         title: Text('Perfil Completo', style: SmarturStyle.calSansTitle.copyWith(fontSize: 20)),
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: SmarturStyle.textPrimary),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: Center(
         child: Column(

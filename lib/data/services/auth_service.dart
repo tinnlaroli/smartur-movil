@@ -157,12 +157,12 @@ class AuthService {
         }
         return data;
       } else if (response.statusCode == 401) {
-        throw AuthException('La sesión de Google ha expirado o es inválida.');
+        throw AuthException('Tu sesión de Google ha expirado. Por favor, intenta de nuevo.');
       } else if (response.statusCode == 400) {
-        final errorMsg = jsonDecode(response.body)['message'] ?? 'Datos inválidos.';
-        throw AuthException(errorMsg);
+        final errorMsg = jsonDecode(response.body)['message'] ?? 'Hubo un error con los datos de tu cuenta de Google.';
+        throw AuthException('Error de validación: $errorMsg');
       } else {
-        throw AuthException('Error en el servidor (${response.statusCode}). Intenta más tarde.');
+        throw AuthException('El servidor no responde (${response.statusCode}). Por favor, intenta más tarde.');
       }
     } on AuthCancelledException {
       rethrow;

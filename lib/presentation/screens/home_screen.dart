@@ -6,6 +6,7 @@ import '../../core/style_guide.dart';
 import '../../core/utils/notifications.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/profile_service.dart';
+import '../widgets/smartur_skeleton.dart';
 import 'preferences/preferences_screen.dart';
 import 'settings_screen.dart';
 import 'welcome_screen.dart';
@@ -23,6 +24,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
   final LocalAuthentication _auth = LocalAuthentication();
+  bool _isLoadingContent = true;
 
   @override
   void initState() {
@@ -31,6 +33,10 @@ class _HomeScreenState extends State<HomeScreen> {
       await _showWelcome();
       await _checkPreferences();
       await _offerBiometricSetup();
+      
+      // Simular carga de contenido principal
+      await Future.delayed(const Duration(milliseconds: 1500));
+      if (mounted) setState(() => _isLoadingContent = false);
     });
   }
 
@@ -145,57 +151,66 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(height: 24),
-              const CircleAvatar(
-                radius: 36,
-                backgroundColor: SmarturStyle.purple,
-                child: Icon(Icons.person, size: 40, color: Colors.white),
-              ),
-              const SizedBox(height: 12),
               Text('Mi perfil', style: SmarturStyle.calSansTitle.copyWith(fontSize: 22)),
               const SizedBox(height: 4),
               const Text(
-                'Configuración de tu cuenta',
+                'Administra tu cuenta rápida',
                 style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary),
               ),
               const SizedBox(height: 16),
-              FutureBuilder<List<String>>(
-                future: ProfileService.getSavedInterests(),
-                builder: (context, snapshot) {
-                  final interests = snapshot.data ?? [];
-                  if (interests.isEmpty) return const SizedBox.shrink();
-                  return Column(
-                    children: [
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: interests.map((interest) => Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            child: Chip(
-                              label: Text(interest, style: const TextStyle(fontSize: 12, fontFamily: 'Outfit', color: SmarturStyle.purple)),
-                              backgroundColor: SmarturStyle.purple.withValues(alpha: 0.1),
-                              side: BorderSide.none,
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            ),
-                          )).toList(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                  );
-                },
-              ),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.tune_outlined, color: SmarturStyle.blue),
                 title: const Text('Mis preferencias', style: TextStyle(fontFamily: 'Outfit')),
                 trailing: const Icon(Icons.chevron_right, color: SmarturStyle.textSecondary),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PreferencesScreen(userName: widget.userName),
+                onTap: () async {
+                  final interests = await ProfileService.getSavedInterests();
+                  if (!ctx.mounted) return;
+                  
+                  showDialog(
+                    context: ctx,
+                    builder: (dCtx) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                      title: const Text('Tus preferencias', style: TextStyle(fontFamily: 'CalSans', color: SmarturStyle.purple)),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (interests.isNotEmpty)
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: interests.map((i) => Chip(
+                                label: Text(i, style: const TextStyle(fontSize: 12, fontFamily: 'Outfit', color: SmarturStyle.purple)),
+                                backgroundColor: SmarturStyle.purple.withValues(alpha: 0.1),
+                                side: BorderSide.none,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              )).toList(),
+                            )
+                          else
+                            const Text('No has Guardado preferencias aún.', style: TextStyle(fontFamily: 'Outfit')),
+                          const SizedBox(height: 24),
+                          const Text('¿Estás seguro que deseas cambiarlas?', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dCtx),
+                          child: const Text('Cancelar', style: TextStyle(color: SmarturStyle.textSecondary)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(dCtx); // Close dialog
+                            Navigator.pop(ctx);  // Close bottom sheet
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => PreferencesScreen(userName: widget.userName)),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: SmarturStyle.purple),
+                          child: const Text('Cambiar'),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -205,44 +220,43 @@ class _HomeScreenState extends State<HomeScreen> {
                 future: _authService.isBiometricEnabled(),
                 builder: (_, snap) {
                   final enabled = snap.data ?? false;
-                  if (!enabled) {
-                    return ListTile(
-                      leading: const Icon(Icons.fingerprint, color: SmarturStyle.purple),
-                      title: const Text('Activar acceso con huella', style: TextStyle(fontFamily: 'Outfit')),
-                      trailing: const Icon(Icons.chevron_right, color: SmarturStyle.textSecondary),
-                      onTap: () async {
-                        try {
-                          final didAuth = await _auth.authenticate(
-                            localizedReason: 'Confirma tu huella',
-                            options: const AuthenticationOptions(biometricOnly: true),
-                          );
-                          if (didAuth) {
-                            await _authService.setBiometricEnabled(true);
+                  return StatefulBuilder(
+                    builder: (BuildContext context, StateSetter setState) {
+                      return SwitchListTile(
+                        activeColor: SmarturStyle.purple,
+                        secondary: const Icon(Icons.fingerprint, color: SmarturStyle.purple),
+                        title: const Text('Acceso con huella', style: TextStyle(fontFamily: 'Outfit')),
+                        value: enabled,
+                        onChanged: (bool newValue) async {
+                          if (newValue) {
+                            try {
+                              final didAuth = await _auth.authenticate(
+                                localizedReason: 'Confirma tu huella para activar',
+                                options: const AuthenticationOptions(biometricOnly: true),
+                              );
+                              if (didAuth) {
+                                await _authService.setBiometricEnabled(true);
+                                if (ctx.mounted) {
+                                  SmarturNotifications.showSuccess(ctx, 'Acceso con huella activado');
+                                  Navigator.pop(ctx);
+                                  _showProfile();
+                                }
+                              }
+                            } catch (_) {
+                              if (ctx.mounted) SmarturNotifications.showError(ctx, 'No se pudo activar la huella');
+                            }
+                          } else {
+                            await _authService.setBiometricEnabled(false);
                             if (ctx.mounted) {
-                              SmarturNotifications.showSuccess(ctx, 'Acceso con huella activado');
+                              SmarturNotifications.showSuccess(ctx, 'Ya no se solicitará tu huella');
                               Navigator.pop(ctx);
                               _showProfile();
                             }
                           }
-                        } catch (_) {
-                          if (ctx.mounted) SmarturNotifications.showError(ctx, 'No se pudo activar la huella');
-                        }
-                      },
-                    );
-                  } else {
-                    return ListTile(
-                      leading: const Icon(Icons.fingerprint_outlined, color: SmarturStyle.pink),
-                      title: const Text('Dejar de recordar huella', style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.pink)),
-                      onTap: () async {
-                        await _authService.setBiometricEnabled(false);
-                        if (ctx.mounted) {
-                          SmarturNotifications.showSuccess(ctx, 'Ya no se solicitará tu huella');
-                          Navigator.pop(ctx);
-                          _showProfile();
-                        }
-                      },
-                    );
-                  }
+                        },
+                      );
+                    }
+                  );
                 },
               ),
               const Divider(),
@@ -307,57 +321,70 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Hola 👋", style: SmarturStyle.calSansTitle.copyWith(fontSize: 28)),
-            const SizedBox(height: 8),
-            const Text(
-              "¿Qué aventura te espera hoy en las Altas Montañas?",
-              style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary, fontSize: 16),
-            ),
-            const SizedBox(height: 24),
+      body: SmarturShimmer(
+        enabled: _isLoadingContent,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _isLoadingContent
+                  ? const SkeletonText(width: 150, height: 32)
+                  : Text("Hola 👋", style: SmarturStyle.calSansTitle.copyWith(fontSize: 28)),
+              const SizedBox(height: 8),
+              _isLoadingContent
+                  ? const SkeletonText(width: 250, height: 16)
+                  : const Text(
+                      "¿Qué aventura te espera hoy en las Altas Montañas?",
+                      style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary, fontSize: 16),
+                    ),
+              const SizedBox(height: 24),
 
-            TextField(
-              decoration: InputDecoration(
-                hintText: "Buscar rutas o destinos...",
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                filled: true,
-                fillColor: Colors.grey[100],
-              ),
-            ),
-
-            const SizedBox(height: 32),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("Recomendado para ti", style: SmarturStyle.calSansTitle.copyWith(fontSize: 18)),
-                const Text("Ver todo", style: TextStyle(color: SmarturStyle.purple, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            Container(
-              height: 200,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                gradient: LinearGradient(
-                  colors: [SmarturStyle.purple, SmarturStyle.purple.withOpacity(0.7)],
+              TextField(
+                enabled: !_isLoadingContent,
+                decoration: InputDecoration(
+                  hintText: "Buscar rutas o destinos...",
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                  filled: true,
+                  fillColor: Colors.grey[100],
                 ),
               ),
-              child: const Center(
-                child: Text(
-                  "Aquí aparecerán tus rutas",
-                  style: TextStyle(color: Colors.white, fontFamily: 'Outfit'),
-                ),
+
+              const SizedBox(height: 32),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _isLoadingContent
+                      ? const SkeletonText(width: 180, height: 20)
+                      : Text("Recomendado para ti", style: SmarturStyle.calSansTitle.copyWith(fontSize: 18)),
+                  if (!_isLoadingContent)
+                    const Text("Ver todo", style: TextStyle(color: SmarturStyle.purple, fontWeight: FontWeight.bold)),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+
+              _isLoadingContent
+                  ? const SkeletonContainer(height: 200, borderRadius: 24)
+                  : Container(
+                      height: 200,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        gradient: LinearGradient(
+                          colors: [SmarturStyle.purple, SmarturStyle.purple.withOpacity(0.7)],
+                        ),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          "Aquí aparecerán tus rutas",
+                          style: TextStyle(color: Colors.white, fontFamily: 'Outfit'),
+                        ),
+                      ),
+                    ),
+            ],
+          ),
         ),
       ),
     );

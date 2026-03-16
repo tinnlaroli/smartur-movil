@@ -453,7 +453,7 @@ class _SmartURLoaderState extends State<SmartURLoader>
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // ── SVG Principal ──────────────────────────────────────────
+                // ── Capa SVG Optimizada (Animada vía Transform) ────────────
                 AnimatedScale(
                   scale: _svgScale,
                   duration: const Duration(milliseconds: 1000),
@@ -461,7 +461,11 @@ class _SmartURLoaderState extends State<SmartURLoader>
                   child: AnimatedOpacity(
                     opacity: _svgOpacity,
                     duration: const Duration(milliseconds: 1000),
-                    child: _buildSvgLayer(size),
+                    child: SizedBox(
+                      width: size,
+                      height: size,
+                      child: _buildOptimizedAnimatedLayers(),
+                    ),
                   ),
                 ),
 
@@ -502,80 +506,99 @@ class _SmartURLoaderState extends State<SmartURLoader>
     );
   }
 
-  Widget _buildSvgLayer(double size) {
-    // Construir el SVG completo dinámicamente
-    final svgBuffer = StringBuffer();
-    svgBuffer.write(
-      '<svg xmlns="http://www.w3.org/2000/svg" '
-      'viewBox="0 0 169.42 218.53">',
-    );
+  /// Construye las capas de animación usando Transforms en lugar de reconstruir Strings SVG
+  Widget _buildOptimizedAnimatedLayers() {
+    // Escala base para mantener el viewBox="0 0 169.42 218.53"
+    // ViewBox original: ancho ~170, alto ~220
+    return LayoutBuilder(builder: (context, constraints) {
+      final scaleX = constraints.maxWidth / 169.42;
+      final scaleY = constraints.maxHeight / 218.53;
+      final scale = min(scaleX, scaleY);
+      
+      final offsetX = (constraints.maxWidth - 169.42 * scale) / 2;
+      final offsetY = (constraints.maxHeight - 218.53 * scale) / 2;
 
-    // ── Capa inferior: piezas del pin ────────────────────────────────────
-    for (int j = 0; j < kPinPaths.length; j++) {
-      final pin = kPinPaths[j];
-      final progress = _pinProgress[j];
-      final fillColor = _pinFillColors[j];
-      final fillHex = fillColor == Colors.transparent
-          ? 'none'
-          : '#${fillColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
-      final strokeHex =
-          '#${pin.color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
-      final opacity = progress > 0 ? 1.0 : 0.0;
+      return Transform(
+        transform: Matrix4.identity()
+          ..translate(offsetX, offsetY)
+          ..scale(scale, scale),
+        child: Stack(
+          children: [
+            // ── Capa inferior: piezas del pin (Dibujo con stroke) ──────
+            for (int j = 0; j < kPinPaths.length; j++)
+              AnimatedBuilder(
+                animation: _pinController, // Solo para forzar rebuild en la fase Pin
+                builder: (context, child) {
+                  final progress = _pinProgress[j];
+                  final fillColor = _pinFillColors[j];
+                  final fillHex = fillColor == Colors.transparent
+                      ? 'none'
+                      : '#${fillColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+                  final strokeHex = '#${kPinPaths[j].color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+                  final opacity = progress > 0 ? 1.0 : 0.0;
+                  
+                  // Generamos el string solo cuando el progreso cambia (muy pocas veces)
+                  final svgStr = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 169.42 218.53">'
+                      '<path d="${kPinPaths[j].d}" fill="$fillHex" stroke="$strokeHex" '
+                      'stroke-width="1.2" stroke-dasharray="1000" '
+                      'stroke-dashoffset="${1000 * (1.0 - progress)}"/>'
+                      '</svg>';
 
-      svgBuffer.write(
-        '<path '
-        'd="${pin.d}" '
-        'fill="$fillHex" '
-        'stroke="$strokeHex" '
-        'stroke-width="1.2" '
-        'stroke-dasharray="1000" '
-        'stroke-dashoffset="${1000 * (1.0 - progress)}" '
-        'opacity="$opacity" '
-        '/>',
+                  return Opacity(
+                    opacity: opacity,
+                    child: SvgPicture.string(svgStr, width: 169.42, height: 218.53),
+                  );
+                },
+              ),
+
+            // ── Capa superior: aviones / íconos giratorios ────────────
+            for (int i = 0; i < 4; i++)
+              AnimatedBuilder(
+                animation: Listenable.merge([_spinControllers[i], _entryControllers[i], _morphController]),
+                builder: (context, child) {
+                  final arc = kArcs[i];
+                  final spinValue = _spinControllers[i].value;
+                  final dir = i % 2 == 0 ? 1 : -1;
+                  final rotateRad = dir * spinValue * 2 * pi;
+
+                  final entryValue = _entryControllers[i].isAnimating || _entryControllers[i].isCompleted
+                      ? Curves.elasticOut.transform(_entryControllers[i].value.clamp(0.0, 1.0))
+                      : 0.0;
+                  final entryOpacity = _entryControllers[i].value.clamp(0.0, 1.0);
+
+                  final rad = arc.startDeg * pi / 180.0;
+                  final dx = arc.r * cos(rad) * (1.0 - entryValue);
+                  final dy = arc.r * sin(rad) * (1.0 - entryValue);
+
+                  final colorHex = _phase == _LoaderPhase.morphing || _phase == _LoaderPhase.pinDraw
+                      ? '#${arc.fill.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}'
+                      : '#${arc.color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+
+                  final currentPath = _morphedPaths[i].isNotEmpty ? _morphedPaths[i] : kPlanes[i];
+                  final fillRule = i == 3 ? "evenodd" : "nonzero";
+
+                  final svgStr = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 169.42 218.53">'
+                      '<path d="$currentPath" fill="$colorHex" fill-rule="$fillRule"/>'
+                      '</svg>';
+
+                  return Opacity(
+                    opacity: entryOpacity,
+                    child: Transform(
+                      transform: Matrix4.identity()
+                        ..translate(dx, dy)
+                        // Pivotar la rotación sobre (arc.ox, arc.oy)
+                        ..translate(arc.ox, arc.oy)
+                        ..rotateZ(rotateRad)
+                        ..translate(-arc.ox, -arc.oy),
+                      child: SvgPicture.string(svgStr, width: 169.42, height: 218.53),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
       );
-    }
-
-    // ── Capa superior: aviones / íconos giratorios ───────────────────────
-    for (int i = 0; i < 4; i++) {
-      final arc = kArcs[i];
-      final spinValue = _spinControllers[i].value;
-      final dir = i % 2 == 0 ? 1 : -1;
-      final rotateDeg = dir * spinValue * 360.0;
-
-      final entryValue =
-          _entryControllers[i].isAnimating || _entryControllers[i].isCompleted
-          ? Curves.elasticOut.transform(
-              _entryControllers[i].value.clamp(0.0, 1.0),
-            )
-          : 0.0;
-      final entryOpacity = _entryControllers[i].value.clamp(0.0, 1.0);
-
-      final rad = arc.startDeg * pi / 180.0;
-      final dx = arc.r * cos(rad) * (1.0 - entryValue);
-      final dy = arc.r * sin(rad) * (1.0 - entryValue);
-
-      final colorHex =
-          _phase == _LoaderPhase.morphing || _phase == _LoaderPhase.pinDraw
-          ? '#${arc.fill.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}'
-          : '#${arc.color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
-
-      final currentPath = _morphedPaths[i].isNotEmpty
-          ? _morphedPaths[i]
-          : kPlanes[i];
-      final fillRule = i == 3 ? "evenodd" : "nonzero";
-
-      svgBuffer.write(
-        '<g transform="rotate($rotateDeg,${arc.ox},${arc.oy}) translate($dx,$dy)" '
-        'opacity="$entryOpacity">'
-        '<path d="$currentPath" fill="$colorHex" '
-        'fill-rule="$fillRule"/>'
-        '</g>',
-      );
-    }
-
-    svgBuffer.write('</svg>');
-
-    return SvgPicture.string(svgBuffer.toString(), width: size, height: size);
+    });
   }
 }
 

@@ -1,92 +1,123 @@
-# Aplicación Móvil SMARTUR
+# 🏔️ Smartur Mobile
 
-## Descripción General
+## *Tu portal inteligente a las Altas Montañas*
 
-Esta es la aplicación móvil oficial para el proyecto SMARTUR, desarrollada con Flutter. La aplicación facilita la autenticación de usuarios, el registro y el seguimiento de destinos dentro de una interfaz de usuario de alta calidad.
+**Smartur** es una aplicación móvil de última generación diseñada para exploradores modernos. Combina una estética visual premium con procesos de seguridad avanzados y una experiencia de usuario fluida, permitiendo conectar con guías locales y descubrir rutas auténticas mediante inteligencia artificial.
 
-## Estructura del Proyecto
+---
 
-El proyecto sigue un patrón de arquitectura limpia para garantizar la mantenibilidad y escalabilidad.
+## 🚀 Inicio Rápido
 
-```text
-lib/
-├── core/                       <── Estilos globales, constantes y utilidades del sistema
-│   ├── constants/              <── Configuración de endpoints y URLs de la API
-│   └── style_guide.dart        <── Tokens de diseño centralizados (colores, tipografía)
-├── data/                       <── Capa de datos para la comunicación con servicios externos
-│   └── services/               <── Lógica de negocio para peticiones (Auth, Registro, OTP)
-└── presentation/               <── Capa de interfaz de usuario (UI) y experiencia de usuario
-    ├── screens/                <── Vistas principales (Bienvenida, Login, Inicio)
-    └── widgets/                <── Componentes visuales reutilizables (Loaders, botones)
-```
+Para poner en marcha el proyecto en tu entorno local:
 
-## Requisitos Previos
+1. **Clona el repositorio**
 
-Antes de comenzar, asegúrese de tener instalado lo siguiente:
-
-- [SDK de Flutter](https://docs.flutter.dev/get-started/install) (Canal estable)
-- [SDK de Dart](https://dart.dev/get-started/sdk)
-- Android Studio / VS Code con la extensión de Flutter
-- Un emulador de Android/iOS o un dispositivo físico
-
-## Instalación
-
-1. **Clonar el repositorio:**
    ```bash
    git clone https://github.com/tinnlaroli/smartur-movil.git
-   cd smartur-movil
    ```
 
-2. **Instalar dependencias:**
+2. **Instala las dependencias**
+
    ```bash
    flutter pub get
    ```
 
-3. **Configurar el Entorno:**
-   Actualice la `baseUrl` en `lib/core/constants/api_constants.dart` con su dirección IP local para permitir que el dispositivo móvil se comunique con la API local.
+3. **Configura la conectividad (IMPORTANTE)**
+
+   Para que el dispositivo físico o emulador conecte con el backend, abre `lib/core/constants/api_constants.dart` y cambia la `baseUrl` por tu IP local:
 
    ```dart
-   static const String baseUrl = 'http://SU_IP_LOCAL:3000/api/v2';
+   static const String baseUrl = 'http://192.168.1.X:3000/api/v2';
    ```
 
-## Ejecución en Desarrollo
+4. **Corre la aplicación**
 
-### Ejecutar la aplicación
-
-Para ejecutar la aplicación en modo de desarrollo:
-
-```bash
-flutter run
-```
-
-### Generar versión de producción
-
-Para generar un archivo de instalación (APK) para Android:
-
-```bash
-flutter build apk --release
-```
-
-## Navegación y Rutas
-
-La aplicación utiliza un flujo de navegación estándar:
-
-1. **Pantalla de Bienvenida**: Punto de entrada para usuarios no autenticados.
-2. **Flujo de Login/Registro**: Autenticación basada en hojas inferiores (bottom-sheets) con un proceso de verificación de 2 pasos (OTP).
-3. **Pantalla de Inicio**: Panel principal después de una autenticación exitosa.
-
-## Detalles de Integración de la API
-
-El flujo de autenticación está asegurado mediante un proceso de dos pasos:
-
-- **Fase 1**: Validación inicial de credenciales a través de `/login`.
-- **Fase 2**: Verificación de OTP a través de `/two-factor`.
-- **Registro**: Incorporación de usuarios a través de `/users/register`.
-
-## Permisos y Seguridad
-
-- **Android**: Se ha habilitado `android:usesCleartextTraffic="true"` para la comunicación en desarrollo local.
-- **Internet**: Los permisos estándar de internet están configurados en el archivo `AndroidManifest.xml`.
+   ```bash
+   flutter run
+   ```
 
 ---
-© 2026 Proyecto SMARTUR. Todos los derechos reservados.
+
+## 📂 Arquitectura del Proyecto
+
+Smartur sigue una estructura orientada a **Clean Architecture** (arquitectura limpia) simplificada para Flutter, facilitando la separación de responsabilidades:
+
+```text
+lib/
+├── core/                # El "Corazón" del sistema
+│   ├── constants/       # API endpoints y configuraciones fijas
+│   ├── utils/           # Ayudantes (Notificaciones, validadores)
+│   └── style_guide.dart # Tokens de diseño (Colores HSL, Tipografía)
+├── data/                # Capa de Datos
+│   └── services/        # Consumo de APIs (Auth, Profile, etc.)
+├── models/              # Clases de datos y entidades
+└── presentation/        # Capa de Interfaz (UI)
+    ├── screens/         # Vistas completas (Onboarding, Welcome, Home)
+    └── widgets/         # Componentes atómicos y decoradores
+```
+
+---
+
+## ✨ Características UX Premium
+
+### 1. Atmósfera Dinámica e Infinita
+
+Utilizamos el widget `SmarturBackground` para crear una sensación de profundidad. Este componente cicla suavemente entre 5 colores armónicos (Rosa, Morado, Naranja, Azul, Verde) con un efecto de **Glassmorphism** (cristal esmerilado) que no distrae al usuario.
+
+### 2. Autenticación Robusta y Segura
+
+- **OTP (Two Factor Auth)**: Confirmación visual del correo y opción de cambio rápido de identidad si se cometió un error.
+- **Validación en Tiempo Real**: Checklist interactivo que verifica requisitos de contraseña (Mayúsculas, Números, Longitud) mientras el usuario escribe.
+- **Biometría Nativa**: Integración con sensor de huellas/rostro para accesos rápidos.
+- **Smart Google Login**: Botón persistente con diseño oficial y estados de carga integrados.
+
+### 3. Onboarding de Parallax
+
+Navegación intuitiva con efectos de movimiento sincronizados, soportando tanto animaciones **Lottie** (JSON) como vectores **SVG** de alta fidelidad, garantizando tiempos de carga ínfimos.
+
+---
+
+## 🧩 Componentes Core (Para Desarrolladores)
+
+Si necesitas extender o modificar la app, estos son los widgets clave:
+
+| Widget | Descripción |
+| :--- | :--- |
+| `SmarturBackground` | Fondo animado con degradado cíclico y desenfoque gausiano. |
+| `SmarturShimmer` | Generador de efecto de brillo para cargas (Skeleton loading). |
+| `SkeletonContainer` | Forma base para crear esqueletos de carga rectangulares o circulares. |
+| `SmarturNotifications` | Capa de abstracción sobre Snackbars/Toasts con diseño personalizado. |
+
+### Cómo añadir una pantalla de carga (Skeleton)
+
+```dart
+SmarturShimmer(
+  enabled: _isLoading,
+  child: _isLoading 
+    ? SkeletonText(width: 200) 
+    : Text("Datos cargados")
+)
+```
+
+---
+
+## 🛠 Stack Tecnológico
+
+- **Framework**: Flutter ^3.11.1
+- **State Management**: Stateful widgets (local) + SharedPreferences (persistente).
+- **Seguridad**: `flutter_secure_storage` para tokens JWT.
+- **Animaciones**: `Lottie` + `AnimatedBuilder` (Custom).
+- **Iconografía**: `flutter_svg` para vectores limpios.
+
+---
+
+## 👨‍💻 Guía de Contribución
+
+1. Crea un **Feature Branch** (`git checkout -b feature/novedad`).
+2. Sigue los tokens de color definidos en `lib/core/style_guide.dart`.
+3. Documenta cualquier nuevo servicio en la sección de `lib/data/services/`.
+4. Asegúrate de pasar el análisis estático (`flutter analyze`).
+
+---
+
+© 2026 **SMARTUR Project**. Diseñado con ❤️ para la exploración consciente.
