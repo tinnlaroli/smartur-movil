@@ -167,6 +167,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   final interests = await ProfileService.getSavedInterests();
                   if (!ctx.mounted) return;
                   
+                  if (interests.isEmpty) {
+                    Navigator.pop(ctx);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => PreferencesScreen(userName: widget.userName)),
+                    );
+                    return;
+                  }
+
                   showDialog(
                     context: ctx,
                     builder: (dCtx) => AlertDialog(

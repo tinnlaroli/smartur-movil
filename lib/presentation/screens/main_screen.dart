@@ -100,27 +100,35 @@ class _MainScreenState extends State<MainScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.elasticOut,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isSelected ? SmarturStyle.purple.withValues(alpha: 0.1) : Colors.transparent,
+              color: isSelected ? SmarturStyle.purple.withOpacity(0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(
-              isSelected ? solidIcon : outlineIcon,
-              color: color,
-              size: 26,
+            transform: Matrix4.translationValues(0, isSelected ? -4 : 0, 0),
+            child: AnimatedScale(
+              scale: isSelected ? 1.15 : 1.0,
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.elasticOut,
+              child: Icon(
+                isSelected ? solidIcon : outlineIcon,
+                color: color,
+                size: 26,
+              ),
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 300),
             style: TextStyle(
               fontFamily: 'Outfit',
               fontSize: 11,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
               color: color,
             ),
+            child: Text(label),
           ),
         ],
       ),

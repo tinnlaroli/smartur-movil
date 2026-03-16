@@ -1,4 +1,4 @@
-import 'dart:math';
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -40,45 +40,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _storeOnboardingInfo() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_seen', true);
-  }
-
-  double get _planeX {
-    if (_pageOffset <= 1.0) {
-      return _pageOffset * 60; 
-    } else {
-      return 60 - ((_pageOffset - 1.0) * 60);
-    }
-  }
-
-  double get _planeY {
-    if (_pageOffset <= 1.0) {
-      return -(_pageOffset * 100);
-    } else {
-      return -100 + ((_pageOffset - 1.0) * 150);
-    }
-  }
-
-  double get _planeRotation {
-    if (_pageOffset <= 1.0) {
-      return -(_pageOffset * (30 * pi / 180));
-    } else {
-      double current = -30 * pi / 180;
-      double target = 60 * pi / 180;
-      return current + ((_pageOffset - 1.0) * (target - current));
-    }
-  }
-
-  double get _planeScale {
-    if (_pageOffset <= 1.0) {
-      return 1.0 - (_pageOffset * 0.2); 
-    } else {
-      return 0.8 - ((_pageOffset - 1.0) * 0.6); 
-    }
-  }
-
-  double get _planeOpacity {
-    if (_pageOffset <= 1.5) return 1.0;
-    return (1.0 - ((_pageOffset - 1.5) * 2)).clamp(0.0, 1.0);
   }
 
   Widget _buildImageAsset(String path, {double height = 300, ColorFilter? colorFilter}) {
@@ -180,32 +141,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               },
             ),
 
-            AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return Opacity(
-                  opacity: _planeOpacity,
-                  child: Transform.translate(
-                    offset: Offset(_planeX, _planeY),
-                    child: Transform.rotate(
-                      angle: _planeRotation,
-                      child: Transform.scale(
-                        scale: _planeScale,
-                        child: child,
-                      ),
-                    ),
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 220), 
-                child: _buildImageAsset(
-                  'assets/lottie/paper_plane.json', 
-                  height: 150, 
-                  colorFilter: const ColorFilter.mode(SmarturStyle.textPrimary, BlendMode.srcIn),
-                ),
-              ),
-            ),
 
             Positioned(
               bottom: 40,

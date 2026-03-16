@@ -1,6 +1,6 @@
 class ApiConstants {
-  static const String baseUrl = 'http://192.168.1.94:3000/api/v2';
-
+  // static const String baseUrl = 'http://192.168.1.94:3000/api/v2';
+  static const String baseUrl = 'https://api-smartur.fly.dev/api/v2';
   // Endpoints
   static const String register = '/users/register';
   static const String login = '/login';

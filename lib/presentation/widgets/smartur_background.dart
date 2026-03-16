@@ -35,11 +35,11 @@ class _SmarturBackgroundState extends State<SmarturBackground> with SingleTicker
     // Define the color palette for cycling
     _colorAnimation = TweenSequence<Color?>(
       [
-        _buildSequenceItem(const Color(0xFFA8E6CF), SmarturStyle.purple), // Green to Purple
-        _buildSequenceItem(SmarturStyle.purple, const Color(0xFFFFD3B6)), // Purple to Orange
-        _buildSequenceItem(const Color(0xFFFFD3B6), SmarturStyle.blue),   // Orange to Blue
+        _buildSequenceItem(SmarturStyle.green, SmarturStyle.purple), // Green to Purple
+        _buildSequenceItem(SmarturStyle.purple, SmarturStyle.orange), // Purple to Orange
+        _buildSequenceItem(SmarturStyle.orange, SmarturStyle.blue),   // Orange to Blue
         _buildSequenceItem(SmarturStyle.blue, SmarturStyle.pink),        // Blue to Pink
-        _buildSequenceItem(SmarturStyle.pink, const Color(0xFFA8E6CF)),  // Pink to Green
+        _buildSequenceItem(SmarturStyle.pink, SmarturStyle.green),  // Pink to Green
       ],
     ).animate(_controller);
   }

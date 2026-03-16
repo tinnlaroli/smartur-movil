@@ -24,53 +24,70 @@ class _MapScreenState extends State<MapScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
       ),
-      body: FlutterMap(
-        options: MapOptions(
-          initialCenter: _initialCenter,
-          initialZoom: _initialZoom,
-          minZoom: 8.0,
-          maxZoom: 18.0,
+      body: Container(
+        margin: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.grey.shade200, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        children: [
-          TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.smartur.app',
-          ),
-          MarkerLayer(
-            markers: [
-              Marker(
-                point: _initialCenter,
-                width: 50,
-                height: 50,
-                child: const Icon(
-                  Icons.location_on,
-                  color: SmarturStyle.pink,
-                  size: 44,
-                ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: FlutterMap(
+            options: MapOptions(
+              initialCenter: _initialCenter,
+              initialZoom: _initialZoom,
+              minZoom: 8.0,
+              maxZoom: 18.0,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.smartur.app',
               ),
-              Marker(
-                point: const LatLng(18.8496, -97.1036), // Orizaba Centro
-                width: 50,
-                height: 50,
-                child: const Icon(
-                  Icons.location_on,
-                  color: SmarturStyle.purple,
-                  size: 44,
-                ),
-              ),
-               Marker(
-                point: const LatLng(18.8841, -96.9242), // Córdoba Centro
-                width: 50,
-                height: 50,
-                child: const Icon(
-                  Icons.location_on,
-                  color: SmarturStyle.blue,
-                  size: 44,
-                ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _initialCenter,
+                    width: 50,
+                    height: 50,
+                    child: const Icon(
+                      Icons.location_on,
+                      color: SmarturStyle.pink,
+                      size: 44,
+                    ),
+                  ),
+                  Marker(
+                    point: const LatLng(18.8496, -97.1036), // Orizaba Centro
+                    width: 50,
+                    height: 50,
+                    child: const Icon(
+                      Icons.location_on,
+                      color: SmarturStyle.purple,
+                      size: 44,
+                    ),
+                  ),
+                   Marker(
+                    point: const LatLng(18.8841, -96.9242), // Córdoba Centro
+                    width: 50,
+                    height: 50,
+                    child: const Icon(
+                      Icons.location_on,
+                      color: SmarturStyle.blue,
+                      size: 44,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
