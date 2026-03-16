@@ -7,7 +7,7 @@ import '../../core/style_guide.dart';
 import '../../core/utils/notifications.dart';
 import '../../data/services/auth_service.dart';
 import '../widgets/smartur_background.dart';
-import 'home_screen.dart';
+import 'main_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -218,7 +218,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                             Navigator.pop(context);
                                             Navigator.pushReplacement(
                                               context,
-                                              MaterialPageRoute(builder: (_) => const HomeScreen()),
+                                              MaterialPageRoute(
+                                                builder: (_) => MainScreen(
+                                                  userName: _nameController.text.trim().isNotEmpty
+                                                      ? _nameController.text.trim()
+                                                      : null,
+                                                  isNewLogin: true,
+                                                ),
+                                              ),
                                             );
                                           } else {
                                             if (context.mounted) {
@@ -264,7 +271,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                       Navigator.pop(context);
                                       Navigator.pushReplacement(
                                         context,
-                                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                                        MaterialPageRoute(
+                                          builder: (_) => const MainScreen(
+                                            userName: null,
+                                            isNewLogin: true,
+                                          ),
+                                        ),
                                       );
                                     }
                                   } catch (e) {
@@ -542,7 +554,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
 
       final String? token = await _authService.getToken();
       if (token != null && context.mounted) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const MainScreen(
+              userName: null,
+              isNewLogin: false,
+            ),
+          ),
+        );
       } else if (context.mounted) {
         await _authService.clearSession();
         SmarturNotifications.showInfo(context, 'Sesión expirada. Inicia sesión de nuevo.');

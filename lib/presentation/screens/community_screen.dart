@@ -14,21 +14,87 @@ class CommunityScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Center(
+      body: ListView.builder(
+        padding: const EdgeInsets.only(bottom: 80),
+        itemCount: 8,
+        itemBuilder: (context, index) => _PostCard(index: index),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: SmarturStyle.purple,
+        onPressed: () {
+          // Aquí integrarías ImagePicker para subir foto real
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Acción para subir una foto')),
+          );
+        },
+        child: const Icon(Icons.add_a_photo),
+      ),
+    );
+  }
+}
+
+class _PostCard extends StatelessWidget {
+  final int index;
+
+  const _PostCard({required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 2,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.people_outline, size: 80, color: SmarturStyle.purple),
-            const SizedBox(height: 16),
-            Text(
-              "Red Social",
-              style: SmarturStyle.calSansTitle.copyWith(fontSize: 22),
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: SmarturStyle.purple.withOpacity(0.15),
+                child: const Icon(Icons.person, color: SmarturStyle.purple),
+              ),
+              title: Text(
+                'Turista ${index + 1}',
+                style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text(
+                'Lugar destacado en las Altas Montañas',
+                style: TextStyle(fontFamily: 'Outfit', fontSize: 12),
+              ),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              "Conecta y comparte experiencias\ncon otros turistas.",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary),
+            AspectRatio(
+              aspectRatio: 4 / 3,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+                ),
+                child: const Icon(Icons.photo, size: 64, color: SmarturStyle.textSecondary),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.favorite_border),
+                  ),
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.bookmark_border),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'Hace ${index + 1} h',
+                    style: const TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 11,
+                      color: SmarturStyle.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

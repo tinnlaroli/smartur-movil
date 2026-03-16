@@ -424,15 +424,20 @@ class _SmartURLoaderState extends State<SmartURLoader> with TickerProviderStateM
       // Solo escucha spin y entry; el morph lo maneja FadeTransition internamente
       animation: Listenable.merge([_spinCtrl[i], _entryCtrl[i]]),
       builder: (ctx, child) {
-        final spin = dir * _spinCtrl[i].value * 2 * pi;
+        final bool isOrbitActive =
+            _phase == _Phase.spinning || _phase == _Phase.parking;
+        final spin = isOrbitActive ? dir * _spinCtrl[i].value * 2 * pi : 0.0;
 
         // entry con curva elasticOut (permite overshoot intencional)
         final entryRaw = _entryCtrl[i].value;
         final entry = Curves.elasticOut.transform(entryRaw.clamp(0.0, 1.0));
 
-        // Desplazamiento inicial: arranca desde la órbita y vuela al centro
-        final dx = arc.r * cos(startRad) * (1.0 - entry);
-        final dy = arc.r * sin(startRad) * (1.0 - entry);
+        // Desplazamiento inicial: arranca desde la órbita y vuela al centro.
+        // Cuando ya estamos en morphing / pin / assembling, dx,dy = 0 para que
+        // el ícono quede fijo en su posición final del logo.
+        final factor = isOrbitActive ? (1.0 - entry) : 0.0;
+        final dx = arc.r * cos(startRad) * factor;
+        final dy = arc.r * sin(startRad) * factor;
 
         // Rotación alrededor del pivote (ox,oy) + desplazamiento de entrada (dx,dy).
         // Equivale a T(dx,dy)·T(ox,oy)·R(spin)·T(-ox,-oy) computado analíticamente.

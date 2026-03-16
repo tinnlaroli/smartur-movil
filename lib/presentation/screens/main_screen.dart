@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/style_guide.dart';
 import 'home_screen.dart';
-import 'map_screen.dart';
 import 'diary_screen.dart';
 import 'community_screen.dart';
 import 'profile_screen.dart';
+import 'recommendation_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final String? userName;
@@ -27,7 +27,6 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     _screens = [
       HomeScreen(userName: widget.userName, isNewLogin: widget.isNewLogin),
-      const MapScreen(),
       const DiaryScreen(),
       const CommunityScreen(),
       const ProfileScreen(),
@@ -75,12 +74,13 @@ class _MainScreenState extends State<MainScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 _buildNavItem(Icons.explore_outlined, Icons.explore, 'Inicio', 0),
-                _buildNavItem(Icons.map_outlined, Icons.map, 'Mapa', 1),
-                _buildNavItem(Icons.book_outlined, Icons.book, 'Diario', 2),
-                _buildNavItem(Icons.people_outline, Icons.people, 'Comunidad', 3),
-                _buildNavItem(Icons.person_outline, Icons.person, 'Usuario', 4),
+                _buildNavItem(Icons.book_outlined, Icons.book, 'Diario', 1),
+                _buildCentralCta(context),
+                _buildNavItem(Icons.people_outline, Icons.people, 'Comunidad', 2),
+                _buildNavItem(Icons.person_outline, Icons.person, 'Usuario', 3),
               ],
             ),
           ),
@@ -99,26 +99,7 @@ class _MainScreenState extends State<MainScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.elasticOut,
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isSelected ? SmarturStyle.purple.withOpacity(0.15) : Colors.transparent,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            transform: Matrix4.translationValues(0, isSelected ? -4 : 0, 0),
-            child: AnimatedScale(
-              scale: isSelected ? 1.15 : 1.0,
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.elasticOut,
-              child: Icon(
-                isSelected ? solidIcon : outlineIcon,
-                color: color,
-                size: 26,
-              ),
-            ),
-          ),
+          _buildAnimatedIcon(index, isSelected, color, outlineIcon, solidIcon),
           const SizedBox(height: 4),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 300),
@@ -131,6 +112,107 @@ class _MainScreenState extends State<MainScreen> {
             child: Text(label),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAnimatedIcon(
+    int index,
+    bool isSelected,
+    Color color,
+    IconData outlineIcon,
+    IconData solidIcon,
+  ) {
+    final iconData = isSelected ? solidIcon : outlineIcon;
+
+    // Micro-animaciones:
+    // 0: Inicio      → brújula gira una vuelta corta
+    // 1–3: resto de pestañas sin animación extra (solo cambio de color)
+
+    switch (index) {
+      case 0:
+        // Inicio: giro tipo brújula
+        return AnimatedRotation(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOut,
+          turns: isSelected ? 1.0 : 0.0,
+          child: Icon(iconData, color: color, size: 26),
+        );
+      default:
+        // Otras pestañas: sin animación extra
+        return Icon(iconData, color: color, size: 26);
+    }
+  }
+
+  Widget _buildCentralCta(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const RecommendationScreen(),
+          ),
+        );
+      },
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 72,
+        child: TweenAnimationBuilder<double>(
+          key: ValueKey<int>(_currentIndex),
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOut,
+          builder: (context, value, child) {
+            // Pulso sutil: scale 1.0 → 1.08 → 1.0 según value
+            final double pulse =
+                1.0 + 0.08 * (1 - (2 * (value - 0.5)).abs().clamp(0.0, 1.0));
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Transform.translate(
+                  offset: const Offset(0, -18),
+                  child: Transform.scale(
+                    scale: pulse,
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [SmarturStyle.purple, SmarturStyle.pink],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: SmarturStyle.purple.withOpacity(0.35),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.auto_awesome_outlined,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Recomendar',
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: SmarturStyle.purple,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
