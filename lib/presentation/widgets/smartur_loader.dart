@@ -7,6 +7,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 // ══════════════════════════════════════════════════════════════════════════════
 const double _svgW = 169.42;
 const double _svgH = 218.53;
+const double _svgCx = _svgW / 2;
+const double _svgCy = _svgH / 2;
 
 // ══════════════════════════════════════════════════════════════════════════════
 // DATOS DE ARCOS (órbitas + colores)
@@ -97,7 +99,7 @@ const List<PinPathData> kPinPaths = [
 // ══════════════════════════════════════════════════════════════════════════════
 // FASES DE ANIMACIÓN
 // ══════════════════════════════════════════════════════════════════════════════
-enum _Phase { spinning, parking, morphing, pinDraw, assembling }
+enum _Phase { orbit, converge, pinReveal, zoomOut, done }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // WIDGET PRINCIPAL
@@ -112,31 +114,40 @@ class SmartURLoader extends StatefulWidget {
   State<SmartURLoader> createState() => _SmartURLoaderState();
 }
 
-class _SmartURLoaderState extends State<SmartURLoader> with TickerProviderStateMixin {
+class _SmartURLoaderState extends State<SmartURLoader>
+    with TickerProviderStateMixin {
 
-  // ── Controllers (todos declarados aquí para poder disponerlos) ─────────────
-  late final List<AnimationController> _spinCtrl;    // ×4 rotación infinita
-  late final List<AnimationController> _entryCtrl;   // ×4 entrada desde órbita
-  late final List<AnimationController> _morphCtrl;   // ×4 crossfade avión → ícono
-  late final List<AnimationController> _pinCtrl;     // ×7 reveal de piezas del pin
-  late final AnimationController _progressCtrl;      // barra 0 → 85%
-  late final AnimationController _crawlCtrl;         // rastreo 85 → 99% (lento)
-  late final AnimationController _progressFinalCtrl; // 85 → 100% al final
-  late final AnimationController _fadeOutCtrl;       // fade out de pantalla
+  static const double _zoomFrom = 2.04;  // 15% smaller
+  static const double _zoomTo   = 0.85;
 
-  // ── Animaciones con curvas pre-computadas ──────────────────────────────────
-  late final List<Animation<double>> _morphAnim;  // easeInOut por arco
-  late final List<Animation<double>> _pinAnim;    // easeOutCubic por pieza pin
-  late final Animation<double> _fadeOutAnim;      // easeIn para fade out
+  // All planes orbit CW with varied speeds for organic feel
+  static const List<double> _orbitDir = [1.0, 1.0, 1.0, 1.0];
+  static const List<int>    _spinMs   = [2000, 2300, 2100, 1850];
 
-  // ── SVG Widgets pre-renderizados (se parsean UNA sola vez) ────────────────
-  late final List<Widget> _planeSvgs;  // aviones ×4
-  late final List<Widget> _iconSvgs;   // íconos destino ×4
-  late final List<Widget> _pinSvgs;    // piezas pin ×7
+  // ── Controllers ────────────────────────────────────────────────────────────
+  late final List<AnimationController> _spinCtrl;     // ×4 continuous orbit
+  late final List<AnimationController> _entryCtrl;    // ×4 staggered fade-in
+  late final AnimationController       _convergeCtrl; // settle orbit → resting pos
+  late final List<AnimationController> _morphCtrl;    // ×4 crossfade plane → icon
+  late final List<AnimationController> _pinCtrl;      // ×7 pin piece reveal
+  late final AnimationController       _zoomCtrl;     // pull-back zoom
+  late final AnimationController       _fadeOutCtrl;   // final exit fade
 
-  // ── Estado mínimo ─────────────────────────────────────────────────────────
-  _Phase _phase = _Phase.spinning;
-  bool _showLogo = false;
+  // ── Curved animations ─────────────────────────────────────────────────────
+  late final Animation<double>       _convergeAnim;
+  late final List<Animation<double>> _morphAnim;
+  late final List<Animation<double>> _pinAnim;
+  late final Animation<double>       _zoomAnim;
+  late final Animation<double>       _fadeAnim;
+
+  // ── Pre-built SVG widgets (parsed once) ────────────────────────────────────
+  late final List<Widget> _planeSvgs;
+  late final List<Widget> _iconSvgs;
+  late final List<Widget> _pinSvgs;
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  _Phase _phase = _Phase.orbit;
+  final List<double> _capturedAngles = List.filled(4, 0.0);
 
   // ══════════════════════════════════════════════════════════════════════════
   // INIT
@@ -146,29 +157,25 @@ class _SmartURLoaderState extends State<SmartURLoader> with TickerProviderStateM
     super.initState();
     _initSvgs();
     _initControllers();
-    _startAnimation();
+    _runSequence();
   }
 
-  // Convierte Color a hex string para SVG (#rrggbb)
   static String _hex(Color c) {
     final v = c.toARGB32();
     return '#${v.toRadixString(16).padLeft(8, '0').substring(2)}';
   }
 
   void _initSvgs() {
-    // Aviones — color de arco (.color)
     _planeSvgs = List.generate(4, (i) {
       final h = _hex(kArcs[i].color);
       final rule = i == 3 ? 'evenodd' : 'nonzero';
       return SvgPicture.string(
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $_svgW $_svgH">'
-        '<path d="${kPlanes[i]}" fill="$h" fill-rule="$rule"/>'
-        '</svg>',
+        '<path d="${kPlanes[i]}" fill="$h" fill-rule="$rule"/></svg>',
         width: _svgW, height: _svgH,
       );
     });
 
-    // Íconos destino — color de fill (.fill), soporta multi-path
     _iconSvgs = List.generate(4, (i) {
       final h = _hex(kArcs[i].fill);
       final rule = i == 3 ? 'evenodd' : 'nonzero';
@@ -181,153 +188,144 @@ class _SmartURLoaderState extends State<SmartURLoader> with TickerProviderStateM
       );
     });
 
-    // Piezas del pin
     _pinSvgs = List.generate(7, (j) {
       final h = _hex(kPinPaths[j].color);
       return SvgPicture.string(
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $_svgW $_svgH">'
-        '<path d="${kPinPaths[j].d}" fill="$h"/>'
-        '</svg>',
+        '<path d="${kPinPaths[j].d}" fill="$h"/></svg>',
         width: _svgW, height: _svgH,
       );
     });
   }
 
   void _initControllers() {
-    // Spinners: velocidades ligeramente distintas para variedad visual
     _spinCtrl = List.generate(4, (i) => AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 1200 + i * 200),
+      duration: Duration(milliseconds: _spinMs[i]),
     ));
 
-    // Entradas con elastic bounce
     _entryCtrl = List.generate(4, (i) => AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 950),
+      duration: const Duration(milliseconds: 550),
     ));
 
-    // Morph crossfade avión → ícono
+    _convergeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _convergeAnim = CurvedAnimation(
+      parent: _convergeCtrl,
+      curve: Curves.easeOutExpo,
+    );
+
     _morphCtrl = List.generate(4, (i) => AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 550),
+      duration: const Duration(milliseconds: 500),
     ));
     _morphAnim = _morphCtrl
         .map((c) => CurvedAnimation(parent: c, curve: Curves.easeInOut))
         .toList();
 
-    // Pin reveal (fade-in por pieza)
     _pinCtrl = List.generate(7, (i) => AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 480),
+      duration: const Duration(milliseconds: 380),
     ));
     _pinAnim = _pinCtrl
         .map((c) => CurvedAnimation(parent: c, curve: Curves.easeOutCubic))
         .toList();
 
-    // Progreso principal 0→85%
-    _progressCtrl = AnimationController(
+    _zoomCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2500),
+      duration: const Duration(milliseconds: 1000),
+    );
+    _zoomAnim = CurvedAnimation(
+      parent: _zoomCtrl,
+      curve: Curves.easeOutCubic,
     );
 
-    // Rastreo lento 85→99% mientras se ejecutan las fases intermedias
-    _crawlCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 3500),
-    );
-
-    // Salto final 85→100%
-    _progressFinalCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    );
-
-    // Fade out general
     _fadeOutCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 550),
     );
-    _fadeOutAnim = CurvedAnimation(parent: _fadeOutCtrl, curve: Curves.easeIn);
+    _fadeAnim = CurvedAnimation(
+      parent: _fadeOutCtrl,
+      curve: Curves.easeIn,
+    );
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // LÓGICA DE ANIMACIÓN
+  // ANIMATION SEQUENCE
   // ══════════════════════════════════════════════════════════════════════════
-  void _startAnimation() {
-    _progressCtrl
-      ..addStatusListener((s) {
-        if (s == AnimationStatus.completed) {
-          _crawlCtrl.forward();
-          Future.delayed(const Duration(milliseconds: 200), () {
-            if (mounted) _triggerExit();
-          });
-        }
-      })
-      ..forward();
+  double _shortestAngleTo0(double a) {
+    a = a % (2 * pi);
+    if (a > pi) a -= 2 * pi;
+    if (a < -pi) a += 2 * pi;
+    // Ensure we always take the shortest arc (< 180°)
+    if (a.abs() > pi) {
+      a += (a > 0 ? -2 : 2) * pi;
+    }
+    return a;
+  }
 
-    // Entradas escalonadas de cada avión
+  Future<void> _runSequence() async {
+    // ── 1. Orbit: planes enter staggered & begin spinning ────────────────
     for (int i = 0; i < 4; i++) {
-      Future.delayed(Duration(milliseconds: i * 130), () {
+      Future.delayed(Duration(milliseconds: i * 170), () {
         if (!mounted) return;
         _entryCtrl[i].forward();
         _spinCtrl[i].repeat();
       });
     }
-  }
+    await Future.delayed(const Duration(milliseconds: 2700));
 
-  void triggerExit() => _triggerExit();
-
-  Future<void> _triggerExit() async {
+    // ── 2. Converge + Morph: settle angle while transforming in place ────
     if (!mounted) return;
-
-    // ── 1. Parking: spinners se detienen suavemente ────────────────────────
-    setState(() => _phase = _Phase.parking);
-    for (final c in _spinCtrl) {
-      c.stop();
-    }
-    await Future.delayed(const Duration(milliseconds: 380));
-
-    // ── 2. Morph crossfade escalonado ──────────────────────────────────────
-    if (!mounted) return;
-    setState(() => _phase = _Phase.morphing);
     for (int i = 0; i < 4; i++) {
-      Future.delayed(Duration(milliseconds: i * 90), () {
-        if (mounted) _morphCtrl[i].forward();
-      });
+      _capturedAngles[i] = _shortestAngleTo0(
+        _spinCtrl[i].value * 2 * pi * _orbitDir[i],
+      );
+      _spinCtrl[i].stop();
     }
-    await Future.delayed(const Duration(milliseconds: 850));
+    setState(() => _phase = _Phase.converge);
+    _convergeCtrl.forward();
+    // Morph starts 200ms into converge so the snap is almost done
+    Future.delayed(const Duration(milliseconds: 200), () {
+      for (int i = 0; i < 4; i++) {
+        Future.delayed(Duration(milliseconds: i * 100), () {
+          if (mounted) _morphCtrl[i].forward();
+        });
+      }
+    });
+    await Future.delayed(const Duration(milliseconds: 1100));
 
-    // ── 3. Reveal del pin (piezas aparecen escalonadas) ───────────────────
+    // ── 4. Pin reveal: pieces appear staggered ──────────────────────────
     if (!mounted) return;
-    setState(() => _phase = _Phase.pinDraw);
+    setState(() => _phase = _Phase.pinReveal);
     for (int j = 0; j < 7; j++) {
-      Future.delayed(Duration(milliseconds: j * 95), () {
+      Future.delayed(Duration(milliseconds: j * 85), () {
         if (mounted) _pinCtrl[j].forward();
       });
     }
-    await Future.delayed(const Duration(milliseconds: 1250));
+    await Future.delayed(const Duration(milliseconds: 1000));
 
-    // ── 4. Ensamble final ──────────────────────────────────────────────────
+    // ── 5. Zoom out: pull back to reveal the full assembled logo ────────
     if (!mounted) return;
-    setState(() => _phase = _Phase.assembling);
-    _crawlCtrl.stop();
-    _progressFinalCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 480));
+    setState(() => _phase = _Phase.zoomOut);
+    _zoomCtrl.forward();
+    await Future.delayed(const Duration(milliseconds: 1100));
 
-    // ── 5. Logo aparece ────────────────────────────────────────────────────
+    // ── 6. Brief hold, then fade out ────────────────────────────────────
     if (!mounted) return;
-    setState(() => _showLogo = true);
-    await Future.delayed(const Duration(milliseconds: 650));
-
-    // ── 6. Fade out y callback ─────────────────────────────────────────────
+    await Future.delayed(const Duration(milliseconds: 450));
     if (!mounted) return;
+    setState(() => _phase = _Phase.done);
     _fadeOutCtrl.forward().whenComplete(() {
       if (mounted) widget.onFinished?.call();
     });
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // DISPOSE — ningún controller queda sin limpiar
+  // DISPOSE
   // ══════════════════════════════════════════════════════════════════════════
   @override
   void dispose() {
@@ -337,15 +335,14 @@ class _SmartURLoaderState extends State<SmartURLoader> with TickerProviderStateM
     for (final c in _entryCtrl) {
       c.dispose();
     }
+    _convergeCtrl.dispose();
     for (final c in _morphCtrl) {
       c.dispose();
     }
     for (final c in _pinCtrl) {
       c.dispose();
     }
-    _progressCtrl.dispose();
-    _crawlCtrl.dispose();
-    _progressFinalCtrl.dispose();
+    _zoomCtrl.dispose();
     _fadeOutCtrl.dispose();
     super.dispose();
   }
@@ -355,26 +352,33 @@ class _SmartURLoaderState extends State<SmartURLoader> with TickerProviderStateM
   // ══════════════════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
-    // Dimensiones con aspect ratio correcto del viewBox (169.42 / 218.53 ≈ 0.775)
-    final double w = widget.isMini ? 62.0  : 156.0;
-    final double h = widget.isMini ? 80.0  : 201.0;
-
     return FadeTransition(
-      opacity: ReverseAnimation(_fadeOutAnim),
+      opacity: ReverseAnimation(_fadeAnim),
       child: ColoredBox(
         color: Colors.white,
         child: SizedBox.expand(
           child: Center(
-            child: SizedBox(
-              width: w,
-              height: h,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  _buildSvgContent(w, h),
-                  _buildLogo(w),
-                  _buildProgressText(h),
-                ],
+            child: AnimatedBuilder(
+              animation: _zoomCtrl,
+              builder: (_, child) {
+                final s = _zoomFrom + (_zoomTo - _zoomFrom) * _zoomAnim.value;
+                return Transform.scale(
+                  scale: widget.isMini ? 0.4 : s,
+                  child: child,
+                );
+              },
+              child: SizedBox(
+                width: _svgW,
+                height: _svgH,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (int j = 0; j < 7; j++)
+                      FadeTransition(opacity: _pinAnim[j], child: _pinSvgs[j]),
+                    for (int i = 0; i < 4; i++)
+                      RepaintBoundary(child: _buildArc(i)),
+                  ],
+                ),
               ),
             ),
           ),
@@ -383,145 +387,67 @@ class _SmartURLoaderState extends State<SmartURLoader> with TickerProviderStateM
     );
   }
 
-  // ── Capas SVG escaladas al viewBox ────────────────────────────────────────
-  Widget _buildSvgContent(double w, double h) {
-    // Mapeo uniforme de coordenadas SVG (169.42×218.53) al espacio del widget
-    final scale = min(w / _svgW, h / _svgH);
-    final ox = (w - _svgW * scale) / 2;
-    final oy = (h - _svgH * scale) / 2;
-
-    return Transform.translate(
-      offset: Offset(ox, oy),
-      child: Transform.scale(
-        scale: scale,
-        alignment: Alignment.topLeft,
-        child: SizedBox(
-          width: _svgW,
-          height: _svgH,
-          child: Stack(
-            children: [
-              // Pin: cada pieza hace fade-in de forma escalonada
-              for (int j = 0; j < 7; j++)
-                FadeTransition(opacity: _pinAnim[j], child: _pinSvgs[j]),
-
-              // Arcos: cada uno en su propio RepaintBoundary (diferente frecuencia)
-              for (int i = 0; i < 4; i++)
-                RepaintBoundary(child: _buildArc(i)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Un arco giratorio con crossfade avión → ícono ────────────────────────
+  // ── Single orbiting arc with crossfade plane → icon ────────────────────
   Widget _buildArc(int i) {
-    final arc = kArcs[i];
-    final dir = i % 2 == 0 ? 1.0 : -1.0;
-    final startRad = arc.startDeg * pi / 180.0;
-
     return AnimatedBuilder(
-      // Solo escucha spin y entry; el morph lo maneja FadeTransition internamente
-      animation: Listenable.merge([_spinCtrl[i], _entryCtrl[i]]),
-      builder: (ctx, child) {
-        final bool isOrbitActive =
-            _phase == _Phase.spinning || _phase == _Phase.parking;
-        final spin = isOrbitActive ? dir * _spinCtrl[i].value * 2 * pi : 0.0;
+      animation: Listenable.merge([
+        _spinCtrl[i], _entryCtrl[i], _convergeCtrl, _morphCtrl[i],
+      ]),
+      builder: (_, _) {
+        final entry = Curves.easeOut.transform(
+          _entryCtrl[i].value.clamp(0.0, 1.0),
+        );
 
-        // entry con curva elasticOut (permite overshoot intencional)
-        final entryRaw = _entryCtrl[i].value;
-        final entry = Curves.elasticOut.transform(entryRaw.clamp(0.0, 1.0));
+        double angle;
+        if (_phase == _Phase.orbit) {
+          angle = _spinCtrl[i].value * 2 * pi * _orbitDir[i];
+        } else {
+          angle = _capturedAngles[i] * (1.0 - _convergeAnim.value);
+        }
 
-        // Desplazamiento inicial: arranca desde la órbita y vuela al centro.
-        // Cuando ya estamos en morphing / pin / assembling, dx,dy = 0 para que
-        // el ícono quede fijo en su posición final del logo.
-        final factor = isOrbitActive ? (1.0 - entry) : 0.0;
-        final dx = arc.r * cos(startRad) * factor;
-        final dy = arc.r * sin(startRad) * factor;
+        // Planes orbit at 55% size, grow to 100% during converge
+        final double planeScale = _phase == _Phase.orbit
+            ? 0.55
+            : (0.55 + 0.45 * _convergeAnim.value).clamp(0.55, 1.0);
+        final double morphT = _morphAnim[i].value;
 
-        // Rotación alrededor del pivote (ox,oy) + desplazamiento de entrada (dx,dy).
-        // Equivale a T(dx,dy)·T(ox,oy)·R(spin)·T(-ox,-oy) computado analíticamente.
-        final cosA = cos(spin);
-        final sinA = sin(spin);
-        final m = Matrix4.identity();
-        m.setEntry(0, 0,  cosA);
-        m.setEntry(0, 1, -sinA);
-        m.setEntry(1, 0,  sinA);
-        m.setEntry(1, 1,  cosA);
-        m.setEntry(0, 3,  arc.ox * (1 - cosA) + arc.oy * sinA + dx);
-        m.setEntry(1, 3, -arc.ox * sinA + arc.oy * (1 - cosA) + dy);
+        final cosA = cos(angle);
+        final sinA = sin(angle);
+        final tx = _svgCx * (1 - cosA) + _svgCy * sinA;
+        final ty = _svgCy * (1 - cosA) - _svgCx * sinA;
+
+        final m = Matrix4.identity()
+          ..setEntry(0, 0, cosA)
+          ..setEntry(0, 1, -sinA)
+          ..setEntry(1, 0, sinA)
+          ..setEntry(1, 1, cosA)
+          ..setEntry(0, 3, tx)
+          ..setEntry(1, 3, ty);
 
         return Opacity(
-          opacity: entryRaw.clamp(0.0, 1.0),
-          child: Transform(transform: m, child: child),
+          opacity: entry,
+          child: Transform(
+            transform: m,
+            child: Stack(
+              children: [
+                if (morphT < 1.0)
+                  Opacity(
+                    opacity: 1.0 - morphT,
+                    child: Transform.scale(
+                      scale: planeScale,
+                      child: _planeSvgs[i],
+                    ),
+                  ),
+                if (morphT > 0.0)
+                  Opacity(
+                    opacity: morphT,
+                    child: _iconSvgs[i],
+                  ),
+              ],
+            ),
+          ),
         );
       },
-      // child se construye UNA vez y se reutiliza en cada tick del builder
-      child: Stack(
-        children: [
-          // Avión: opacidad 1→0 al morphear
-          FadeTransition(
-            opacity: ReverseAnimation(_morphAnim[i]),
-            child: _planeSvgs[i],
-          ),
-          // Ícono: opacidad 0→1 al morphear (crossfade complementario)
-          FadeTransition(
-            opacity: _morphAnim[i],
-            child: _iconSvgs[i],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Logo final ─────────────────────────────────────────────────────────────
-  Widget _buildLogo(double w) {
-    return AnimatedOpacity(
-      opacity: _showLogo ? 1.0 : 0.0,
-      duration: const Duration(milliseconds: 400),
-      child: AnimatedScale(
-        scale: _showLogo ? 1.0 : 1.7,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutCubic,
-        child: Image.asset('assets/imgs/logo.png', width: w * 0.62),
-      ),
-    );
-  }
-
-  // ── Contador de progreso ───────────────────────────────────────────────────
-  Widget _buildProgressText(double h) {
-    return Positioned(
-      bottom: 6,
-      child: AnimatedBuilder(
-        animation: Listenable.merge([_progressCtrl, _crawlCtrl, _progressFinalCtrl]),
-        builder: (ctx, _) {
-          final double pct;
-          if (_progressFinalCtrl.value > 0) {
-            // Fase final: 85→100%
-            pct = 85.0 + Curves.easeOut.transform(_progressFinalCtrl.value) * 15.0;
-          } else if (_progressCtrl.isCompleted) {
-            // Rastreo lento: 85→99%
-            pct = 85.0 + Curves.decelerate.transform(_crawlCtrl.value) * 14.0;
-          } else {
-            // Progreso principal: 0→85%
-            pct = Curves.easeOut.transform(_progressCtrl.value) * 85.0;
-          }
-
-          return AnimatedOpacity(
-            opacity: _phase == _Phase.assembling ? 0.0 : 1.0,
-            duration: const Duration(milliseconds: 300),
-            child: Text(
-              '${pct.floor()}%',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF555555),
-                decoration: TextDecoration.none,
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 }

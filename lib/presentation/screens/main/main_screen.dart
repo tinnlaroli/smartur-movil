@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../core/style_guide.dart';
+import '../../../core/theme/style_guide.dart';
 import 'home_screen.dart';
 import 'diary_screen.dart';
 import 'community_screen.dart';
 import 'profile_screen.dart';
-import 'recommendation_screen.dart';
+import '../explore/recommendation_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final String? userName;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/style_guide.dart';
+import '../../../core/theme/style_guide.dart';
 
 class CommunityScreen extends StatelessWidget {
   const CommunityScreen({super.key});

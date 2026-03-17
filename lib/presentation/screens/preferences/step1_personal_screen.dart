@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/style_guide.dart';
+import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 
 /// Paso 1: Datos Personales (edad, rango edad, género)
@@ -17,7 +17,7 @@ class
 _PreferencesStep1State extends State<PreferencesStep1> {
   final _formKey = GlobalKey<FormState>();
 
-  final _ageController = TextEditingController();
+  final _birthYearController = TextEditingController();
   String? _selectedGender;
 
   final List<Map<String, dynamic>> _genders = [
@@ -32,14 +32,16 @@ _PreferencesStep1State extends State<PreferencesStep1> {
     super.initState();
     // Restore from shared data if user navigates back
     if (widget.data['age'] != null) {
-      _ageController.text = widget.data['age'].toString();
+      final currentYear = DateTime.now().year;
+      final age = widget.data['age'] as int;
+      _birthYearController.text = (currentYear - age).toString();
     }
     _selectedGender = widget.data['gender'];
   }
 
   @override
   void dispose() {
-    _ageController.dispose();
+    _birthYearController.dispose();
     super.dispose();
   }
 
@@ -50,20 +52,23 @@ _PreferencesStep1State extends State<PreferencesStep1> {
       return;
     }
 
-    final age = int.tryParse(_ageController.text.trim());
+    final birthYear = int.tryParse(_birthYearController.text.trim());
+    if (birthYear == null) return;
+
+    final currentYear = DateTime.now().year;
+    final age = currentYear - birthYear;
+
     String ageRange = '18-30'; // Default
-    if (age != null) {
-      if (age < 18) {
-        ageRange = 'Menor de 18';
-      } else if (age <= 30) {
-        ageRange = '18-30';
-      } else if (age <= 45) {
-        ageRange = '31-45';
-      } else if (age <= 60) {
-        ageRange = '46-60';
-      } else {
-        ageRange = 'Mayor de 60';
-      }
+    if (age < 18) {
+      ageRange = 'Menor de 18';
+    } else if (age <= 30) {
+      ageRange = '18-30';
+    } else if (age <= 45) {
+      ageRange = '31-45';
+    } else if (age <= 60) {
+      ageRange = '46-60';
+    } else {
+      ageRange = 'Mayor de 60';
     }
 
     widget.data['age'] = age;
@@ -79,19 +84,20 @@ _PreferencesStep1State extends State<PreferencesStep1> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Edad
+          // Año de nacimiento
           TextFormField(
-            controller: _ageController,
+            controller: _birthYearController,
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
-              labelText: 'Tu edad',
-              prefixIcon: const Icon(Icons.cake_outlined, color: SmarturStyle.purple),
+              labelText: 'Año de nacimiento',
+              prefixIcon: const Icon(Icons.calendar_today_outlined, color: SmarturStyle.purple),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             validator: (v) {
-              if (v == null || v.isEmpty) return 'Ingresa tu edad';
+              if (v == null || v.isEmpty) return 'Ingresa tu año de nacimiento';
               final n = int.tryParse(v);
-              if (n == null || n < 10 || n > 110) return 'Edad no válida';
+              final currentYear = DateTime.now().year;
+              if (n == null || n < 1900 || n > currentYear - 10) return 'Año no válido';
               return null;
             },
           ),

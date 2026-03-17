@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/style_guide.dart';
+import '../../../core/theme/style_guide.dart';
 
 class RecommendationScreen extends StatelessWidget {
   final String? city;

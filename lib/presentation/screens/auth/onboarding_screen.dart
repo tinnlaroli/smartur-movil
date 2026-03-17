@@ -1,13 +1,12 @@
 
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smartur/models/onboarding_model.dart';
-import 'package:smartur/core/style_guide.dart';
-import 'welcome_screen.dart'; 
-import '../widgets/smartur_background.dart';
+import '../../../data/models/onboarding_model.dart';
+import '../../../core/theme/style_guide.dart';
+import 'welcome_screen.dart';
+import '../../widgets/smartur_background.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});

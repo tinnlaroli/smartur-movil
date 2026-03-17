@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/style_guide.dart';
+import '../../../core/theme/style_guide.dart';
 
 /// Paso 3: Accesibilidad, restricciones, preferencias sostenibles, visita previa
 class PreferencesStep3 extends StatefulWidget {

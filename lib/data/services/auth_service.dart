@@ -9,17 +9,18 @@ class AuthService {
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'auth_token';
   static const _biometricKey = 'biometric_enabled';
-
-  // ── Exceptions ─────────────────────────────────────────────────────────
+  static const _biometricDismissedKey = 'biometric_dismissed';
+  static const _userIdKey = 'user_id';
+  static const _userNameKey = 'user_name';
+  static const _userEmailKey = 'user_email';
 
   static final _googleSignIn = GoogleSignIn.instance;
 
   AuthService() {
-    // OJO: ESTO DEBERIA IR EN .env
     unawaited(_googleSignIn.initialize(
-      serverClientId: '77253773974-b412uvcqhrqmchhtdq5rq6tl81hpados.apps.googleusercontent.com', 
+      serverClientId:
+          '77253773974-b412uvcqhrqmchhtdq5rq6tl81hpados.apps.googleusercontent.com',
     ));
-
   }
 
   // ── Token persistence ───────────────────────────────────────────────────
@@ -37,8 +38,6 @@ class AuthService {
     return token != null && token.isNotEmpty;
   }
 
-  /// Cierra sesión. Si la huella está activada, el token se conserva
-  /// (queda protegido detrás del sensor biométrico).
   Future<void> clearSession() async {
     final biometric = await isBiometricEnabled();
     if (!biometric) {
@@ -46,10 +45,73 @@ class AuthService {
     }
   }
 
-  /// Borra TODO: token + preferencia de huella. Logout total.
   Future<void> fullLogout() async {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _biometricKey);
+    await _storage.delete(key: _biometricDismissedKey);
+    await _storage.delete(key: _userIdKey);
+    await _storage.delete(key: _userNameKey);
+    await _storage.delete(key: _userEmailKey);
+  }
+
+  // ── User data persistence ──────────────────────────────────────────────
+
+  Future<void> saveUserData(Map<String, dynamic> user) async {
+    if (user['id'] != null) {
+      await _storage.write(key: _userIdKey, value: user['id'].toString());
+    }
+    if (user['name'] != null) {
+      await _storage.write(key: _userNameKey, value: user['name']);
+    }
+    if (user['email'] != null) {
+      await _storage.write(key: _userEmailKey, value: user['email']);
+    }
+  }
+
+  Future<int?> getUserId() async {
+    final val = await _storage.read(key: _userIdKey);
+    if (val != null) return int.tryParse(val);
+    return _resolveUserIdFromToken();
+  }
+
+  Future<String?> getUserName() async =>
+      await _storage.read(key: _userNameKey);
+
+  Future<String?> getUserEmail() async {
+    final stored = await _storage.read(key: _userEmailKey);
+    if (stored != null) return stored;
+    final token = await getToken();
+    if (token == null) return null;
+    return _decodeTokenPayload(token)?['email'] as String?;
+  }
+
+  int? _resolveUserIdFromToken() {
+    return null; // will be resolved async
+  }
+
+  Future<int?> resolveUserId() async {
+    final stored = await _storage.read(key: _userIdKey);
+    if (stored != null) return int.tryParse(stored);
+    final token = await getToken();
+    if (token == null) return null;
+    final decoded = _decodeTokenPayload(token);
+    final id = decoded?['id'] as int?;
+    if (id != null) {
+      await _storage.write(key: _userIdKey, value: id.toString());
+    }
+    return id;
+  }
+
+  Map<String, dynamic>? _decodeTokenPayload(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final normalized = base64Url.normalize(parts[1]);
+      return jsonDecode(utf8.decode(base64Url.decode(normalized)))
+          as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
   }
 
   // ── Biometric preference ───────────────────────────────────────────────
@@ -60,6 +122,15 @@ class AuthService {
 
   Future<bool> isBiometricEnabled() async {
     final val = await _storage.read(key: _biometricKey);
+    return val == 'true';
+  }
+
+  Future<void> setBiometricDismissed(bool dismissed) async {
+    await _storage.write(key: _biometricDismissedKey, value: dismissed.toString());
+  }
+
+  Future<bool> isBiometricDismissed() async {
+    final val = await _storage.read(key: _biometricDismissedKey);
     return val == 'true';
   }
 
@@ -75,14 +146,16 @@ class AuthService {
     if (response.statusCode == 201 || response.statusCode == 200) {
       return true;
     } else {
-      final errorMsg = jsonDecode(response.body)['message'] ?? 'Error al registrarse.';
+      final errorMsg =
+          jsonDecode(response.body)['message'] ?? 'Error al registrarse.';
       throw AuthException(errorMsg);
     }
   }
 
   // ── LOGIN PASO 1 (Credenciales) ────────────────────────────────────────
 
-  Future<Map<String, dynamic>?> loginStep1(String email, String password) async {
+  Future<Map<String, dynamic>?> loginStep1(
+      String email, String password) async {
     final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.login}');
     final response = await http.post(
       url,
@@ -93,12 +166,13 @@ class AuthService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      final errorMsg = jsonDecode(response.body)['message'] ?? 'Credenciales incorrectas.';
+      final errorMsg =
+          jsonDecode(response.body)['message'] ?? 'Credenciales incorrectas.';
       throw AuthException(errorMsg);
     }
   }
 
-  // ── LOGIN PASO 2 (OTP) — guarda el token automáticamente ───────────────
+  // ── LOGIN PASO 2 (OTP) ────────────────────────────────────────────────
 
   Future<String?> verifyOTP(String email, String otpCode) async {
     final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.twoFactor}');
@@ -111,30 +185,25 @@ class AuthService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final String? token = data['token'];
-      if (token != null) {
-        await saveToken(token);
+      if (token != null) await saveToken(token);
+      if (data['user'] != null) {
+        await saveUserData(data['user'] as Map<String, dynamic>);
       }
       return token;
     }
     return null;
   }
 
-// ── LOGIN PASO 3 (Google) ───────────────────────────────────────────────
-//
-// google_sign_in ^7.x eliminó el constructor sin nombre y el método signIn().
-// La API correcta es:
-//   - GoogleSignIn.instance  → singleton
-//   - initialize(serverClientId: ...)  → una sola vez
-//   - authenticate(scopeHint: [...])  → abre el selector de cuentas
+  // ── LOGIN Google ───────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>?> loginWithGoogle() async {
     try {
-      // authenticate() abre el selector de cuentas (equivale al viejo signIn())
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
         scopeHint: ['email', 'profile'],
       );
 
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
       if (idToken == null) {
@@ -143,35 +212,129 @@ class AuthService {
 
       final url = Uri.parse('${ApiConstants.baseUrl}/google-login');
 
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({"idToken": idToken}),
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({"idToken": idToken}),
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final String? token = data['token'];
-        if (token != null) {
-          await saveToken(token);
+        if (token != null) await saveToken(token);
+        if (data['user'] != null) {
+          await saveUserData(data['user'] as Map<String, dynamic>);
         }
         return data;
       } else if (response.statusCode == 401) {
-        throw AuthException('Tu sesión de Google ha expirado. Por favor, intenta de nuevo.');
+        throw AuthException(
+            'Tu sesión de Google ha expirado. Por favor, intenta de nuevo.');
       } else if (response.statusCode == 400) {
-        final errorMsg = jsonDecode(response.body)['message'] ?? 'Hubo un error con los datos de tu cuenta de Google.';
+        final errorMsg = jsonDecode(response.body)['message'] ??
+            'Hubo un error con los datos de tu cuenta de Google.';
         throw AuthException('Error de validación: $errorMsg');
       } else {
-        throw AuthException('El servidor no responde (${response.statusCode}). Por favor, intenta más tarde.');
+        throw AuthException(
+            'El servidor no responde (${response.statusCode}). Por favor, intenta más tarde.');
       }
     } on AuthCancelledException {
       rethrow;
     } on TimeoutException {
-      throw AuthException('La conexión tardó demasiado. Verifica tu internet.');
+      throw AuthException(
+          'La conexión tardó demasiado. Verifica tu internet.');
     } catch (error) {
       if (error is AuthException) rethrow;
       throw AuthException('Error inesperado: $error');
     }
+  }
+
+  // ── Forgot / Reset Password ────────────────────────────────────────────
+
+  Future<void> forgotPassword(String email) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.forgot}');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({"email": email}),
+    );
+    if (response.statusCode != 200) {
+      final msg = jsonDecode(response.body)['message'] ??
+          'Error al enviar código de verificación';
+      throw AuthException(msg);
+    }
+  }
+
+  Future<void> resetPassword(
+      String email, String code, String newPassword) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.reset}');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(
+          {"email": email, "token": code, "newPassword": newPassword}),
+    );
+    if (response.statusCode != 200) {
+      final msg = jsonDecode(response.body)['message'] ??
+          'Error al restablecer contraseña';
+      throw AuthException(msg);
+    }
+  }
+
+  // ── User Profile (GET / PATCH) ─────────────────────────────────────────
+
+  Future<Map<String, dynamic>?> getUserProfile() async {
+    final userId = await resolveUserId();
+    final token = await getToken();
+    if (userId == null || token == null) return null;
+
+    final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.users}/$userId');
+    final response = await http.get(url, headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    });
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final user = data['user'] as Map<String, dynamic>?;
+      if (user != null) await saveUserData(user);
+      return user;
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> updateUser(
+      Map<String, dynamic> updates) async {
+    final userId = await resolveUserId();
+    final token = await getToken();
+    if (userId == null || token == null) return null;
+
+    final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.users}/$userId');
+    final response = await http.patch(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(updates),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final user = data['user'] as Map<String, dynamic>?;
+      if (user != null) await saveUserData(user);
+      return user;
+    } else {
+      final msg =
+          jsonDecode(response.body)['message'] ?? 'Error al actualizar perfil';
+      throw AuthException(msg);
+    }
+  }
+
+  Future<void> deactivateAccount() async {
+    await updateUser({"is_active": false});
+    await fullLogout();
   }
 }
 
@@ -185,5 +348,6 @@ class AuthException implements Exception {
 }
 
 class AuthCancelledException extends AuthException {
-  AuthCancelledException() : super('Inicio de sesión cancelado por el usuario');
+  AuthCancelledException()
+      : super('Inicio de sesión cancelado por el usuario');
 }

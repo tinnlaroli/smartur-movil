@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 
-import '../../core/style_guide.dart';
-import '../../core/utils/notifications.dart';
-import '../../data/services/auth_service.dart';
-import '../widgets/smartur_background.dart';
-import 'main_screen.dart';
+import '../../../core/theme/style_guide.dart';
+import '../../../core/utils/notifications.dart';
+import '../../../data/services/auth_service.dart';
+import '../../widgets/smartur_background.dart';
+import '../main/main_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -68,16 +68,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
 
   // --- RESTORED AUTH MODAL LOGIC ---
   void _showAuthModal(BuildContext context, {bool isLogin = false}) {
-    bool _isExpanded = false;
-    bool _isWaitingOTP = false;
-    bool _isLoadingEmail = false;
-    bool _isLoadingGoogle = false;
-    final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+    bool isExpanded = false;
+    bool isWaitingOTP = false;
+    bool isLoadingEmail = false;
+    bool isLoadingGoogle = false;
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-    final TextEditingController _emailController = TextEditingController();
-    final TextEditingController _passwordController = TextEditingController();
-    final TextEditingController _nameController = TextEditingController();
-    final TextEditingController _otpController = TextEditingController();
+    final TextEditingController emailController = TextEditingController();
+    final TextEditingController passwordController = TextEditingController();
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController otpController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -86,7 +86,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
-            double? height = _isExpanded
+            double? height = isExpanded
                 ? MediaQuery.of(context).size.height * 0.75
                 : null;
 
@@ -106,7 +106,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
               ),
               child: SingleChildScrollView(
                 child: Form(
-                  key: _formKey,
+                  key: formKey,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -138,13 +138,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                         ),
                       ),
                       const SizedBox(height: 32),
-                      if (!_isExpanded) ...[
+                      if (!isExpanded) ...[
                         ElevatedButton(
-                          onPressed: () => setModalState(() => _isExpanded = true),
+                          onPressed: () => setModalState(() => isExpanded = true),
                           child: Text(isLogin ? 'Continuar con Email' : 'Registrarse con Email'),
                         ),
                       ] else ...[
-                        if (_isWaitingOTP)
+                        if (isWaitingOTP)
                           Column(
                             children: [
                               Text(
@@ -152,12 +152,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                 style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary, fontSize: 13),
                               ),
                               Text(
-                                _emailController.text,
+                                emailController.text,
                                 style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: SmarturStyle.textPrimary),
                               ),
                               const SizedBox(height: 20),
                               TextFormField(
-                                controller: _otpController,
+                                controller: otpController,
                                 keyboardType: TextInputType.number,
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
@@ -173,8 +173,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               ),
                               TextButton(
                                 onPressed: () => setModalState(() {
-                                  _isWaitingOTP = false;
-                                  _otpController.clear();
+                                  isWaitingOTP = false;
+                                  otpController.clear();
                                 }),
                                 child: const Text('Cambiar correo', style: TextStyle(color: SmarturStyle.purple)),
                               ),
@@ -183,27 +183,27 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                         else
                           _buildAuthFields(
                             isLogin,
-                            _nameController,
-                            _emailController,
-                            _passwordController,
+                            nameController,
+                            emailController,
+                            passwordController,
                             setModalState,
                           ),
                         const SizedBox(height: 24),
                         ElevatedButton(
-                          onPressed: (_isLoadingEmail || _isLoadingGoogle)
+                          onPressed: (isLoadingEmail || isLoadingGoogle)
                               ? null
                               : () async {
-                                  if (_formKey.currentState!.validate()) {
-                                    setModalState(() => _isLoadingEmail = true);
+                                  if (formKey.currentState!.validate()) {
+                                    setModalState(() => isLoadingEmail = true);
                                     try {
                                       if (isLogin) {
-                                        if (!_isWaitingOTP) {
+                                        if (!isWaitingOTP) {
                                           final response = await _authService.loginStep1(
-                                            _emailController.text.trim(),
-                                            _passwordController.text.trim(),
+                                            emailController.text.trim(),
+                                            passwordController.text.trim(),
                                           );
                                           if (response != null && response['requiresVerification'] == true) {
-                                            setModalState(() => _isWaitingOTP = true);
+                                            setModalState(() => isWaitingOTP = true);
                                           } else {
                                             if (context.mounted) {
                                               SmarturNotifications.showError(context, "Credenciales incorrectas.");
@@ -211,8 +211,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                           }
                                         } else {
                                           final token = await _authService.verifyOTP(
-                                            _emailController.text.trim(),
-                                            _otpController.text.trim(),
+                                            emailController.text.trim(),
+                                            otpController.text.trim(),
                                           );
                                           if (token != null && context.mounted) {
                                             Navigator.pop(context);
@@ -220,8 +220,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                               context,
                                               MaterialPageRoute(
                                                 builder: (_) => MainScreen(
-                                                  userName: _nameController.text.trim().isNotEmpty
-                                                      ? _nameController.text.trim()
+                                                  userName: nameController.text.trim().isNotEmpty
+                                                      ? nameController.text.trim()
                                                       : null,
                                                   isNewLogin: true,
                                                 ),
@@ -235,9 +235,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                         }
                                       } else {
                                         bool success = await _authService.register(
-                                          _nameController.text.trim(),
-                                          _emailController.text.trim(),
-                                          _passwordController.text.trim(),
+                                          nameController.text.trim(),
+                                          emailController.text.trim(),
+                                          passwordController.text.trim(),
                                         );
                                         if (success && context.mounted) {
                                           setModalState(() => isLogin = true);
@@ -249,22 +249,22 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                         SmarturNotifications.showError(context, "Error de conexión.");
                                       }
                                     } finally {
-                                      setModalState(() => _isLoadingEmail = false);
+                                      setModalState(() => isLoadingEmail = false);
                                     }
                                   }
                                 },
-                          child: _isLoadingEmail
+                          child: isLoadingEmail
                               ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : Text(_isWaitingOTP ? 'VERIFICAR' : (isLogin ? 'ENTRAR' : 'CREAR CUENTA')),
+                              : Text(isWaitingOTP ? 'VERIFICAR' : (isLogin ? 'ENTRAR' : 'CREAR CUENTA')),
                         ),
                       ],
-                      if (!_isWaitingOTP) ...[
+                      if (!isWaitingOTP) ...[
                         const SizedBox(height: 12),
                         OutlinedButton(
-                          onPressed: (_isLoadingEmail || _isLoadingGoogle)
+                          onPressed: (isLoadingEmail || isLoadingGoogle)
                               ? null
                               : () async {
-                                  setModalState(() => _isLoadingGoogle = true);
+                                  setModalState(() => isLoadingGoogle = true);
                                   try {
                                     final response = await _authService.loginWithGoogle();
                                     if (response != null && context.mounted) {
@@ -284,14 +284,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                       SmarturNotifications.showError(context, e.toString());
                                     }
                                   } finally {
-                                    setModalState(() => _isLoadingGoogle = false);
+                                    setModalState(() => isLoadingGoogle = false);
                                   }
                                 },
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(color: Colors.grey[300]!),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          child: _isLoadingGoogle
+                          child: isLoadingGoogle
                               ? const SizedBox(
                                   height: 20,
                                   width: 20,
@@ -321,8 +321,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                       TextButton(
                         onPressed: () => setModalState(() {
                           isLogin = !isLogin;
-                          _isWaitingOTP = false; // Reset OTP state when switching
-                          _otpController.clear();
+                          isWaitingOTP = false; // Reset OTP state when switching
+                          otpController.clear();
                         }),
                         child: RichText(
                           text: TextSpan(

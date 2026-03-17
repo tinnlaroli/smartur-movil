@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../../core/style_guide.dart';
+import '../../core/theme/style_guide.dart';
 
 /// A professional background component that subtly cycles through a palette
 /// of colors (Green, Purple, Orange, Blue, Pink) with a frosted glass effect.

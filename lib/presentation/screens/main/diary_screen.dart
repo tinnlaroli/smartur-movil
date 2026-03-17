@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/style_guide.dart';
-import '../widgets/smartur_skeleton.dart';
+import '../../../core/theme/style_guide.dart';
+import '../../widgets/smartur_skeleton.dart';
 
 class DiaryScreen extends StatefulWidget {
   const DiaryScreen({super.key});

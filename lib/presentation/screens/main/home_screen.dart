@@ -7,15 +7,15 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../core/style_guide.dart';
-import '../../core/utils/notifications.dart';
-import '../../data/services/auth_service.dart';
-import '../../data/services/profile_service.dart';
-import '../widgets/smartur_skeleton.dart';
-import 'preferences/preferences_screen.dart';
-import 'settings_screen.dart';
-import 'welcome_screen.dart';
-import 'recommendation_screen.dart';
+import '../../../core/theme/style_guide.dart';
+import '../../../core/utils/notifications.dart';
+import '../../../data/services/auth_service.dart';
+import '../../../data/services/profile_service.dart';
+import '../../widgets/smartur_skeleton.dart';
+import '../preferences/preferences_screen.dart';
+import '../settings/settings_screen.dart';
+import '../auth/welcome_screen.dart';
+import '../explore/recommendation_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String? userName;
@@ -32,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final LocalAuthentication _auth = LocalAuthentication();
   bool _isLoadingContent = true;
   bool _welcomeShown = false;
+  static bool _welcomeShownOnce = false;
   static bool _preferencesCheckedOnce = false;
 
   // Estado UI ventana Explorar
@@ -96,10 +97,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _showWelcome() async {
     if (!mounted) return;
-    if (_welcomeShown) return;
+    if (_welcomeShown || _welcomeShownOnce) return;
     if (!widget.isNewLogin) return;
 
     _welcomeShown = true;
+    _welcomeShownOnce = true;
 
     final name = widget.userName;
     const greeting = 'Bienvenido';
@@ -113,6 +115,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final alreadyEnabled = await _authService.isBiometricEnabled();
     if (alreadyEnabled) return;
 
+    final dismissed = await _authService.isBiometricDismissed();
+    if (dismissed) return;
+
     final canAuth = await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
     if (!canAuth) return;
 
@@ -121,7 +126,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!mounted) return;
 
-    final accepted = await showDialog<bool>(
+    // null = cerró diálogo, 'activate' = activar, 'dismiss' = no recordar
+    final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -133,21 +139,45 @@ class _HomeScreenState extends State<HomeScreen> {
           textAlign: TextAlign.center,
         ),
         actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Ahora no', style: TextStyle(color: SmarturStyle.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: SmarturStyle.purple),
-            child: const Text('Activar'),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, 'activate'),
+                style: ElevatedButton.styleFrom(backgroundColor: SmarturStyle.purple),
+                child: const Text('Activar'),
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Ahora no', style: TextStyle(color: SmarturStyle.textSecondary)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, 'dismiss'),
+                child: Text(
+                  'No me lo recuerdes',
+                  style: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
 
-    if (accepted != true || !mounted) return;
+    if (!mounted) return;
+
+    if (result == 'dismiss') {
+      await _authService.setBiometricDismissed(true);
+      return;
+    }
+
+    if (result != 'activate') return;
 
     try {
       final didAuth = await _auth.authenticate(
@@ -352,7 +382,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   return StatefulBuilder(
                     builder: (BuildContext context, StateSetter setState) {
                       return SwitchListTile(
-                        activeColor: SmarturStyle.purple,
+                        activeThumbColor: SmarturStyle.purple,
                         secondary: const Icon(Icons.fingerprint, color: SmarturStyle.purple),
                         title: const Text('Acceso con huella', style: TextStyle(fontFamily: 'Outfit')),
                         value: enabled,
@@ -568,7 +598,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _cities.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final city = _cities[index];
                 final bool isSelected = city == _selectedCity;
@@ -671,7 +701,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Descubre ${_selectedCity}',
+                                'Descubre $_selectedCity',
                                 style: const TextStyle(
                                   fontFamily: 'CalSans',
                                   fontSize: 20,

@@ -40,20 +40,53 @@ Para poner en marcha el proyecto en tu entorno local:
 
 ## 📂 Arquitectura del Proyecto
 
-Smartur sigue una estructura orientada a **Clean Architecture** (arquitectura limpia) simplificada para Flutter, facilitando la separación de responsabilidades:
+Smartur sigue una estructura orientada a **Clean Architecture** simplificada para Flutter, con pantallas agrupadas por feature y separación clara de responsabilidades:
 
 ```text
 lib/
-├── core/                # El "Corazón" del sistema
-│   ├── constants/       # API endpoints y configuraciones fijas
-│   ├── utils/           # Ayudantes (Notificaciones, validadores)
-│   └── style_guide.dart # Tokens de diseño (Colores HSL, Tipografía)
-├── data/                # Capa de Datos
-│   └── services/        # Consumo de APIs (Auth, Profile, etc.)
-├── models/              # Clases de datos y entidades
-└── presentation/        # Capa de Interfaz (UI)
-    ├── screens/         # Vistas completas (Onboarding, Welcome, Home)
-    └── widgets/         # Componentes atómicos y decoradores
+├── main.dart                        # Punto de entrada de la aplicación
+│
+├── core/                            # Capa núcleo (sin dependencias de negocio)
+│   ├── constants/
+│   │   └── api_constants.dart       # Base URL y endpoints del API
+│   ├── theme/
+│   │   └── style_guide.dart         # Tokens de diseño (colores, tipografía, medidas)
+│   └── utils/
+│       └── notifications.dart       # Toasts/notificaciones reutilizables
+│
+├── data/                            # Capa de datos
+│   ├── models/
+│   │   ├── onboarding_model.dart    # Contenido de las pantallas de onboarding
+│   │   └── traveler_profile_model.dart  # Modelo del perfil del viajero
+│   └── services/
+│       ├── auth_service.dart        # Autenticación, JWT, gestión de usuario
+│       └── profile_service.dart     # Preferencias y perfil del viajero
+│
+└── presentation/                    # Capa de interfaz (UI)
+    ├── screens/
+    │   ├── auth/                    # Flujo de autenticación
+    │   │   ├── onboarding_screen.dart
+    │   │   └── welcome_screen.dart  # Login, registro, OTP, Google Sign-In
+    │   ├── main/                    # Tabs principales del app
+    │   │   ├── main_screen.dart     # Contenedor con bottom navigation
+    │   │   ├── home_screen.dart     # Explorar ciudades, clima, mapa
+    │   │   ├── diary_screen.dart    # Favoritos e historial de visitas
+    │   │   ├── community_screen.dart # Feed de la comunidad
+    │   │   └── profile_screen.dart  # Perfil del usuario (datos del API)
+    │   ├── settings/
+    │   │   └── settings_screen.dart # Configuración, cambio de contraseña, cuenta
+    │   ├── preferences/             # Onboarding de preferencias (3 pasos)
+    │   │   ├── preferences_screen.dart
+    │   │   ├── step1_personal_screen.dart
+    │   │   ├── step2_interests_screen.dart
+    │   │   └── step3_extra_screen.dart
+    │   └── explore/                 # Exploración y recomendaciones IA
+    │       ├── map_screen.dart
+    │       └── recommendation_screen.dart
+    └── widgets/                     # Componentes reutilizables
+        ├── smartur_background.dart  # Fondo animado con glassmorphism
+        ├── smartur_loader.dart      # Splash animado del logo
+        └── smartur_skeleton.dart    # Shimmer y skeleton loading
 ```
 
 ---
@@ -114,10 +147,10 @@ SmarturShimmer(
 ## 👨‍💻 Guía de Contribución
 
 1. Crea un **Feature Branch** (`git checkout -b feature/novedad`).
-2. Sigue los tokens de color definidos en `lib/core/style_guide.dart`.
+2. Sigue los tokens de color definidos en `lib/core/theme/style_guide.dart`.
 3. Documenta cualquier nuevo servicio en la sección de `lib/data/services/`.
 4. Asegúrate de pasar el análisis estático (`flutter analyze`).
 
 ---
 
-© 2026 **SMARTUR Project**. Diseñado con ❤️ para la exploración consciente.
+© 2026 **SMARTUR Project**. Diseñado con ❤️ para la exploración consciente.

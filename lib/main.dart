@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
-import 'core/style_guide.dart';
-import 'presentation/screens/onboarding_screen.dart';
-import 'presentation/screens/welcome_screen.dart';
+import 'core/theme/style_guide.dart';
+import 'data/services/auth_service.dart';
+import 'presentation/screens/auth/onboarding_screen.dart';
+import 'presentation/screens/auth/welcome_screen.dart';
+import 'presentation/screens/main/main_screen.dart';
 import 'presentation/widgets/smartur_loader.dart';
 
 void main() async {
@@ -116,6 +118,26 @@ class _SplashGate extends StatefulWidget {
 
 class _SplashGateState extends State<_SplashGate> {
   bool _showLoader = true;
+  bool? _hasSession;
+  String? _userName;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSession();
+  }
+
+  Future<void> _checkSession() async {
+    final auth = AuthService();
+    final has = await auth.hasSession();
+    final name = has ? await auth.getUserName() : null;
+    if (mounted) {
+      setState(() {
+        _hasSession = has;
+        _userName = name;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +151,16 @@ class _SplashGateState extends State<_SplashGate> {
               key: const ValueKey('loader'),
               onFinished: () => setState(() => _showLoader = false),
             )
-          : (widget.seenOnboarding ? const WelcomeScreen() : const OnboardingScreen()),
+          : _destination(),
     );
+  }
+
+  Widget _destination() {
+    if (_hasSession == true) {
+      return MainScreen(key: const ValueKey('main'), userName: _userName);
+    }
+    return widget.seenOnboarding
+        ? const WelcomeScreen(key: ValueKey('welcome'))
+        : const OnboardingScreen(key: ValueKey('onboarding'));
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/style_guide.dart';
+import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 
 /// Paso 2: Intereses, nivel de actividad, tipo de viaje y lugar preferido
