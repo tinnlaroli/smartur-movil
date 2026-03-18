@@ -4,12 +4,15 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/constants/api_constants.dart';
+import '../../core/constants/env_config.dart';
 
 class AuthService {
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'auth_token';
   static const _biometricKey = 'biometric_enabled';
   static const _biometricDismissedKey = 'biometric_dismissed';
+  static const _rememberMeKey = 'remember_me';
+  static const _sessionExpiryKey = 'session_expires_at';
   static const _userIdKey = 'user_id';
   static const _userNameKey = 'user_name';
   static const _userEmailKey = 'user_email';
@@ -18,8 +21,7 @@ class AuthService {
 
   AuthService() {
     unawaited(_googleSignIn.initialize(
-      serverClientId:
-          '77253773974-b412uvcqhrqmchhtdq5rq6tl81hpados.apps.googleusercontent.com',
+      serverClientId: EnvConfig.googleServerClientId,
     ));
   }
 
@@ -35,7 +37,21 @@ class AuthService {
 
   Future<bool> hasSession() async {
     final token = await _storage.read(key: _tokenKey);
-    return token != null && token.isNotEmpty;
+    if (token == null || token.isEmpty) return false;
+
+    // Si no hay expiración guardada, asumimos sesión válida (compatibilidad)
+    final rawExpiry = await _storage.read(key: _sessionExpiryKey);
+    if (rawExpiry == null) return true;
+
+    final expiryMs = int.tryParse(rawExpiry);
+    if (expiryMs == null) return true;
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    if (nowMs > expiryMs) {
+      await fullLogout();
+      return false;
+    }
+    return true;
   }
 
   Future<void> clearSession() async {
@@ -49,6 +65,8 @@ class AuthService {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _biometricKey);
     await _storage.delete(key: _biometricDismissedKey);
+    await _storage.delete(key: _rememberMeKey);
+    await _storage.delete(key: _sessionExpiryKey);
     await _storage.delete(key: _userIdKey);
     await _storage.delete(key: _userNameKey);
     await _storage.delete(key: _userEmailKey);
@@ -134,6 +152,25 @@ class AuthService {
     return val == 'true';
   }
 
+  // ── Remember me / session expiry ─────────────────────────────────────────
+
+  Future<void> setRememberMe(bool remember) async {
+    await _storage.write(key: _rememberMeKey, value: remember.toString());
+    final now = DateTime.now();
+    final expiry = remember
+        ? now.add(const Duration(days: 7))
+        : now; // sin recordar: expira al cerrar app / próxima apertura
+    await _storage.write(
+      key: _sessionExpiryKey,
+      value: expiry.millisecondsSinceEpoch.toString(),
+    );
+  }
+
+  Future<bool> isRememberMeEnabled() async {
+    final val = await _storage.read(key: _rememberMeKey);
+    return val == 'true';
+  }
+
   // ── REGISTRO ────────────────────────────────────────────────────────────
 
   Future<bool> register(String name, String email, String password) async {
@@ -174,7 +211,7 @@ class AuthService {
 
   // ── LOGIN PASO 2 (OTP) ────────────────────────────────────────────────
 
-  Future<String?> verifyOTP(String email, String otpCode) async {
+  Future<String?> verifyOTP(String email, String otpCode, {bool rememberMe = false}) async {
     final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.twoFactor}');
     final response = await http.post(
       url,
@@ -186,6 +223,7 @@ class AuthService {
       final data = jsonDecode(response.body);
       final String? token = data['token'];
       if (token != null) await saveToken(token);
+      await setRememberMe(rememberMe);
       if (data['user'] != null) {
         await saveUserData(data['user'] as Map<String, dynamic>);
       }
@@ -196,7 +234,7 @@ class AuthService {
 
   // ── LOGIN Google ───────────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>?> loginWithGoogle() async {
+  Future<Map<String, dynamic>?> loginWithGoogle({bool rememberMe = false}) async {
     try {
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
         scopeHint: ['email', 'profile'],
@@ -224,6 +262,7 @@ class AuthService {
         final data = jsonDecode(response.body);
         final String? token = data['token'];
         if (token != null) await saveToken(token);
+        await setRememberMe(rememberMe);
         if (data['user'] != null) {
           await saveUserData(data['user'] as Map<String, dynamic>);
         }

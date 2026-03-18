@@ -22,42 +22,94 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
   
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  late Animation<double> _logoScale;
+  late Animation<double> _logoScale; // para huella/botón
+  late Animation<double> _logoZoom;  // continuidad del zoom del loader
   late Animation<Offset> _textSlide;
   late Animation<double> _buttonFade;
+  late Animation<double> _buttonScale;
+  late Animation<Offset> _buttonSlide;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1600),
     );
 
+    // Fade general para textos/huella/botón (claramente visible)
     _fadeAnimation = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.0, 0.4, curve: Curves.easeIn),
+      curve: const Interval(0.25, 1.0, curve: Curves.easeOutQuad),
     );
 
-    _logoScale = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.2, 0.6, curve: Curves.elasticOut),
+    // Escala 0.8 → 1.05 para contenido (texto/huella) con rebote suave.
+    _logoScale = Tween<double>(begin: 0.8, end: 1.05).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.35, 0.9, curve: Curves.easeOutBack),
+      ),
+    );
+
+    // Logo: pequeño rebote  (1.02 → 0.96 → 1.0) para dar vida al final del zoom.
+    _logoZoom = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.12, end: 0.36)
+            .chain(CurveTween(curve: Curves.easeOutQuad)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.36, end: 1.0)
+            .chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 60,
+      ),
+    ]).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
     );
 
     _textSlide = Tween<Offset>(
-      begin: const Offset(0, 0.2),
+      begin: const Offset(0, 0.35),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.4, 0.8, curve: Curves.easeOutCubic),
+      curve: const Interval(0.3, 1.0, curve: Curves.easeOutCubic),
     ));
 
     _buttonFade = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.7, 1.0, curve: Curves.easeIn),
+      curve: const Interval(0.55, 1.0, curve: Curves.easeOutQuad),
     );
 
-    _controller.forward();
+    // Botón "Comenzar": pop claro y deslizamiento largo hacia arriba
+    _buttonScale = Tween<double>(begin: 0.75, end: 1.05).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.6, 1.0, curve: Curves.elasticOut),
+      ),
+    );
+
+    _buttonSlide = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.55, 1.0, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    // Importante: NO iniciar animaciones inmediatamente.
+    // Esperamos aproximadamente la duración del loader para que
+    // las animaciones se vean recién cuando el overlay desaparece.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future.delayed(const Duration(milliseconds: 4600));
+      if (mounted && !_controller.isAnimating && _controller.value == 0.0) {
+        _controller.forward();
+      }
+    });
   }
 
   @override
@@ -72,6 +124,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     bool isWaitingOTP = false;
     bool isLoadingEmail = false;
     bool isLoadingGoogle = false;
+    bool rememberMe = false;
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
     final TextEditingController emailController = TextEditingController();
@@ -180,7 +233,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               ),
                             ],
                           )
-                        else
+                        else ...[
                           _buildAuthFields(
                             isLogin,
                             nameController,
@@ -188,6 +241,32 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                             passwordController,
                             setModalState,
                           ),
+                          if (isLogin) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Checkbox(
+                                  value: rememberMe,
+                                  onChanged: (val) {
+                                    setModalState(() {
+                                      rememberMe = val ?? false;
+                                    });
+                                  },
+                                ),
+                                const SizedBox(width: 4),
+                                const Expanded(
+                                  child: Text(
+                                    'Recuérdame durante 7 días en este dispositivo',
+                                    style: TextStyle(
+                                      fontFamily: 'Outfit',
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
                         const SizedBox(height: 24),
                         ElevatedButton(
                           onPressed: (isLoadingEmail || isLoadingGoogle)
@@ -213,6 +292,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                           final token = await _authService.verifyOTP(
                                             emailController.text.trim(),
                                             otpController.text.trim(),
+                                            rememberMe: rememberMe,
                                           );
                                           if (token != null && context.mounted) {
                                             Navigator.pop(context);
@@ -266,7 +346,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               : () async {
                                   setModalState(() => isLoadingGoogle = true);
                                   try {
-                                    final response = await _authService.loginWithGoogle();
+                                    final response = await _authService.loginWithGoogle(
+                                      rememberMe: rememberMe,
+                                    );
                                     if (response != null && context.mounted) {
                                       Navigator.pop(context);
                                       Navigator.pushReplacement(
@@ -579,31 +661,49 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       body: SmarturBackground(
         child: Stack(
           children: [
-            Positioned(
-              bottom: 150,
-              left: 0,
-              right: 0,
-              child: Column(
-                children: [
-                  ScaleTransition(
-                    scale: _logoScale,
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Image.asset(
-                        'assets/imgs/logo_costado.png',
-                        width: 100,
-                        height: 100,
-                      ),
-                    ),
+            // Logo principal EXACTAMENTE centrado (mismas dimensiones que el SVG del loader)
+            // Mientras corre el loader, este logo permanece invisible; solo se muestra
+            // cuando el controller del WelcomeScreen arranca, evitando "doble logo".
+            Align(
+              alignment: Alignment.center,
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: AnimatedBuilder(
+                  animation: _logoZoom,
+                  builder: (_, child) {
+                    return Transform.scale(
+                      scale: _logoZoom.value,
+                      child: child,
+                    );
+                  },
+                  child: Image.asset(
+                    'assets/imgs/logo.png',
+                    width: 170.42,
+                    height: 219.53,
                   ),
+                ),
+              ),
+            ),
+            // Textos y huella: flotan justo por encima del botón "Comenzar"
+            Positioned(
+              left: SmarturStyle.spacingLg,
+              right: SmarturStyle.spacingLg,
+              bottom: 130, // un poco por encima del botón (que está en bottom: 50)
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   SlideTransition(
                     position: _textSlide,
                     child: FadeTransition(
                       opacity: _fadeAnimation,
-                      child: const Text('Experiencias Únicas\nEmpiezan Aquí', style: SmarturStyle.calSansTitle, textAlign: TextAlign.center),
+                      child: const Text(
+                        'Experiencias Únicas\nEmpiezan Aquí',
+                        style: SmarturStyle.calSansTitle,
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 32),
                   FadeTransition(
                     opacity: _fadeAnimation,
                     child: ScaleTransition(
@@ -622,10 +722,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   FadeTransition(
                     opacity: _fadeAnimation,
-                    child: const Text('Ingresar con huella', style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary, fontWeight: FontWeight.w500)),
+                    child: const Text(
+                      'Ingresar con huella',
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        color: SmarturStyle.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -636,9 +743,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
               right: SmarturStyle.spacingLg,
               child: FadeTransition(
                 opacity: _buttonFade,
-                child: ElevatedButton(
-                  onPressed: () => _showAuthModal(context),
-                  child: const Text('Comenzar'),
+                child: SlideTransition(
+                  position: _buttonSlide,
+                  child: ScaleTransition(
+                    scale: _buttonScale,
+                    child: ElevatedButton(
+                      onPressed: () => _showAuthModal(context, isLogin: true),
+                      child: const Text('Comenzar'),
+                    ),
+                  ),
                 ),
               ),
             ),

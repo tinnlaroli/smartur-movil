@@ -141,17 +141,21 @@ class _SplashGateState extends State<_SplashGate> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 800),
-      transitionBuilder: (Widget child, Animation<double> animation) {
-        return FadeTransition(opacity: animation, child: child);
-      },
-      child: _showLoader
-          ? SmartURLoader(
+    final destination = _destination();
+
+    return Stack(
+      children: [
+        // Contenido real de la app (welcome / onboarding / main)
+        destination,
+        // Loader como overlay a pantalla completa para continuidad perfecta
+        if (_showLoader)
+          Positioned.fill(
+            child: SmartURLoader(
               key: const ValueKey('loader'),
               onFinished: () => setState(() => _showLoader = false),
-            )
-          : _destination(),
+            ),
+          ),
+      ],
     );
   }
 

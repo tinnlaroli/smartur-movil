@@ -121,8 +121,9 @@ class _SmartURLoaderState extends State<SmartURLoader>
   static const double _zoomTo   = 0.85;
 
   // All planes orbit CW with varied speeds for organic feel
+  // (slightly faster spins than antes)
   static const List<double> _orbitDir = [1.0, 1.0, 1.0, 1.0];
-  static const List<int>    _spinMs   = [2000, 2300, 2100, 1850];
+  static const List<int>    _spinMs   = [1400, 1650, 1500, 1300];
 
   // ── Controllers ────────────────────────────────────────────────────────────
   late final List<AnimationController> _spinCtrl;     // ×4 continuous orbit
@@ -314,14 +315,10 @@ class _SmartURLoaderState extends State<SmartURLoader>
     _zoomCtrl.forward();
     await Future.delayed(const Duration(milliseconds: 1100));
 
-    // ── 6. Brief hold, then fade out ────────────────────────────────────
-    if (!mounted) return;
-    await Future.delayed(const Duration(milliseconds: 450));
+    // ── 6. Complete (sin fade interno: lo maneja _SplashGate) ───────────────
     if (!mounted) return;
     setState(() => _phase = _Phase.done);
-    _fadeOutCtrl.forward().whenComplete(() {
-      if (mounted) widget.onFinished?.call();
-    });
+    widget.onFinished?.call();
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -352,33 +349,33 @@ class _SmartURLoaderState extends State<SmartURLoader>
   // ══════════════════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: ReverseAnimation(_fadeAnim),
-      child: ColoredBox(
-        color: Colors.white,
-        child: SizedBox.expand(
-          child: Center(
-            child: AnimatedBuilder(
-              animation: _zoomCtrl,
-              builder: (_, child) {
-                final s = _zoomFrom + (_zoomTo - _zoomFrom) * _zoomAnim.value;
-                return Transform.scale(
-                  scale: widget.isMini ? 0.4 : s,
-                  child: child,
-                );
-              },
-              child: SizedBox(
-                width: _svgW,
-                height: _svgH,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    for (int j = 0; j < 7; j++)
-                      FadeTransition(opacity: _pinAnim[j], child: _pinSvgs[j]),
-                    for (int i = 0; i < 4; i++)
-                      RepaintBoundary(child: _buildArc(i)),
-                  ],
-                ),
+    return ColoredBox(
+      // Fondo transparente para que se vea el mismo background
+      // que el de la pantalla subyacente (WelcomeScreen, etc.).
+      color: Colors.transparent,
+      child: SizedBox.expand(
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _zoomCtrl,
+            builder: (_, child) {
+              final s = _zoomFrom + (_zoomTo - _zoomFrom) * _zoomAnim.value;
+              return Transform.scale(
+                // Reducir dimensiones generales ~1/3 para ambas variantes
+                scale: (widget.isMini ? 0.4 : s) * (2.0 / 3.0),
+                child: child,
+              );
+            },
+            child: SizedBox(
+              width: _svgW,
+              height: _svgH,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  for (int j = 0; j < 7; j++)
+                    FadeTransition(opacity: _pinAnim[j], child: _pinSvgs[j]),
+                  for (int i = 0; i < 4; i++)
+                    RepaintBoundary(child: _buildArc(i)),
+                ],
               ),
             ),
           ),

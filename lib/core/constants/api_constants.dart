@@ -1,6 +1,8 @@
+import 'env_config.dart';
+
 class ApiConstants {
   // static const String baseUrl = 'http://192.168.1.94:3000/api/v2';
-  static const String baseUrl = 'https://api-smartur.fly.dev/api/v2';
+  static const String baseUrl = EnvConfig.apiBaseUrl;
 
   // Auth
   static const String register = '/users/register';

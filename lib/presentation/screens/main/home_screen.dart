@@ -8,6 +8,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/theme/style_guide.dart';
+import '../../../core/constants/env_config.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/profile_service.dart';
@@ -34,6 +35,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _welcomeShown = false;
   static bool _welcomeShownOnce = false;
   static bool _preferencesCheckedOnce = false;
+
+  // Cache en memoria por sesión para no llamar al API de clima
+  static final Map<String, String?> _weatherSummaryCache = {};
 
   // Estado UI ventana Explorar
   final List<String> _cities = const ['Orizaba', 'Córdoba', 'Fortín'];
@@ -206,15 +210,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadWeatherForSelectedCity() async {
+    // Si ya tenemos el clima de esta ciudad en caché, úsalo y no llames a la API.
+    final cached = _weatherSummaryCache[_selectedCity];
+    if (cached != null) {
+      setState(() {
+        _weatherSummary = cached;
+        _weatherLoading = false;
+      });
+      return;
+    }
+
     setState(() {
       _weatherLoading = true;
     });
 
-    // Coordenadas aproximadas para cada ciudad (Open-Meteo, sin API key).
+    // Coordenadas precisas para cada ciudad.
     final coords = <String, Map<String, double>>{
-      'Orizaba': const {'lat': 18.85, 'lon': -97.1},
-      'Córdoba': const {'lat': 18.89, 'lon': -96.93},
-      'Fortín': const {'lat': 18.91, 'lon': -96.99},
+      'Orizaba': const {'lat': 18.8491, 'lon': -97.1051},
+      'Fortín':  const {'lat': 18.9023, 'lon': -97.0001},
+      'Córdoba': const {'lat': 18.8943, 'lon': -96.9351},
     }[_selectedCity];
 
     if (coords == null) {
@@ -225,24 +239,43 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    final apiKey = EnvConfig.openWeatherApiKey;
+    if (apiKey.isEmpty) {
+      setState(() {
+        _weatherSummary = null;
+        _weatherLoading = false;
+      });
+      return;
+    }
+
     final uri = Uri.parse(
-      'https://api.open-meteo.com/v1/forecast'
-      '?latitude=${coords['lat']}'
-      '&longitude=${coords['lon']}'
-      '&current_weather=true',
+      'https://api.openweathermap.org/data/2.5/weather'
+      '?lat=${coords['lat']!.toStringAsFixed(4)}'
+      '&lon=${coords['lon']!.toStringAsFixed(4)}'
+      '&appid=$apiKey'
+      '&units=metric'
+      '&lang=es',
     );
 
     try {
       final resp = await http.get(uri);
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        final current = data['current_weather'] as Map<String, dynamic>?;
-        if (current != null) {
-          final temp = (current['temperature'] as num?)?.toDouble();
-          final code = current['weathercode'] as int? ?? 0;
-          final desc = _mapWeatherCodeToText(code);
+        final main = data['main'] as Map<String, dynamic>?;
+        final weatherList = data['weather'] as List<dynamic>?;
+
+        if (main != null && weatherList != null && weatherList.isNotEmpty) {
+          final temp = (main['temp'] as num?)?.toDouble();
+          final descRaw = (weatherList.first as Map<String, dynamic>)['description'] as String? ?? '';
+          final desc = descRaw.isNotEmpty
+              ? '${descRaw[0].toUpperCase()}${descRaw.substring(1)}'
+              : '';
+
+          final summary =
+              temp != null ? '${temp.toStringAsFixed(1)}°C · $desc' : desc;
+          _weatherSummaryCache[_selectedCity] = summary;
           setState(() {
-            _weatherSummary = temp != null ? '${temp.toStringAsFixed(1)}°C · $desc' : desc;
+            _weatherSummary = summary;
             _weatherLoading = false;
           });
         } else {
@@ -264,18 +297,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _weatherLoading = false;
       });
     }
-  }
-
-  String _mapWeatherCodeToText(int code) {
-    if (code == 0) return 'Despejado';
-    if (code == 1 || code == 2) return 'Mayormente despejado';
-    if (code == 3) return 'Nublado';
-    if (code == 45 || code == 48) return 'Niebla';
-    if (code == 51 || code == 53 || code == 55) return 'Llovizna';
-    if (code == 61 || code == 63 || code == 65) return 'Lluvia';
-    if (code == 71 || code == 73 || code == 75) return 'Nieve';
-    if (code == 95) return 'Tormenta';
-    return 'Condición variable';
   }
 
   void _showProfile() {
