@@ -194,9 +194,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                         isLogin
                             ? l10n.loginSubtitle
                             : l10n.registerSubtitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Outfit',
-                          color: SmarturStyle.textSecondary,
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -210,12 +210,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                           Column(
                             children: [
                               Text(
-                                "Se envió un código a:",
-                                style: TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary, fontSize: 13),
+                                l10n.codeSentToLabel,
+                                style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurfaceVariant, fontSize: 13),
                               ),
                               Text(
                                 emailController.text,
-                                style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: SmarturStyle.textPrimary),
+                                style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: scheme.onSurface),
                               ),
                               const SizedBox(height: 20),
                               TextFormField(
@@ -229,7 +229,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                 ),
                                 decoration: InputDecoration(
                                   hintText: "000000",
-                                  helperText: "Ingresa el código de 6 dígitos",
+                                  helperText: l10n.enterSixDigitCode,
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
                               ),
@@ -238,7 +238,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                   isWaitingOTP = false;
                                   otpController.clear();
                                 }),
-                                child: const Text('Cambiar correo', style: TextStyle(color: SmarturStyle.purple)),
+                                child: Text(l10n.changeEmail, style: const TextStyle(color: SmarturStyle.purple)),
                               ),
                             ],
                           )
@@ -263,10 +263,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                   },
                                 ),
                                 const SizedBox(width: 4),
-                                const Expanded(
+                                Expanded(
                                   child: Text(
-                                    'Recuérdame durante 7 días en este dispositivo',
-                                    style: TextStyle(
+                                    l10n.rememberMe7Days,
+                                    style: const TextStyle(
                                       fontFamily: 'Outfit',
                                       fontSize: 13,
                                     ),
@@ -294,7 +294,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                             setModalState(() => isWaitingOTP = true);
                                           } else {
                                             if (context.mounted) {
-                                              SmarturNotifications.showError(context, "Credenciales incorrectas.");
+                                              SmarturNotifications.showError(context, l10n.invalidCredentials);
                                             }
                                           }
                                         } else {
@@ -318,7 +318,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                             );
                                           } else {
                                             if (context.mounted) {
-                                              SmarturNotifications.showError(context, "Código inválido o expirado.");
+                                              SmarturNotifications.showError(context, l10n.invalidCode);
                                             }
                                           }
                                         }
@@ -330,12 +330,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                         );
                                         if (success && context.mounted) {
                                           setModalState(() => isLogin = true);
-                                          SmarturNotifications.showSuccess(context, "Cuenta creada exitosamente. Por favor, inicia sesión.");
+                                          SmarturNotifications.showSuccess(context, l10n.accountCreated);
                                         }
                                       }
                                     } catch (e) {
                                       if (context.mounted) {
-                                        SmarturNotifications.showError(context, "Error de conexión.");
+                                        SmarturNotifications.showError(context, l10n.connectionError);
                                       }
                                     } finally {
                                       setModalState(() => isLoadingEmail = false);
@@ -344,7 +344,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                 },
                           child: isLoadingEmail
                               ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : Text(isWaitingOTP ? 'VERIFICAR' : (isLogin ? 'ENTRAR' : 'CREAR CUENTA')),
+                              : Text(isWaitingOTP ? l10n.verify : (isLogin ? l10n.signInButton : l10n.createAccount)),
                         ),
                       ],
                       if (!isWaitingOTP) ...[
@@ -379,7 +379,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                   }
                                 },
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey[300]!),
+                            side: BorderSide(color: scheme.outlineVariant),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           child: isLoadingGoogle
@@ -397,9 +397,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
-                                      'Continuar con Google',
+                                      l10n.continueWithGoogle,
                                       style: TextStyle(
-                                        color: SmarturStyle.textPrimary,
+                                        color: scheme.onSurface,
                                         fontFamily: 'Outfit',
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -417,10 +417,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                         }),
                         child: RichText(
                           text: TextSpan(
-                            style: const TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textPrimary),
+                            style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurface),
                             children: [
-                              TextSpan(text: isLogin ? '¿No tienes cuenta? ' : '¿Ya tienes una cuenta? '),
-                              TextSpan(text: isLogin ? 'Regístrate' : 'Inicia sesión', style: const TextStyle(color: SmarturStyle.purple, fontWeight: FontWeight.bold)),
+                              TextSpan(text: isLogin ? l10n.noAccountPrompt : l10n.haveAccountPrompt),
+                              TextSpan(text: isLogin ? l10n.signUp : l10n.signInAction, style: const TextStyle(color: SmarturStyle.purple, fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
@@ -443,6 +443,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     TextEditingController passCtrl,
     StateSetter setModalState,
   ) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     String password = passCtrl.text;
     double strength = _getPasswordStrength(password);
     Color strengthColor = _getStrengthColor(strength);
@@ -460,13 +462,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
           TextFormField(
             controller: nameCtrl,
             decoration: InputDecoration(
-              labelText: 'Nombre completo',
+              labelText: l10n.fullName,
               prefixIcon: const Icon(Icons.person_outline, color: SmarturStyle.purple),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             validator: (v) {
-              if (v == null || v.isEmpty) return 'Ingresa tu nombre completo';
-              if (v.length < 3) return 'Mínimo 3 letras';
+              if (v == null || v.isEmpty) return l10n.enterFullName;
+              if (v.length < 3) return l10n.minThreeChars;
               return null;
             },
           ),
@@ -476,14 +478,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
           controller: emailCtrl,
           keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
-            labelText: 'Correo electrónico',
+            labelText: l10n.emailAddress,
             prefixIcon: const Icon(Icons.email_outlined, color: SmarturStyle.purple),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           validator: (v) {
-            if (v == null || v.isEmpty) return 'Ingresa tu correo';
+            if (v == null || v.isEmpty) return l10n.enterEmail;
             if (isLogin) return null;
-            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) return 'Ingresa un correo válido';
+            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) return l10n.enterValidEmail;
             return null;
           },
         ),
@@ -491,20 +493,20 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
         TextFormField(
           controller: passCtrl,
           obscureText: true,
-          onChanged: (value) => setModalState(() {}), // Trigger modal rebuild for real-time feedback
+          onChanged: (value) => setModalState(() {}),
           decoration: InputDecoration(
-            labelText: 'Contraseña',
+            labelText: l10n.password,
             prefixIcon: const Icon(Icons.lock_outline, color: SmarturStyle.purple),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           validator: (v) {
-            if (v == null || v.isEmpty) return 'Ingresa tu contraseña';
+            if (v == null || v.isEmpty) return l10n.enterPassword;
             if (isLogin) return null;
-            if (v.length < 8) return 'Mínimo 8 caracteres';
-            if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Al menos una mayúscula';
-            if (!RegExp(r'[a-z]').hasMatch(v)) return 'Al menos una minúscula';
-            if (!RegExp(r'[0-9]').hasMatch(v)) return 'Al menos un número';
-            if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(v)) return 'Al menos un carácter especial';
+            if (v.length < 8) return l10n.minEightChars;
+            if (!RegExp(r'[A-Z]').hasMatch(v)) return l10n.atLeastOneUppercase;
+            if (!RegExp(r'[a-z]').hasMatch(v)) return l10n.atLeastOneLowercase;
+            if (!RegExp(r'[0-9]').hasMatch(v)) return l10n.atLeastOneNumber;
+            if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(v)) return l10n.atLeastOneSpecial;
             return null;
           },
         ),
@@ -515,7 +517,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
             borderRadius: BorderRadius.circular(2),
             child: LinearProgressIndicator(
               value: strength,
-              backgroundColor: Colors.grey[200],
+              backgroundColor: scheme.outlineVariant,
               color: strengthColor,
               minHeight: 6,
             ),
@@ -538,23 +540,23 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
+              color: scheme.surfaceContainerLowest,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[200]!),
+              border: Border.all(color: scheme.outlineVariant),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'La contraseña debe tener:',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+                Text(
+                  l10n.passwordRequirements,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
                 ),
                 const SizedBox(height: 8),
-                _buildRequirementRow('Mínimo 8 caracteres', hasMinLength),
-                _buildRequirementRow('Al menos una mayúscula', hasUppercase),
-                _buildRequirementRow('Al menos una minúscula', hasLowercase),
-                _buildRequirementRow('Al menos un número', hasNumber),
-                _buildRequirementRow('Un carácter especial (!@#\$%^&*)', hasSpecial),
+                _buildRequirementRow(l10n.minEightChars, hasMinLength),
+                _buildRequirementRow(l10n.atLeastOneUppercase, hasUppercase),
+                _buildRequirementRow(l10n.atLeastOneLowercase, hasLowercase),
+                _buildRequirementRow(l10n.atLeastOneNumber, hasNumber),
+                _buildRequirementRow(l10n.specialCharHint, hasSpecial),
               ],
             ),
           ),
@@ -564,6 +566,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
   }
 
   Widget _buildRequirementRow(String text, bool isMet) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
@@ -571,14 +574,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
           Icon(
             isMet ? Icons.check_circle : Icons.circle_outlined,
             size: 16,
-            color: isMet ? Colors.green : Colors.grey[400],
+            color: isMet ? Colors.green : scheme.onSurfaceVariant,
           ),
           const SizedBox(width: 8),
           Text(
             text,
             style: TextStyle(
               fontSize: 12,
-              color: isMet ? Colors.green[700] : Colors.grey[600],
+              color: isMet ? Colors.green[700] : scheme.onSurfaceVariant,
               fontFamily: 'Outfit',
               decoration: isMet ? TextDecoration.lineThrough : null,
             ),
@@ -608,11 +611,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
   }
 
   String _getStrengthText(double strength) {
-    if (strength <= 0.2) return 'Muy débil';
-    if (strength <= 0.4) return 'Débil';
-    if (strength <= 0.6) return 'Regular';
-    if (strength <= 0.8) return 'Fuerte';
-    return 'Muy fuerte';
+    final l10n = AppLocalizations.of(context)!;
+    if (strength <= 0.2) return l10n.strengthVeryWeak;
+    if (strength <= 0.4) return l10n.strengthWeak;
+    if (strength <= 0.6) return l10n.strengthFair;
+    if (strength <= 0.8) return l10n.strengthStrong;
+    return l10n.strengthVeryStrong;
   }
 
   // --- RESTORED BIOMETRICS LOGIC ---
@@ -676,6 +680,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: SmarturBackground(
         child: Stack(
@@ -749,9 +754,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                     opacity: _fadeAnimation,
                     child: Text(
                       l10n.loginWithBiometrics,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Outfit',
-                        color: SmarturStyle.textSecondary,
+                        color: scheme.onSurfaceVariant,
                         fontWeight: FontWeight.w500,
                       ),
                     ),

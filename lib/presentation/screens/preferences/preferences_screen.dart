@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartur/l10n/app_localizations.dart';
 import '../../widgets/smartur_background.dart';
 
 import '../../../core/theme/style_guide.dart';
@@ -33,10 +34,10 @@ class _PreferencesScreenState extends State<PreferencesScreen>
 
   static const int _totalSteps = 3;
 
-  final List<StepMeta> _steps = const [
-    StepMeta(title: 'Sobre ti', subtitle: 'Cuéntanos un poco de ti', icon: Icons.person_outline),
-    StepMeta(title: 'Tus gustos', subtitle: 'Qué te apasiona hacer', icon: Icons.favorite_outline),
-    StepMeta(title: 'Detalles', subtitle: 'Últimas preferencias', icon: Icons.tune_outlined),
+  List<StepMeta> _getSteps(AppLocalizations l10n) => [
+    StepMeta(title: l10n.stepAboutYou, subtitle: l10n.stepAboutYouSubtitle, icon: Icons.person_outline),
+    StepMeta(title: l10n.stepYourTastes, subtitle: l10n.stepYourTastesSubtitle, icon: Icons.favorite_outline),
+    StepMeta(title: l10n.stepDetails, subtitle: l10n.stepDetailsSubtitle, icon: Icons.tune_outlined),
   ];
 
   @override
@@ -68,10 +69,11 @@ class _PreferencesScreenState extends State<PreferencesScreen>
   Future<void> _submit() async {
     setState(() => _isLoading = true);
     try {
+      final l10n = AppLocalizations.of(context)!;
       final authService = AuthService();
       final token = await authService.getToken();
       if (token == null) {
-        if (mounted) SmarturNotifications.showError(context, 'Sesión expirada. Vuelve a iniciar sesión.');
+        if (mounted) SmarturNotifications.showError(context, l10n.sessionExpiredPreferences);
         return;
       }
 
@@ -79,7 +81,7 @@ class _PreferencesScreenState extends State<PreferencesScreen>
       if (!mounted) return;
 
       if (success) {
-        SmarturNotifications.showSuccess(context, '¡Perfil listo! Ahora te daremos recomendaciones a tu medida 🎉');
+        SmarturNotifications.showSuccess(context, l10n.profileReady);
         await Future.delayed(const Duration(milliseconds: 600));
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
@@ -88,7 +90,7 @@ class _PreferencesScreenState extends State<PreferencesScreen>
           (_) => false,
         );
       } else {
-        SmarturNotifications.showError(context, 'No se pudieron guardar las preferencias. Intenta de nuevo.');
+        SmarturNotifications.showError(context, l10n.couldNotSavePreferences);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -97,6 +99,9 @@ class _PreferencesScreenState extends State<PreferencesScreen>
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final steps = _getSteps(l10n);
     return Scaffold(
       backgroundColor: Colors.white,
       body: SmarturBackground(
@@ -117,16 +122,16 @@ class _PreferencesScreenState extends State<PreferencesScreen>
                   children: [
                     Row(
                       children: [
-                        const Text('SMARTUR', style: TextStyle(fontFamily: 'CalSans', fontSize: 18, color: SmarturStyle.textPrimary)),
+                        Text(l10n.appTitle, style: TextStyle(fontFamily: 'CalSans', fontSize: 18, color: scheme.onSurface)),
                         const Spacer(),
                         Text(
-                          'Paso ${_currentStep + 1} de $_totalSteps',
-                          style: const TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary, fontSize: 13),
+                          l10n.stepXOfY(_currentStep + 1, _totalSteps),
+                          style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurfaceVariant, fontSize: 13),
                         ),
                         const SizedBox(width: 8),
                         IconButton(
                           onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close, color: SmarturStyle.textSecondary, size: 20),
+                          icon: Icon(Icons.close, color: scheme.onSurfaceVariant, size: 20),
                           constraints: const BoxConstraints(),
                           padding: EdgeInsets.zero,
                         ),
@@ -134,7 +139,6 @@ class _PreferencesScreenState extends State<PreferencesScreen>
                     ),
                     const SizedBox(height: SmarturStyle.spacingMd),
 
-                    // Barra de progreso animada
                     AnimatedBuilder(
                       animation: _progressController,
                       builder: (context, child) => ClipRRect(
@@ -142,14 +146,13 @@ class _PreferencesScreenState extends State<PreferencesScreen>
                         child: LinearProgressIndicator(
                           value: _progressController.value,
                           minHeight: 6,
-                          backgroundColor: Colors.grey.shade200,
+                          backgroundColor: scheme.outlineVariant,
                           valueColor: const AlwaysStoppedAnimation<Color>(SmarturStyle.purple),
                         ),
                       ),
                     ),
                     const SizedBox(height: SmarturStyle.spacingMd),
 
-                    // Indicador de paso actual (solo iconos en círculos)
                     Row(
                       children: List.generate(_totalSteps, (i) {
                         final active = i == _currentStep;
@@ -172,15 +175,15 @@ class _PreferencesScreenState extends State<PreferencesScreen>
                                   ? SmarturStyle.purple
                                   : done
                                       ? SmarturStyle.green
-                                      : Colors.grey.shade300,
+                                      : scheme.outlineVariant,
                               width: 2,
                             ),
                           ),
                           child: Center(
                             child: Icon(
-                              done ? Icons.check : _steps[i].icon,
+                              done ? Icons.check : steps[i].icon,
                               size: 20,
-                              color: active || done ? Colors.white : Colors.grey.shade400,
+                              color: active || done ? Colors.white : scheme.onSurfaceVariant,
                             ),
                           ),
                         );
@@ -196,7 +199,7 @@ class _PreferencesScreenState extends State<PreferencesScreen>
                                   duration: const Duration(milliseconds: 300),
                                   height: 2,
                                   margin: const EdgeInsets.symmetric(horizontal: 8),
-                                  color: done ? SmarturStyle.green : Colors.grey.shade300,
+                                  color: done ? SmarturStyle.green : scheme.outlineVariant,
                                 ),
                               ),
                             ],
@@ -206,15 +209,14 @@ class _PreferencesScreenState extends State<PreferencesScreen>
                     ),
                     const SizedBox(height: SmarturStyle.spacingLg),
 
-                    // Título del paso actual
                     Text(
-                      _steps[_currentStep].title,
+                      steps[_currentStep].title,
                       style: SmarturStyle.calSansTitle.copyWith(fontSize: 26),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _steps[_currentStep].subtitle,
-                      style: const TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary),
+                      steps[_currentStep].subtitle,
+                      style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurfaceVariant),
                     ),
                   ],
                 ),

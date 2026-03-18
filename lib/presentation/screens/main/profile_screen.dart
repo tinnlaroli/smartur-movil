@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
@@ -30,13 +31,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadProfile() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final profile = await _authService.getUserProfile();
       final interests = await ProfileService.getSavedInterests();
 
       final name = profile?['name'] ??
           await _authService.getUserName() ??
-          'Turista SMARTUR';
+          l10n.defaultUserName;
       final email = profile?['email'] ??
           await _authService.getUserEmail() ??
           '';
@@ -46,11 +48,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (createdAt != null) {
         final dt = DateTime.tryParse(createdAt);
         if (dt != null) {
-          final months = [
-            '', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-            'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
-          ];
-          memberSince = '${months[dt.month]} ${dt.year}';
+          memberSince = '${dt.month}/${dt.year}';
         }
       }
 
@@ -64,7 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     } catch (_) {
-      final name = await _authService.getUserName() ?? 'Turista SMARTUR';
+      final name = await _authService.getUserName() ?? l10n.defaultUserName;
       final email = await _authService.getUserEmail() ?? '';
       if (mounted) {
         setState(() {
@@ -86,6 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: _loading
           ? const Center(
@@ -102,16 +101,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       delegate: SliverChildListDelegate([
                         const SizedBox(height: 24),
                         if (_interests.isNotEmpty) ...[
-                          _buildSection('Mis Intereses'),
+                          _buildSection(l10n.myInterests),
                           const SizedBox(height: 12),
                           _buildInterestChips(),
                           const SizedBox(height: 28),
                         ],
-                        _buildSection('Configuración rápida'),
+                        _buildSection(l10n.quickSettings),
                         const SizedBox(height: 12),
                         _buildQuickSettingsCard(),
                         const SizedBox(height: 28),
-                        _buildSection('Cuenta'),
+                        _buildSection(l10n.accountSection),
                         const SizedBox(height: 12),
                         _buildAccountCard(),
                         const SizedBox(height: 32),
@@ -211,7 +210,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      'Miembro desde $_memberSince',
+                      AppLocalizations.of(context)!.memberSince(_memberSince),
                       style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 12,
@@ -280,30 +279,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ── Configuración rápida ────────────────────────────────────────────────
 
   Widget _buildQuickSettingsCard() {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: scheme.outlineVariant),
       ),
       child: Column(
         children: [
           _buildCardTile(
             icon: Icons.notifications_outlined,
             iconColor: SmarturStyle.blue,
-            title: 'Notificaciones',
-            subtitle: 'Gestiona alertas de clima, rutas y comunidad',
+            title: l10n.notifications,
+            subtitle: l10n.notificationsSubtitle,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const SettingsScreen()),
             ),
           ),
-          Divider(height: 0, color: Colors.grey.shade200),
+          Divider(height: 0, color: scheme.outlineVariant),
           _buildCardTile(
             icon: Icons.tune_outlined,
             iconColor: SmarturStyle.purple,
-            title: 'Preferencias de app',
-            subtitle: 'Idioma, unidades y tema visual',
+            title: l10n.appPreferences,
+            subtitle: l10n.appPreferencesSubtitle,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const SettingsScreen()),
@@ -317,19 +318,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ── Cuenta ──────────────────────────────────────────────────────────────
 
   Widget _buildAccountCard() {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: scheme.outlineVariant),
       ),
       child: Column(
         children: [
           _buildCardTile(
             icon: Icons.person_outline,
-            iconColor: SmarturStyle.textPrimary,
-            title: 'Editar perfil',
-            subtitle: 'Cambia tu nombre y datos personales',
+            iconColor: scheme.onSurface,
+            title: l10n.editProfile,
+            subtitle: l10n.editProfileSubtitle,
             onTap: () async {
               await Navigator.push(
                 context,
@@ -338,22 +341,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _loadProfile();
             },
           ),
-          Divider(height: 0, color: Colors.grey.shade200),
+          Divider(height: 0, color: scheme.outlineVariant),
           _buildCardTile(
             icon: Icons.lock_outline,
-            iconColor: SmarturStyle.textPrimary,
-            title: 'Cambiar contraseña',
-            subtitle: 'Actualiza tu contraseña de acceso',
+            iconColor: scheme.onSurface,
+            title: l10n.changePassword,
+            subtitle: l10n.changePasswordSubtitle,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const SettingsScreen()),
             ),
           ),
-          Divider(height: 0, color: Colors.grey.shade200),
+          Divider(height: 0, color: scheme.outlineVariant),
           _buildCardTile(
             icon: Icons.logout,
             iconColor: SmarturStyle.pink,
-            title: 'Cerrar sesión',
+            title: l10n.logout,
             titleColor: SmarturStyle.pink,
             onTap: () => _confirmLogout(),
           ),
@@ -370,6 +373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Color? titleColor,
     required VoidCallback onTap,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return ListTile(
       leading: Container(
         width: 40,
@@ -385,18 +389,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         style: TextStyle(
           fontFamily: 'Outfit',
           fontWeight: FontWeight.w600,
-          color: titleColor ?? SmarturStyle.textPrimary,
+          color: titleColor ?? scheme.onSurface,
         ),
       ),
       subtitle: subtitle != null
           ? Text(subtitle,
-              style: const TextStyle(
+              style: TextStyle(
                   fontFamily: 'Outfit',
                   fontSize: 12,
-                  color: SmarturStyle.textSecondary))
+                  color: scheme.onSurfaceVariant))
           : null,
-      trailing: const Icon(Icons.chevron_right,
-          color: SmarturStyle.textSecondary, size: 20),
+      trailing: Icon(Icons.chevron_right,
+          color: scheme.onSurfaceVariant, size: 20),
       onTap: onTap,
     );
   }
@@ -404,23 +408,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ── Cerrar sesión ───────────────────────────────────────────────────────
 
   void _confirmLogout() {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24)),
-        title: const Text('Cerrar sesión',
+        title: Text(l10n.confirmLogoutTitle,
             style: SmarturStyle.calSansTitle),
-        content: const Text(
-          '¿Estás seguro de que deseas cerrar sesión?',
+        content: Text(
+          l10n.confirmLogoutMessage,
           style: TextStyle(
-              fontFamily: 'Outfit', color: SmarturStyle.textSecondary),
+              fontFamily: 'Outfit', color: scheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar',
-                style: TextStyle(color: SmarturStyle.textSecondary)),
+            child: Text(l10n.cancel,
+                style: TextStyle(color: scheme.onSurfaceVariant)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -430,7 +436,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               await _authService.clearSession();
               if (mounted) {
                 SmarturNotifications.showSuccess(
-                    context, 'Sesión cerrada');
+                    context, l10n.sessionClosed);
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (_) => WelcomeScreen()),
@@ -438,8 +444,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               }
             },
-            child: const Text('Cerrar sesión',
-                style: TextStyle(color: Colors.white)),
+            child: Text(l10n.logout,
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),

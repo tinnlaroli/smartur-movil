@@ -12,6 +12,7 @@ class RecommendationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final displayCity = city ?? 'Altas Montañas';
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -46,13 +47,13 @@ class RecommendationScreen extends StatelessWidget {
               ),
               subtitle: Text(
                 l10n.recommendationSubtitle(displayCity),
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Outfit',
                   fontSize: 12,
-                  color: SmarturStyle.textSecondary,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
-              trailing: const Icon(Icons.chevron_right, color: SmarturStyle.textSecondary),
+              trailing: Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
               onTap: () {},
             ),
           );

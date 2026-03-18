@@ -89,9 +89,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(_language,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontFamily: 'Outfit',
-                        color: SmarturStyle.textSecondary)),
+                        color: scheme.onSurfaceVariant)),
                 Icon(Icons.chevron_right,
                     color: scheme.onSurfaceVariant),
               ],
@@ -149,18 +149,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // ── Información ─────────────────────────────────────────────
           _buildSectionHeader(l10n.infoSection),
           ListTile(
-            leading: const Icon(Icons.info_outline,
-                color: SmarturStyle.textSecondary),
+            leading: Icon(Icons.info_outline,
+                color: scheme.onSurfaceVariant),
             title: Text(l10n.appVersion,
                 style: const TextStyle(fontFamily: 'Outfit')),
-            trailing: const Text('v1.0.0',
+            trailing: Text('v1.0.0',
                 style: TextStyle(
                     fontFamily: 'Outfit',
-                    color: SmarturStyle.textSecondary)),
+                    color: scheme.onSurfaceVariant)),
           ),
           ListTile(
-            leading: const Icon(Icons.description_outlined,
-                color: SmarturStyle.textSecondary),
+            leading: Icon(Icons.description_outlined,
+                color: scheme.onSurfaceVariant),
             title: Text(l10n.termsAndConditions,
                 style: const TextStyle(fontFamily: 'Outfit')),
             trailing: Icon(Icons.chevron_right,
@@ -202,15 +202,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Helpers UI ──────────────────────────────────────────────────────────
 
   Widget _buildSectionHeader(String title) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Outfit',
           fontWeight: FontWeight.bold,
           fontSize: 12,
-          color: SmarturStyle.textSecondary,
+          color: scheme.onSurfaceVariant,
         ),
       ),
     );
@@ -220,6 +221,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showLanguageDialog() {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     final languages = ['Español', 'English', 'Français', 'Português'];
     showModalBottomSheet(
       context: context,
@@ -235,7 +237,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: scheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -289,6 +291,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showEditNameDialog() async {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     final currentName = await _authService.getUserName() ?? '';
     final controller = TextEditingController(text: currentName);
 
@@ -319,7 +322,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.cancel,
-                style: TextStyle(color: SmarturStyle.textSecondary)),
+                style: TextStyle(color: scheme.onSurfaceVariant)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -355,6 +358,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _confirmDeletion(BuildContext parentCtx) {
     final l10n = AppLocalizations.of(parentCtx)!;
+    final scheme = Theme.of(parentCtx).colorScheme;
     showDialog(
       context: parentCtx,
       builder: (ctx) => AlertDialog(
@@ -365,13 +369,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         content: Text(
           l10n.deleteAccountConfirm,
           style: TextStyle(
-              fontFamily: 'Outfit', color: SmarturStyle.textSecondary),
+              fontFamily: 'Outfit', color: scheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.cancel,
-                style: TextStyle(color: SmarturStyle.textSecondary)),
+                style: TextStyle(color: scheme.onSurfaceVariant)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -506,6 +510,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: EdgeInsets.only(
         left: 24,
@@ -521,7 +526,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: scheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -536,9 +541,9 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                   ? l10n.changePasswordStep0Hint
                   : l10n.changePasswordStep1Hint,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                   fontFamily: 'Outfit',
-                  color: SmarturStyle.textSecondary,
+                  color: scheme.onSurfaceVariant,
                   fontSize: 14),
             ),
             const SizedBox(height: 24),
@@ -606,6 +611,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
 
   Widget _buildStep1() {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Form(
       key: _formKey,
       child: Column(
@@ -637,7 +643,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
               suffixIcon: IconButton(
                 icon: Icon(
                     _obscureNew ? Icons.visibility_off : Icons.visibility,
-                    color: SmarturStyle.textSecondary),
+                    color: scheme.onSurfaceVariant),
                 onPressed: () =>
                     setState(() => _obscureNew = !_obscureNew),
               ),
@@ -671,7 +677,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                     _obscureConfirm
                         ? Icons.visibility_off
                         : Icons.visibility,
-                    color: SmarturStyle.textSecondary),
+                    color: scheme.onSurfaceVariant),
                 onPressed: () =>
                     setState(() => _obscureConfirm = !_obscureConfirm),
               ),

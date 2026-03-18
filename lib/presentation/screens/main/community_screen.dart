@@ -41,6 +41,7 @@ class _PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Card(
@@ -67,10 +68,10 @@ class _PostCard extends StatelessWidget {
               aspectRatio: 4 / 3,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
+                  color: scheme.outlineVariant,
                   borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
                 ),
-                child: const Icon(Icons.photo, size: 64, color: SmarturStyle.textSecondary),
+                child: Icon(Icons.photo, size: 64, color: scheme.onSurfaceVariant),
               ),
             ),
             Padding(
@@ -88,10 +89,10 @@ class _PostCard extends StatelessWidget {
                   const Spacer(),
                   Text(
                     'Hace ${index + 1} h',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 11,
-                      color: SmarturStyle.textSecondary,
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ],

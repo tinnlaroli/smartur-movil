@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartur/l10n/app_localizations.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 
@@ -15,22 +16,43 @@ class PreferencesStep2 extends StatefulWidget {
 }
 
 class _PreferencesStep2State extends State<PreferencesStep2> {
-  final _interestOptions = [
-    {'label': 'Cultura', 'icon': Icons.museum_outlined},
-    {'label': 'Gastronomía', 'icon': Icons.restaurant_outlined},
-    {'label': 'Aventura', 'icon': Icons.terrain},
-    {'label': 'Naturaleza', 'icon': Icons.park_outlined},
-    {'label': 'Historia', 'icon': Icons.account_balance_outlined},
-    {'label': 'Fotografía', 'icon': Icons.camera_alt_outlined},
-    {'label': 'Deportes', 'icon': Icons.sports_soccer},
-    {'label': 'Bienestar', 'icon': Icons.spa_outlined},
-    {'label': 'Arte', 'icon': Icons.palette_outlined},
-    {'label': 'Nightlife', 'icon': Icons.nightlife},
+  List<Map<String, dynamic>> _interestOptions(AppLocalizations l10n) => [
+    {'key': 'Cultura', 'label': l10n.interestCulture, 'icon': Icons.museum_outlined},
+    {'key': 'Gastronomía', 'label': l10n.interestGastronomy, 'icon': Icons.restaurant_outlined},
+    {'key': 'Aventura', 'label': l10n.interestAdventure, 'icon': Icons.terrain},
+    {'key': 'Naturaleza', 'label': l10n.interestNature, 'icon': Icons.park_outlined},
+    {'key': 'Historia', 'label': l10n.interestHistory, 'icon': Icons.account_balance_outlined},
+    {'key': 'Fotografía', 'label': l10n.interestPhotography, 'icon': Icons.camera_alt_outlined},
+    {'key': 'Deportes', 'label': l10n.interestSports, 'icon': Icons.sports_soccer},
+    {'key': 'Bienestar', 'label': l10n.interestWellness, 'icon': Icons.spa_outlined},
+    {'key': 'Arte', 'label': l10n.interestArt, 'icon': Icons.palette_outlined},
+    {'key': 'Nightlife', 'label': l10n.interestNightlife, 'icon': Icons.nightlife},
   ];
 
-  final _activityLevels = ['Bajo', 'Moderado', 'Alto', 'Extremo'];
-  final _travelTypes = ['Mochilero', 'Familiar', 'Lujo', 'Aventura', 'Romántico', 'De negocios'];
-  final _preferredPlaces = ['Playa', 'Montaña', 'Ciudad', 'Campo', 'Bosque', 'Desierto'];
+  List<Map<String, String>> _activityOptions(AppLocalizations l10n) => [
+    {'key': 'Bajo', 'label': l10n.activityLow},
+    {'key': 'Moderado', 'label': l10n.activityModerate},
+    {'key': 'Alto', 'label': l10n.activityHigh},
+    {'key': 'Extremo', 'label': l10n.activityExtreme},
+  ];
+
+  List<Map<String, String>> _travelOptions(AppLocalizations l10n) => [
+    {'key': 'Mochilero', 'label': l10n.travelBackpacker},
+    {'key': 'Familiar', 'label': l10n.travelFamily},
+    {'key': 'Lujo', 'label': l10n.travelLuxury},
+    {'key': 'Aventura', 'label': l10n.travelAdventure},
+    {'key': 'Romántico', 'label': l10n.travelRomantic},
+    {'key': 'De negocios', 'label': l10n.travelBusiness},
+  ];
+
+  List<Map<String, String>> _placeOptions(AppLocalizations l10n) => [
+    {'key': 'Playa', 'label': l10n.placeBeach},
+    {'key': 'Montaña', 'label': l10n.placeMountain},
+    {'key': 'Ciudad', 'label': l10n.placeCity},
+    {'key': 'Campo', 'label': l10n.placeCountryside},
+    {'key': 'Bosque', 'label': l10n.placeForest},
+    {'key': 'Desierto', 'label': l10n.placeDesert},
+  ];
 
   Set<String> _selectedInterests = {};
   String? _activityLevel;
@@ -65,21 +87,22 @@ class _PreferencesStep2State extends State<PreferencesStep2> {
   }
 
   void _submit() {
+    final l10n = AppLocalizations.of(context)!;
     if (_selectedInterests.isEmpty) {
-      SmarturNotifications.showError(context, 'Selecciona al menos un interés');
+      SmarturNotifications.showError(context, l10n.selectAtLeastOneInterest);
       return;
     }
     if (_activityLevel == null || _travelType == null || _preferredPlace == null) {
-      SmarturNotifications.showError(context, 'Completa todos los campos');
+      SmarturNotifications.showError(context, l10n.completeAllFields);
       return;
     }
-    int activityValue = 3; // Moderado por defecto
+    int activityValue = 3;
     if (_activityLevel == 'Bajo') {
       activityValue = 1;
     } else if (_activityLevel == 'Moderado') {
       activityValue = 3;
     } else {
-      activityValue = 5; // Alto o Extremo
+      activityValue = 5;
     }
 
     widget.data['interests'] = _selectedInterests.toList();
@@ -90,31 +113,38 @@ class _PreferencesStep2State extends State<PreferencesStep2> {
   }
 
   Widget _sectionLabel(String text, IconData icon) {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
         Icon(icon, size: 18, color: SmarturStyle.purple),
         const SizedBox(width: 8),
-        Text(text, style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600, color: SmarturStyle.textPrimary, fontSize: 15)),
+        Text(text, style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600, color: scheme.onSurface, fontSize: 15)),
       ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final interests = _interestOptions(l10n);
+    final activities = _activityOptions(l10n);
+    final travels = _travelOptions(l10n);
+    final places = _placeOptions(l10n);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Intereses
-        _sectionLabel('Tus intereses', Icons.favorite_outline),
+        _sectionLabel(l10n.yourInterests, Icons.favorite_outline),
         const SizedBox(height: SmarturStyle.spacingSm),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _interestOptions.map((item) {
-            final selected = _selectedInterests.contains(item['label']);
+          children: interests.map((item) {
+            final selected = _selectedInterests.contains(item['key']);
             return FilterChip(
               avatar: Icon(item['icon'] as IconData, size: 16, color: selected ? Colors.white : SmarturStyle.purple),
-              label: Text(item['label'] as String, style: TextStyle(fontFamily: 'Outfit', fontSize: 13, color: selected ? Colors.white : SmarturStyle.textPrimary)),
+              label: Text(item['label'] as String, style: TextStyle(fontFamily: 'Outfit', fontSize: 13, color: selected ? Colors.white : scheme.onSurface)),
               selected: selected,
               showCheckmark: false,
               selectedColor: SmarturStyle.purple,
@@ -127,9 +157,9 @@ class _PreferencesStep2State extends State<PreferencesStep2> {
               onSelected: (val) {
                 setState(() {
                   if (val) {
-                    _selectedInterests.add(item['label'] as String);
+                    _selectedInterests.add(item['key'] as String);
                   } else {
-                    _selectedInterests.remove(item['label'] as String);
+                    _selectedInterests.remove(item['key'] as String);
                   }
                 });
               },
@@ -138,16 +168,15 @@ class _PreferencesStep2State extends State<PreferencesStep2> {
         ),
         const SizedBox(height: SmarturStyle.spacingLg),
 
-        // Nivel de actividad
-        _sectionLabel('Nivel de actividad', Icons.bolt_outlined),
+        _sectionLabel(l10n.activityLevel, Icons.bolt_outlined),
         const SizedBox(height: SmarturStyle.spacingSm),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _activityLevels.map((level) {
-            final selected = _activityLevel == level;
+          children: activities.map((item) {
+            final selected = _activityLevel == item['key'];
             return ChoiceChip(
-              label: Text(level, style: TextStyle(fontFamily: 'Outfit', color: selected ? Colors.white : SmarturStyle.textPrimary)),
+              label: Text(item['label']!, style: TextStyle(fontFamily: 'Outfit', color: selected ? Colors.white : scheme.onSurface)),
               selected: selected,
               showCheckmark: false,
               selectedColor: SmarturStyle.pink,
@@ -156,22 +185,21 @@ class _PreferencesStep2State extends State<PreferencesStep2> {
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(color: selected ? SmarturStyle.pink : SmarturStyle.pink.withValues(alpha: 0.2)),
               ),
-              onSelected: (_) => setState(() => _activityLevel = level),
+              onSelected: (_) => setState(() => _activityLevel = item['key']),
             );
           }).toList(),
         ),
         const SizedBox(height: SmarturStyle.spacingLg),
 
-        // Tipo de viaje
-        _sectionLabel('Tipo de viaje', Icons.luggage_outlined),
+        _sectionLabel(l10n.travelType, Icons.luggage_outlined),
         const SizedBox(height: SmarturStyle.spacingSm),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _travelTypes.map((type) {
-            final selected = _travelType == type;
+          children: travels.map((item) {
+            final selected = _travelType == item['key'];
             return ChoiceChip(
-              label: Text(type, style: TextStyle(fontFamily: 'Outfit', color: selected ? Colors.white : SmarturStyle.textPrimary)),
+              label: Text(item['label']!, style: TextStyle(fontFamily: 'Outfit', color: selected ? Colors.white : scheme.onSurface)),
               selected: selected,
               showCheckmark: false,
               selectedColor: SmarturStyle.blue,
@@ -180,22 +208,21 @@ class _PreferencesStep2State extends State<PreferencesStep2> {
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(color: selected ? SmarturStyle.blue : SmarturStyle.blue.withValues(alpha: 0.2)),
               ),
-              onSelected: (_) => setState(() => _travelType = type),
+              onSelected: (_) => setState(() => _travelType = item['key']),
             );
           }).toList(),
         ),
         const SizedBox(height: SmarturStyle.spacingLg),
 
-        // Lugar preferido
-        _sectionLabel('Lugar preferido', Icons.place_outlined),
+        _sectionLabel(l10n.preferredPlace, Icons.place_outlined),
         const SizedBox(height: SmarturStyle.spacingSm),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _preferredPlaces.map((place) {
-            final selected = _preferredPlace == place;
+          children: places.map((item) {
+            final selected = _preferredPlace == item['key'];
             return ChoiceChip(
-              label: Text(place, style: TextStyle(fontFamily: 'Outfit', color: selected ? Colors.white : SmarturStyle.textPrimary)),
+              label: Text(item['label']!, style: TextStyle(fontFamily: 'Outfit', color: selected ? Colors.white : scheme.onSurface)),
               selected: selected,
               showCheckmark: false,
               selectedColor: SmarturStyle.green,
@@ -204,7 +231,7 @@ class _PreferencesStep2State extends State<PreferencesStep2> {
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(color: selected ? SmarturStyle.green : SmarturStyle.green.withValues(alpha: 0.2)),
               ),
-              onSelected: (_) => setState(() => _preferredPlace = place),
+              onSelected: (_) => setState(() => _preferredPlace = item['key']),
             );
           }).toList(),
         ),
@@ -220,14 +247,14 @@ class _PreferencesStep2State extends State<PreferencesStep2> {
                   minimumSize: const Size(double.infinity, SmarturStyle.touchTargetComfortable),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Atrás', style: TextStyle(color: SmarturStyle.purple, fontFamily: 'Outfit')),
+                child: Text(l10n.back, style: const TextStyle(color: SmarturStyle.purple, fontFamily: 'Outfit')),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: ElevatedButton(
                 onPressed: _submit,
-                child: const Text('Siguiente'),
+                child: Text(l10n.next),
               ),
             ),
           ],

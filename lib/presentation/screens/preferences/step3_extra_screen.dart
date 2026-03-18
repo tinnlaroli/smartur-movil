@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartur/l10n/app_localizations.dart';
 import '../../../core/theme/style_guide.dart';
 
 /// Paso 3: Accesibilidad, restricciones, preferencias sostenibles, visita previa
@@ -27,12 +28,19 @@ class _PreferencesStep3State extends State<PreferencesStep3> {
   final _restrictionsController = TextEditingController();
   String? _sustainablePreference;
 
-  final List<String> _sustainableOptions = [
+  static const List<String> _sustainableKeys = [
     'Sin preferencia',
     'Baja prioridad',
     'Prioridad media',
     'Alta prioridad',
   ];
+
+  Map<String, String> _sustainableLabels(AppLocalizations l10n) => {
+    'Sin preferencia': l10n.sustainableNoPref,
+    'Baja prioridad': l10n.sustainableLow,
+    'Prioridad media': l10n.sustainableMedium,
+    'Alta prioridad': l10n.sustainableHigh,
+  };
 
   @override
   void initState() {
@@ -72,15 +80,18 @@ class _PreferencesStep3State extends State<PreferencesStep3> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final sustainableLabels = _sustainableLabels(l10n);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Accesibilidad
         _SwitchTile(
           icon: Icons.accessibility_new,
           iconColor: SmarturStyle.blue,
-          title: '¿Necesitas accesibilidad especial?',
-          subtitle: 'Rutas adaptadas para movilidad reducida u otras necesidades',
+          title: l10n.needAccessibility,
+          subtitle: l10n.accessibilitySubtitle,
           value: _hasAccessibility,
           onChanged: (v) => setState(() => _hasAccessibility = v),
         ),
@@ -90,8 +101,8 @@ class _PreferencesStep3State extends State<PreferencesStep3> {
             controller: _accessibilityDetailController,
             maxLines: 2,
             decoration: InputDecoration(
-              labelText: 'Describe tu necesidad (opcional)',
-              hintText: 'Ej: silla de ruedas, bastón...',
+              labelText: l10n.describeNeedOptional,
+              hintText: l10n.accessibilityHint,
               prefixIcon: const Icon(Icons.edit_outlined, color: SmarturStyle.blue),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -99,46 +110,44 @@ class _PreferencesStep3State extends State<PreferencesStep3> {
         ],
         const SizedBox(height: SmarturStyle.spacingMd),
 
-        // Ha visitado antes
         _SwitchTile(
           icon: Icons.history_outlined,
           iconColor: SmarturStyle.orange,
-          title: '¿Has visitado las Altas Montañas?',
-          subtitle: 'Esto nos ayuda a personalizar mejor tus recomendaciones',
+          title: l10n.visitedHighMountains,
+          subtitle: l10n.visitedSubtitle,
           value: _hasVisitedBefore,
           onChanged: (v) => setState(() => _hasVisitedBefore = v),
         ),
         const SizedBox(height: SmarturStyle.spacingMd),
 
-        // Restricciones alimentarias / médicas
         TextFormField(
           controller: _restrictionsController,
           maxLines: 2,
           decoration: InputDecoration(
-            labelText: 'Restricciones alimentarias o médicas',
-            hintText: 'Ej: vegetariano, alergia a mariscos... (dejar vacío si ninguna)',
+            labelText: l10n.dietaryRestrictions,
+            hintText: l10n.dietaryHint,
             prefixIcon: const Icon(Icons.no_food_outlined, color: SmarturStyle.pink),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         const SizedBox(height: SmarturStyle.spacingLg),
 
-        // Preferencias sostenibles
         Row(
-          children: const [
-            Icon(Icons.eco_outlined, size: 18, color: SmarturStyle.green),
-            SizedBox(width: 8),
-            Text('Preferencias sustentables', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600, color: SmarturStyle.textPrimary, fontSize: 15)),
+          children: [
+            const Icon(Icons.eco_outlined, size: 18, color: SmarturStyle.green),
+            const SizedBox(width: 8),
+            Text(l10n.sustainablePreferences, style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600, color: scheme.onSurface, fontSize: 15)),
           ],
         ),
         const SizedBox(height: SmarturStyle.spacingSm),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _sustainableOptions.map((opt) {
-            final selected = _sustainablePreference == opt;
+          children: _sustainableKeys.map((key) {
+            final selected = _sustainablePreference == key;
+            final label = sustainableLabels[key] ?? key;
             return ChoiceChip(
-              label: Text(opt, style: TextStyle(fontFamily: 'Outfit', color: selected ? Colors.white : SmarturStyle.textPrimary, fontSize: 13)),
+              label: Text(label, style: TextStyle(fontFamily: 'Outfit', color: selected ? Colors.white : scheme.onSurface, fontSize: 13)),
               selected: selected,
               color: WidgetStateProperty.resolveWith((states) =>
                   states.contains(WidgetState.selected) ? SmarturStyle.green : SmarturStyle.green.withValues(alpha: 0.1)),
@@ -146,7 +155,7 @@ class _PreferencesStep3State extends State<PreferencesStep3> {
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(color: selected ? SmarturStyle.green : SmarturStyle.green.withValues(alpha: 0.2)),
               ),
-              onSelected: (_) => setState(() => _sustainablePreference = opt),
+              onSelected: (_) => setState(() => _sustainablePreference = key),
             );
           }).toList(),
         ),
@@ -162,7 +171,7 @@ class _PreferencesStep3State extends State<PreferencesStep3> {
                   minimumSize: const Size(double.infinity, SmarturStyle.touchTargetComfortable),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Atrás', style: TextStyle(color: SmarturStyle.purple, fontFamily: 'Outfit')),
+                child: Text(l10n.back, style: const TextStyle(color: SmarturStyle.purple, fontFamily: 'Outfit')),
               ),
             ),
             const SizedBox(width: 12),
@@ -179,7 +188,7 @@ class _PreferencesStep3State extends State<PreferencesStep3> {
                         width: 20,
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                       )
-                    : const Text('Guardar'),
+                    : Text(l10n.save),
               ),
             ),
           ],
@@ -208,12 +217,13 @@ class _SwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: value ? iconColor.withValues(alpha: 0.06) : SmarturStyle.bgSecondary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: value ? iconColor.withValues(alpha: 0.4) : Colors.grey.shade200),
+        border: Border.all(color: value ? iconColor.withValues(alpha: 0.4) : scheme.outlineVariant),
       ),
       child: Row(
         children: [
@@ -223,8 +233,8 @@ class _SwitchTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600, fontSize: 13, color: SmarturStyle.textPrimary)),
-                Text(subtitle, style: const TextStyle(fontFamily: 'Outfit', fontSize: 11, color: SmarturStyle.textSecondary)),
+                Text(title, style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600, fontSize: 13, color: scheme.onSurface)),
+                Text(subtitle, style: TextStyle(fontFamily: 'Outfit', fontSize: 11, color: scheme.onSurfaceVariant)),
               ],
             ),
           ),

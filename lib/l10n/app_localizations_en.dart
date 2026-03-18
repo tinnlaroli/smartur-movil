@@ -250,4 +250,509 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get biometricReadError => 'Error reading fingerprint.';
+
+  @override
+  String get quickAccess => 'Quick access';
+
+  @override
+  String get activate => 'Activate';
+
+  @override
+  String get notNow => 'Not now';
+
+  @override
+  String get dontRemindMe => 'Don\'t remind me';
+
+  @override
+  String get biometricPrompt =>
+      'Do you want to use your fingerprint to sign in faster next time?';
+
+  @override
+  String get biometricActivateReason =>
+      'Confirm your fingerprint to enable quick access';
+
+  @override
+  String get biometricActivateTitle => 'Activate fingerprint — SMARTUR';
+
+  @override
+  String get biometricTouchSensor => 'Touch the sensor';
+
+  @override
+  String get biometricActivated => 'Fingerprint access activated';
+
+  @override
+  String biometricActivateError(Object error) {
+    return 'Could not activate: $error';
+  }
+
+  @override
+  String get biometricDeactivated => 'Fingerprint will no longer be requested';
+
+  @override
+  String get biometricConfirmActivate => 'Confirm your fingerprint to activate';
+
+  @override
+  String get biometricCouldNotActivate => 'Could not activate fingerprint';
+
+  @override
+  String get myProfile => 'My profile';
+
+  @override
+  String get manageAccount => 'Manage your account quickly';
+
+  @override
+  String get myPreferences => 'My preferences';
+
+  @override
+  String get yourPreferences => 'Your preferences';
+
+  @override
+  String get noPreferencesSaved => 'You haven\'t saved preferences yet.';
+
+  @override
+  String get confirmChangePreferences =>
+      'Are you sure you want to change them?';
+
+  @override
+  String get change => 'Change';
+
+  @override
+  String get fingerprintAccess => 'Fingerprint access';
+
+  @override
+  String get configuration => 'Settings';
+
+  @override
+  String exploreGreeting(Object name) {
+    return 'Explore$name';
+  }
+
+  @override
+  String get highMountainsVeracruz => 'Altas Montañas, Veracruz';
+
+  @override
+  String get exploreHighMountains => 'Explore the High Mountains';
+
+  @override
+  String recommendationsForYou(Object name) {
+    return 'Recommendations for you, $name';
+  }
+
+  @override
+  String get weatherNow => 'Weather now';
+
+  @override
+  String get notAvailable => 'Not available';
+
+  @override
+  String get allCategories => 'All';
+
+  @override
+  String get noCategoryPlaces => 'No places in this category yet';
+
+  @override
+  String get tabHistory => 'History';
+
+  @override
+  String get tabLocation => 'Location';
+
+  @override
+  String get tabGastronomy => 'Gastronomy';
+
+  @override
+  String get tabAiSummary => 'AI Summary';
+
+  @override
+  String get fromPrice => 'From';
+
+  @override
+  String get free => 'Free';
+
+  @override
+  String get createOneDayRoute => 'Create 1-Day Route';
+
+  @override
+  String get tabLocationPlaceholder => 'Map and key points to visit.';
+
+  @override
+  String get tabGastronomyPlaceholder =>
+      'Typical dishes and recommended cafés in the area.';
+
+  @override
+  String get tabAiPlaceholder =>
+      'AI-generated summary with reviews and ratings from other tourists.';
+
+  @override
+  String get invalidCredentials => 'Invalid credentials.';
+
+  @override
+  String get invalidCode => 'Invalid or expired code.';
+
+  @override
+  String get accountCreated => 'Account created successfully. Please sign in.';
+
+  @override
+  String get connectionError => 'Connection error.';
+
+  @override
+  String get changeEmail => 'Change email';
+
+  @override
+  String get confirmLogoutTitle => 'Log out';
+
+  @override
+  String get confirmLogoutMessage => 'Are you sure you want to log out?';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get back => 'Back';
+
+  @override
+  String get sustainablePreferences => 'Sustainable preferences';
+
+  @override
+  String get sessionExpiredPreferences =>
+      'Session expired. Please sign in again.';
+
+  @override
+  String get profileReady =>
+      'Profile ready! Now we\'ll give you tailored recommendations 🎉';
+
+  @override
+  String get couldNotSavePreferences =>
+      'Could not save preferences. Please try again.';
+
+  @override
+  String get selectGender => 'Please select your gender';
+
+  @override
+  String get selectAtLeastOneInterest => 'Select at least one interest';
+
+  @override
+  String get completeAllFields => 'Complete all fields';
+
+  @override
+  String get categoryHotels => 'Hotels';
+
+  @override
+  String get categoryRestaurants => 'Restaurants';
+
+  @override
+  String get categoryMuseums => 'Museums';
+
+  @override
+  String get categoryAdventures => 'Adventures';
+
+  @override
+  String get tourist => 'tourist';
+
+  @override
+  String get codeSentToLabel => 'A code was sent to:';
+
+  @override
+  String get enterSixDigitCode => 'Enter the 6-digit code';
+
+  @override
+  String get rememberMe7Days => 'Remember me for 7 days on this device';
+
+  @override
+  String get verify => 'VERIFY';
+
+  @override
+  String get signInButton => 'SIGN IN';
+
+  @override
+  String get createAccount => 'CREATE ACCOUNT';
+
+  @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get noAccountPrompt => 'Don\'t have an account? ';
+
+  @override
+  String get haveAccountPrompt => 'Already have an account? ';
+
+  @override
+  String get signUp => 'Sign up';
+
+  @override
+  String get signInAction => 'Sign in';
+
+  @override
+  String get fullName => 'Full name';
+
+  @override
+  String get enterFullName => 'Enter your full name';
+
+  @override
+  String get minThreeChars => 'Minimum 3 characters';
+
+  @override
+  String get emailAddress => 'Email address';
+
+  @override
+  String get enterEmail => 'Enter your email';
+
+  @override
+  String get enterValidEmail => 'Enter a valid email';
+
+  @override
+  String get password => 'Password';
+
+  @override
+  String get enterPassword => 'Enter your password';
+
+  @override
+  String get minEightChars => 'Minimum 8 characters';
+
+  @override
+  String get atLeastOneUppercase => 'At least one uppercase letter';
+
+  @override
+  String get atLeastOneLowercase => 'At least one lowercase letter';
+
+  @override
+  String get atLeastOneNumber => 'At least one number';
+
+  @override
+  String get atLeastOneSpecial => 'At least one special character';
+
+  @override
+  String get passwordRequirements => 'Password must have:';
+
+  @override
+  String get specialCharHint => 'A special character (!@#\$%^&*)';
+
+  @override
+  String get strengthVeryWeak => 'Very weak';
+
+  @override
+  String get strengthWeak => 'Weak';
+
+  @override
+  String get strengthFair => 'Fair';
+
+  @override
+  String get strengthStrong => 'Strong';
+
+  @override
+  String get strengthVeryStrong => 'Very strong';
+
+  @override
+  String get defaultUserName => 'SMARTUR Tourist';
+
+  @override
+  String get myInterests => 'My Interests';
+
+  @override
+  String get quickSettings => 'Quick Settings';
+
+  @override
+  String memberSince(Object date) {
+    return 'Member since $date';
+  }
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get notificationsSubtitle =>
+      'Manage weather, route and community alerts';
+
+  @override
+  String get appPreferences => 'App Preferences';
+
+  @override
+  String get appPreferencesSubtitle => 'Language, units and visual theme';
+
+  @override
+  String get editProfile => 'Edit Profile';
+
+  @override
+  String get editProfileSubtitle => 'Change your name and personal data';
+
+  @override
+  String get changePasswordSubtitle => 'Update your access password';
+
+  @override
+  String get sessionClosed => 'Session closed';
+
+  @override
+  String stepXOfY(Object current, Object total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String get stepAboutYou => 'About you';
+
+  @override
+  String get stepAboutYouSubtitle => 'Tell us a bit about yourself';
+
+  @override
+  String get stepYourTastes => 'Your tastes';
+
+  @override
+  String get stepYourTastesSubtitle => 'What you love to do';
+
+  @override
+  String get stepDetails => 'Details';
+
+  @override
+  String get stepDetailsSubtitle => 'Final preferences';
+
+  @override
+  String get birthYear => 'Birth year';
+
+  @override
+  String get enterBirthYear => 'Enter your birth year';
+
+  @override
+  String get invalidYear => 'Invalid year';
+
+  @override
+  String get gender => 'Gender';
+
+  @override
+  String get genderMale => 'Male';
+
+  @override
+  String get genderFemale => 'Female';
+
+  @override
+  String get genderNonBinary => 'Non-binary';
+
+  @override
+  String get genderPreferNotToSay => 'Prefer not to say';
+
+  @override
+  String get yourInterests => 'Your interests';
+
+  @override
+  String get activityLevel => 'Activity level';
+
+  @override
+  String get travelType => 'Travel type';
+
+  @override
+  String get preferredPlace => 'Preferred place';
+
+  @override
+  String get interestCulture => 'Culture';
+
+  @override
+  String get interestGastronomy => 'Gastronomy';
+
+  @override
+  String get interestAdventure => 'Adventure';
+
+  @override
+  String get interestNature => 'Nature';
+
+  @override
+  String get interestHistory => 'History';
+
+  @override
+  String get interestPhotography => 'Photography';
+
+  @override
+  String get interestSports => 'Sports';
+
+  @override
+  String get interestWellness => 'Wellness';
+
+  @override
+  String get interestArt => 'Art';
+
+  @override
+  String get interestNightlife => 'Nightlife';
+
+  @override
+  String get activityLow => 'Low';
+
+  @override
+  String get activityModerate => 'Moderate';
+
+  @override
+  String get activityHigh => 'High';
+
+  @override
+  String get activityExtreme => 'Extreme';
+
+  @override
+  String get travelBackpacker => 'Backpacker';
+
+  @override
+  String get travelFamily => 'Family';
+
+  @override
+  String get travelLuxury => 'Luxury';
+
+  @override
+  String get travelAdventure => 'Adventure';
+
+  @override
+  String get travelRomantic => 'Romantic';
+
+  @override
+  String get travelBusiness => 'Business';
+
+  @override
+  String get placeBeach => 'Beach';
+
+  @override
+  String get placeMountain => 'Mountain';
+
+  @override
+  String get placeCity => 'City';
+
+  @override
+  String get placeCountryside => 'Countryside';
+
+  @override
+  String get placeForest => 'Forest';
+
+  @override
+  String get placeDesert => 'Desert';
+
+  @override
+  String get needAccessibility => 'Do you need special accessibility?';
+
+  @override
+  String get accessibilitySubtitle =>
+      'Routes adapted for reduced mobility or other needs';
+
+  @override
+  String get describeNeedOptional => 'Describe your need (optional)';
+
+  @override
+  String get accessibilityHint => 'E.g.: wheelchair, cane...';
+
+  @override
+  String get visitedHighMountains => 'Have you visited the High Mountains?';
+
+  @override
+  String get visitedSubtitle =>
+      'This helps us better personalize your recommendations';
+
+  @override
+  String get dietaryRestrictions => 'Dietary or medical restrictions';
+
+  @override
+  String get dietaryHint =>
+      'E.g.: vegetarian, seafood allergy... (leave empty if none)';
+
+  @override
+  String get sustainableNoPref => 'No preference';
+
+  @override
+  String get sustainableLow => 'Low priority';
+
+  @override
+  String get sustainableMedium => 'Medium priority';
+
+  @override
+  String get sustainableHigh => 'High priority';
 }

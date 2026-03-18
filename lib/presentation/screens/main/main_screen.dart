@@ -93,8 +93,9 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Widget _buildNavItem(IconData outlineIcon, IconData solidIcon, String label, int index) {
+    final scheme = Theme.of(context).colorScheme;
     final bool isSelected = _currentIndex == index;
-    final color = isSelected ? SmarturStyle.purple : Colors.grey.shade400;
+    final color = isSelected ? SmarturStyle.purple : scheme.onSurfaceVariant;
 
     return GestureDetector(
       onTap: () => _onTabTapped(index),

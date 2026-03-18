@@ -25,6 +25,7 @@ class _DiaryScreenState extends State<DiaryScreen> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -35,7 +36,7 @@ class _DiaryScreenState extends State<DiaryScreen> with SingleTickerProviderStat
           bottom: TabBar(
             indicatorColor: SmarturStyle.purple,
             labelColor: SmarturStyle.purple,
-            unselectedLabelColor: SmarturStyle.textSecondary,
+            unselectedLabelColor: scheme.onSurfaceVariant,
             labelStyle: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600),
             tabs: [
               Tab(text: l10n.favoritesTab),
@@ -94,6 +95,7 @@ class _FavoritesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: GridView.builder(
@@ -111,8 +113,8 @@ class _FavoritesTab extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 Container(
-                  color: Colors.grey.shade200,
-                  child: const Icon(Icons.photo_outlined, color: SmarturStyle.textSecondary),
+                  color: scheme.outlineVariant,
+                  child: Icon(Icons.photo_outlined, color: scheme.onSurfaceVariant),
                 ),
                 Align(
                   alignment: Alignment.topRight,
@@ -168,7 +170,7 @@ class _HistoryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Timeline visual simple sin paquete externo.
+    final scheme = Theme.of(context).colorScheme;
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
       itemCount: 6,
@@ -200,7 +202,7 @@ class _HistoryTab extends StatelessWidget {
                   Container(
                     width: 2,
                     height: 70,
-                    color: Colors.grey.shade300,
+                    color: scheme.outlineVariant,
                   ),
               ],
             ),
@@ -210,9 +212,9 @@ class _HistoryTab extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 20),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
+                  color: scheme.surfaceContainerLowest,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
+                  border: Border.all(color: scheme.outlineVariant),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,21 +245,21 @@ class _HistoryTab extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       '12 de octubre, 2023 · 16:45',
                       style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 12,
-                        color: SmarturStyle.textSecondary,
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
+                    Text(
                       'Pequeña nota de cómo te sentiste en este lugar y qué te gustó más.',
                       style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 12,
-                        color: SmarturStyle.textSecondary,
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
                   ],

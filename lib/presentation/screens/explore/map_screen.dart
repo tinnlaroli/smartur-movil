@@ -135,6 +135,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _buildTopFiltersBar(AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
     return Positioned(
       top: 8,
       left: 12,
@@ -162,10 +163,10 @@ class _MapScreenState extends State<MapScreen> {
                 Expanded(
                   child: Text(
                     l10n.mapDiscoverHint,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 12,
-                      color: SmarturStyle.textSecondary,
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -195,14 +196,14 @@ class _MapScreenState extends State<MapScreen> {
                         fontFamily: 'Outfit',
                         fontSize: 12,
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? Colors.white : SmarturStyle.textSecondary,
+                        color: isSelected ? Colors.white : scheme.onSurfaceVariant,
                       ),
                     ),
                     backgroundColor: isSelected ? SmarturStyle.purple : Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
                       side: BorderSide(
-                        color: isSelected ? SmarturStyle.purple : Colors.grey.shade300,
+                        color: isSelected ? SmarturStyle.purple : scheme.outlineVariant,
                       ),
                     ),
                     elevation: isSelected ? 2 : 0,
@@ -223,6 +224,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _buildBottomInfoCard(AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
     final place = _selectedPlace;
     if (place == null) {
       return Positioned(
@@ -247,15 +249,15 @@ class _MapScreenState extends State<MapScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.touch_app_outlined,
-                    size: 18, color: SmarturStyle.textSecondary),
+                Icon(Icons.touch_app_outlined,
+                    size: 18, color: scheme.onSurfaceVariant),
                 const SizedBox(width: 8),
                 Text(
                   l10n.mapTapPinHint,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Outfit',
                     fontSize: 12,
-                    color: SmarturStyle.textSecondary,
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -317,25 +319,25 @@ class _MapScreenState extends State<MapScreen> {
                       place.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 12,
-                        color: SmarturStyle.textSecondary,
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${l10n.aiSmartur} · ${place.category}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 11,
-                        color: SmarturStyle.textSecondary,
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: SmarturStyle.textSecondary),
+              Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
             ],
           ),
         ),

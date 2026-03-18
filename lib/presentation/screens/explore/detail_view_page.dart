@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
+import 'package:smartur/l10n/app_localizations.dart';
 import '../../../core/theme/style_guide.dart';
 
 class DetailViewPage extends StatelessWidget {
@@ -24,177 +26,87 @@ class DetailViewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return DefaultTabController(
       length: 4,
       child: Scaffold(
         body: Stack(
           children: [
+            // Hero background image
             Hero(
               tag: heroTag,
               child: SizedBox.expand(
                 child: Image.network(
                   heroImageUrl,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stack) => Container(
+                    color: Colors.grey.shade900,
+                    child: const Icon(Icons.image_not_supported_outlined,
+                        color: Colors.white38, size: 48),
+                  ),
                 ),
               ),
             ),
-            // Dark overlay for legibility
-            Positioned.fill(
-              child: ColoredBox(color: Colors.black.withValues(alpha: 0.38)),
+
+            // Dark gradient overlay
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0.0, 0.3, 0.7, 1.0],
+                    colors: [
+                      Color(0x30000000),
+                      Color(0x10000000),
+                      Color(0x90000000),
+                      Color(0xDD000000),
+                    ],
+                  ),
+                ),
+              ),
             ),
+
             SafeArea(
               child: Stack(
                 children: [
-                  // Top actions
+                  // Top row — back + bookmark
                   Positioned(
                     top: 8,
                     left: 8,
-                    child: IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    child: _GlassCircle(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(Icons.arrow_back_rounded,
+                          color: Colors.white, size: 22),
                     ),
                   ),
                   Positioned(
                     top: 8,
                     right: 8,
-                    child: IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.bookmark_border, color: Colors.white),
+                    child: _GlassCircle(
+                      onTap: () {},
+                      child: const Icon(Icons.bookmark_border_rounded,
+                          color: Colors.white, size: 22),
                     ),
                   ),
 
-                  // Right mosaic
+                  // Right mosaic thumbnails
+                  if (galleryUrls.length > 1)
+                    Positioned(
+                      top: 130,
+                      right: 16,
+                      child: _RightMosaic(galleryUrls: galleryUrls),
+                    ),
+
+                  // Main content — bottom sheet style
                   Positioned(
-                    top: 140,
-                    right: 16,
-                    child: _RightMosaic(galleryUrls: galleryUrls),
-                  ),
-
-                  // Main content
-                  Positioned(
-                    left: 20,
-                    right: 20,
-                    bottom: 26,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _RatingPill(rating: rating),
-                        const SizedBox(height: 10),
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontFamily: 'CalSans',
-                            fontSize: 44,
-                            fontWeight: FontWeight.bold,
-                            height: 1.0,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            const Icon(Icons.place_outlined, color: Colors.white70, size: 16),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                locationLine,
-                                style: const TextStyle(
-                                  fontFamily: 'Outfit',
-                                  fontSize: 12,
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Tabs + content inside glass card
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(22),
-                          child: Container(
-                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-                            decoration: BoxDecoration(
-                              color: scheme.surface.withValues(alpha: 0.10),
-                              borderRadius: BorderRadius.circular(22),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.18),
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TabBar(
-                                  isScrollable: true,
-                                  indicatorColor: SmarturStyle.orange,
-                                  labelColor: Colors.white,
-                                  unselectedLabelColor: Colors.white70,
-                                  labelStyle: const TextStyle(
-                                    fontFamily: 'Outfit',
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12,
-                                  ),
-                                  tabs: const [
-                                    Tab(text: 'Historia'),
-                                    Tab(text: 'Ubicación'),
-                                    Tab(text: 'Gastronomía'),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                SizedBox(
-                                  height: 130,
-                                  child: TabBarView(
-                                    children: [
-                                      _TabText(
-                                        text: subtitle,
-                                      ),
-                                      const _TabText(
-                                        text:
-                                            'Mapa y puntos clave para visitar. (Placeholder para R4: pins + rutas)',
-                                      ),
-                                      const _TabText(
-                                        text:
-                                            'Platillos típicos y cafés recomendados. (Placeholder)',
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // CTA
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: SmarturStyle.orange,
-                                  foregroundColor: Colors.white,
-                                  minimumSize: const Size(0, 54),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                onPressed: () {},
-                                child: const Text(
-                                  'Ver Guías Locales',
-                                  style: TextStyle(
-                                    fontFamily: 'Outfit',
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: _BottomContent(
+                      title: title,
+                      locationLine: locationLine,
+                      rating: rating,
+                      subtitle: subtitle,
                     ),
                   ),
                 ],
@@ -207,6 +119,211 @@ class DetailViewPage extends StatelessWidget {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+
+class _GlassCircle extends StatelessWidget {
+  final VoidCallback onTap;
+  final Widget child;
+  const _GlassCircle({required this.onTap, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipOval(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            color: Colors.white.withValues(alpha: 0.12),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Bottom content with glass card ──
+
+class _BottomContent extends StatelessWidget {
+  final String title;
+  final String locationLine;
+  final double rating;
+  final String subtitle;
+
+  const _BottomContent({
+    required this.title,
+    required this.locationLine,
+    required this.rating,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.42),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(
+              top: BorderSide(
+                color: Colors.white.withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Rating + location row
+              Row(
+                children: [
+                  _RatingPill(rating: rating),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.place_outlined,
+                            color: Colors.white54, size: 14),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            locationLine,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 11,
+                              color: Colors.white54,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Title
+              Text(
+                title,
+                style: const TextStyle(
+                  fontFamily: 'CalSans',
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  height: 1.0,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Tabs
+              TabBar(
+                isScrollable: true,
+                indicatorColor: SmarturStyle.orange,
+                indicatorSize: TabBarIndicatorSize.label,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white54,
+                labelStyle: const TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+                dividerHeight: 0,
+                tabAlignment: TabAlignment.start,
+                tabs: [
+                  Tab(text: l10n.tabHistory),
+                  Tab(text: l10n.tabLocation),
+                  Tab(text: l10n.tabGastronomy),
+                  Tab(text: l10n.tabAiSummary),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              SizedBox(
+                height: 110,
+                child: TabBarView(
+                  children: [
+                    _TabText(text: subtitle),
+                    _TabText(text: l10n.tabLocationPlaceholder),
+                    _TabText(text: l10n.tabGastronomyPlaceholder),
+                    _TabText(text: l10n.tabAiPlaceholder),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // CTA row: price + button
+              Row(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        l10n.fromPrice,
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 10,
+                          color: Colors.white.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      Text(
+                        l10n.free,
+                        style: TextStyle(
+                          fontFamily: 'CalSans',
+                          fontSize: 22,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: SmarturStyle.orange,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(0, 52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: () {},
+                      child: Text(
+                        l10n.createOneDayRoute,
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Reusable small widgets ──
+
 class _RatingPill extends StatelessWidget {
   final double rating;
   const _RatingPill({required this.rating});
@@ -214,17 +331,17 @@ class _RatingPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: SmarturStyle.orange.withValues(alpha: 0.28),
+        color: SmarturStyle.orange.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: SmarturStyle.orange.withValues(alpha: 0.45)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star_rounded, size: 16, color: SmarturStyle.orange),
-          const SizedBox(width: 6),
+          const Icon(Icons.star_rounded, size: 14, color: SmarturStyle.orange),
+          const SizedBox(width: 4),
           Text(
             rating.toStringAsFixed(1),
             style: const TextStyle(
@@ -246,24 +363,24 @@ class _RightMosaic extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = galleryUrls.take(3).toList();
-    final remaining = (galleryUrls.length - items.length);
+    final items = galleryUrls.skip(1).take(3).toList();
+    final remaining = (galleryUrls.length - 1 - items.length).clamp(0, 999);
 
     return Column(
       children: [
         for (int i = 0; i < items.length; i++) ...[
-          _MiniThumb(url: items[i], size: i == 0 ? 56 : 48),
+          _MiniThumb(url: items[i], size: i == 0 ? 54 : 46),
           const SizedBox(height: 10),
         ],
         if (remaining > 0)
           Container(
-            width: 48,
-            height: 48,
+            width: 46,
+            height: 46,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.35),
+              color: Colors.black.withValues(alpha: 0.40),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
             ),
             child: Text(
               '+$remaining',
@@ -287,11 +404,14 @@ class _MiniThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: SizedBox(
-        width: size,
-        height: size,
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
+      ),
+      child: ClipOval(
         child: Image.network(url, fit: BoxFit.cover),
       ),
     );
@@ -305,16 +425,18 @@ class _TabText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontFamily: 'Outfit',
-          fontSize: 12,
-          height: 1.35,
-          color: Colors.white70,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 12,
+            height: 1.4,
+            color: Colors.white.withValues(alpha: 0.72),
+          ),
         ),
       ),
     );
   }
 }
-

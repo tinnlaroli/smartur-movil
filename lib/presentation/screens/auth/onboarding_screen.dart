@@ -83,6 +83,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: SmarturBackground(
         opacity: 0.55,
@@ -111,10 +112,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           Text(
                             contents[i].title,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 32, 
                               fontWeight: FontWeight.bold,
-                              color: SmarturStyle.textPrimary,
+                              color: scheme.onSurface,
                               height: 1.2,
                               fontFamily: 'CalSans',
                             ),
@@ -123,9 +124,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           Text(
                             contents[i].description,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16, 
-                              color: SmarturStyle.textSecondary,
+                              color: scheme.onSurfaceVariant,
                               height: 1.5,
                               fontFamily: 'Outfit',
                             ),
@@ -158,7 +159,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           borderRadius: BorderRadius.circular(20),
                           color: (_pageOffset.round() == index) 
                               ? SmarturStyle.purple 
-                              : SmarturStyle.textSecondary.withValues(alpha: 0.3),
+                              : scheme.onSurfaceVariant.withValues(alpha: 0.3),
                         ),
                       ),
                     ),
@@ -178,10 +179,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               curve: Curves.easeInOutCubic,
                             );
                           },
-                          child: const Text(
+                          child: Text(
                             "Continuar",
                             style: TextStyle(
-                              color: SmarturStyle.textPrimary,
+                              color: scheme.onSurface,
                               fontSize: 18, 
                               fontWeight: FontWeight.w600,
                               fontFamily: 'Outfit',

@@ -16,4 +16,9 @@ class ApiConstants {
 
   // Profiles
   static const String preferences = '/profiles/preferences';
+
+  // Explore
+  static const String locations = '/locations';
+  static const String touristServices = '/tourist-services';
+  static const String pointsOfInterest = '/points-of-interest';
 }
