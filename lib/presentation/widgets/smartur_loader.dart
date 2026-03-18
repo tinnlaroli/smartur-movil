@@ -139,7 +139,6 @@ class _SmartURLoaderState extends State<SmartURLoader>
   late final List<Animation<double>> _morphAnim;
   late final List<Animation<double>> _pinAnim;
   late final Animation<double>       _zoomAnim;
-  late final Animation<double>       _fadeAnim;
 
   // ── Pre-built SVG widgets (parsed once) ────────────────────────────────────
   late final List<Widget> _planeSvgs;
@@ -247,10 +246,6 @@ class _SmartURLoaderState extends State<SmartURLoader>
     _fadeOutCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 550),
-    );
-    _fadeAnim = CurvedAnimation(
-      parent: _fadeOutCtrl,
-      curve: Curves.easeIn,
     );
   }
 

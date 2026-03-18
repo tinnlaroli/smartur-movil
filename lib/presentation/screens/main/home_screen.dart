@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
 
 import '../../../core/theme/style_guide.dart';
 import '../../../core/constants/env_config.dart';
@@ -13,10 +11,11 @@ import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/profile_service.dart';
 import '../../widgets/smartur_skeleton.dart';
+import '../../widgets/smartur_background.dart';
 import '../preferences/preferences_screen.dart';
 import '../settings/settings_screen.dart';
 import '../auth/welcome_screen.dart';
-import '../explore/recommendation_screen.dart';
+import '../explore/detail_view_page.dart';
 
 class HomeScreen extends StatefulWidget {
   final String? userName;
@@ -42,7 +41,6 @@ class _HomeScreenState extends State<HomeScreen> {
   // Estado UI ventana Explorar
   final List<String> _cities = const ['Orizaba', 'Córdoba', 'Fortín'];
   String _selectedCity = 'Orizaba';
-  int _currentCarousel = 0;
 
   // Estado clima
   String? _weatherSummary;
@@ -67,7 +65,40 @@ class _HomeScreenState extends State<HomeScreen> {
     ],
   };
 
-  List<String> get _currentImages => _cityImages[_selectedCity] ?? const [];
+
+
+  late final Map<String, _CityShowcase> _showcases = {
+    'Orizaba': _CityShowcase(
+      city: 'Orizaba',
+      heroImageUrl: _cityImages['Orizaba']!.first,
+      galleryUrls: _cityImages['Orizaba']!,
+      subtitle:
+          'Orizaba combina montaña, historia y miradores únicos. Un lugar perfecto para rutas de 1 día.',
+      locationLine: 'Orizaba · Veracruz, México',
+      rating: 4.8,
+      icon: Icons.cable,
+    ),
+    'Córdoba': _CityShowcase(
+      city: 'Córdoba',
+      heroImageUrl: _cityImages['Córdoba']!.first,
+      galleryUrls: _cityImages['Córdoba']!,
+      subtitle:
+          'Córdoba es café, tradición y calles llenas de vida. Ideal para un plan gastronómico y cultural.',
+      locationLine: 'Córdoba · Veracruz, México',
+      rating: 4.7,
+      icon: Icons.local_cafe,
+    ),
+    'Fortín': _CityShowcase(
+      city: 'Fortín',
+      heroImageUrl: _cityImages['Fortín']!.first,
+      galleryUrls: _cityImages['Fortín']!,
+      subtitle:
+          'Fortín ofrece naturaleza, jardines y tranquilidad. Perfecto para explorar sin prisa.',
+      locationLine: 'Fortín · Veracruz, México',
+      rating: 4.6,
+      icon: Icons.local_florist,
+    ),
+  };
 
   @override
   void initState() {
@@ -341,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (interests.isEmpty) {
                     Navigator.pop(ctx);
                     Navigator.push(
-                      context,
+                      ctx,
                       MaterialPageRoute(builder: (_) => PreferencesScreen(userName: widget.userName)),
                     );
                     return;
@@ -489,33 +520,157 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SmarturShimmer(
-        enabled: _isLoadingContent,
-        child: CustomScrollView(
-          slivers: [
-            _buildHeaderAppBar(),
-            SliverToBoxAdapter(child: _buildCitySelector()),
-            SliverToBoxAdapter(child: _buildCarousel()),
-            SliverToBoxAdapter(child: _buildMiniMap()),
-            SliverToBoxAdapter(child: _buildCtaButton()),
-            SliverToBoxAdapter(child: _buildTop3Title()),
-            _buildTop3List(),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-          ],
+      backgroundColor: Colors.transparent,
+      body: SmarturBackgroundTop(
+        child: SmarturShimmer(
+          enabled: _isLoadingContent,
+          child: CustomScrollView(
+            slivers: [
+              _buildHeaderAppBar(),
+              SliverToBoxAdapter(child: _buildCityFilter()),
+              _buildDestinationGrid(),
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
+  Widget _buildCityFilter() {
+    final scheme = Theme.of(context).colorScheme;
+    final selectedColor = SmarturStyle.green;
+
+    return SizedBox(
+      height: 54,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: _cities.length,
+        itemBuilder: (context, idx) {
+          final city = _cities[idx];
+          final isSelected = city == _selectedCity;
+          final icon = _showcases[city]?.icon ?? Icons.place_outlined;
+
+          return Padding(
+            padding: EdgeInsets.only(right: idx == _cities.length - 1 ? 0 : 10),
+            child: ChoiceChip(
+              selected: isSelected,
+              showCheckmark: false,
+              side: BorderSide(
+                color: isSelected
+                    ? selectedColor.withValues(alpha: 0.5)
+                    : scheme.outlineVariant,
+              ),
+              backgroundColor: scheme.surfaceContainerHighest,
+              selectedColor: selectedColor.withValues(alpha: 0.20),
+              labelPadding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    size: 16,
+                    color: isSelected ? selectedColor : scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    city,
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? selectedColor : scheme.onSurface,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+              onSelected: (v) {
+                if (!v) return;
+                setState(() => _selectedCity = city);
+                _loadWeatherForSelectedCity();
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  SliverPadding _buildDestinationGrid() {
+    final showcase = _showcases[_selectedCity]!;
+    final cards = <_GridCard>[
+      _GridCard(
+        title: showcase.city,
+        subtitle: 'Destino destacado',
+        imageUrl: showcase.heroImageUrl,
+        heroTag: 'cityHero_${showcase.city}',
+        rating: showcase.rating,
+        onTap: () => _openCityDetail(showcase),
+      ),
+      ...showcase.galleryUrls.skip(1).take(5).toList().asMap().entries.map((e) {
+        final i = e.key;
+        final url = e.value;
+        return _GridCard(
+          title: 'Lugar ${i + 1}',
+          subtitle: 'Recomendado',
+          imageUrl: url,
+          heroTag: 'placeHero_${showcase.city}_$i',
+          rating: showcase.rating - 0.2,
+          onTap: () => _openCityDetail(showcase),
+        );
+      }),
+    ];
+
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+      sliver: SliverGrid(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) => _DestinationCard(card: cards[index]),
+          childCount: cards.length,
+        ),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 15,
+          crossAxisSpacing: 15,
+          childAspectRatio: 0.82,
+        ),
+      ),
+    );
+  }
+
+  void _openCityDetail(_CityShowcase showcase) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DetailViewPage(
+          title: showcase.city,
+          heroTag: 'cityHero_${showcase.city}',
+          heroImageUrl: showcase.heroImageUrl,
+          subtitle: showcase.subtitle,
+          locationLine: showcase.locationLine,
+          rating: showcase.rating,
+          galleryUrls: showcase.galleryUrls,
         ),
       ),
     );
   }
 
   SliverAppBar _buildHeaderAppBar() {
+    final scheme = Theme.of(context).colorScheme;
     final name = widget.userName;
     final greetingName = (name != null && name.isNotEmpty) ? ', $name' : '';
 
     return SliverAppBar(
       pinned: true,
       expandedHeight: 160,
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
+      forceMaterialTransparency: true,
       elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsetsDirectional.only(start: 20, end: 20, bottom: 16),
@@ -534,31 +689,24 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: SmarturStyle.calSansTitle.copyWith(fontSize: 20),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         'Altas Montañas, Veracruz',
                         style: TextStyle(
                           fontFamily: 'Outfit',
                           fontSize: 11,
-                          color: SmarturStyle.textSecondary,
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.person_outline, color: SmarturStyle.textPrimary),
+                    icon: Icon(Icons.person_outline, color: scheme.onSurface),
                     onPressed: _showProfile,
                   ),
                 ],
               ),
         background: Container(
           padding: const EdgeInsets.fromLTRB(20, 60, 20, 0),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFEEF2FF), Color(0xFFFFFFFF)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
           child: Align(
             alignment: Alignment.topLeft,
             child: _isLoadingContent
@@ -572,23 +720,23 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text(
+                          Text(
                             'Clima ahora',
                             style: TextStyle(
                               fontFamily: 'Outfit',
                               fontSize: 11,
-                              color: SmarturStyle.textSecondary,
+                              color: scheme.onSurfaceVariant,
                             ),
                           ),
                           Text(
                             _weatherLoading
                                 ? 'Cargando...'
                                 : (_weatherSummary ?? 'No disponible'),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Outfit',
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: SmarturStyle.textPrimary,
+                              color: scheme.onSurface,
                             ),
                           ),
                         ],
@@ -601,377 +749,147 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCitySelector() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _isLoadingContent
-              ? const SkeletonText(width: 180, height: 18)
-              : Text(
-                  'Elige tu ciudad',
-                  style: SmarturStyle.calSansTitle.copyWith(fontSize: 18),
-                ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _cities.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final city = _cities[index];
-                final bool isSelected = city == _selectedCity;
-                if (_isLoadingContent) {
-                  return const SkeletonContainer(width: 80, height: 32, borderRadius: 24);
-                }
-                return FilterChip(
-                  selected: isSelected,
-                  showCheckmark: false,
-                  label: Text(
-                    city,
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? Colors.white : SmarturStyle.textSecondary,
-                    ),
-                  ),
-                  selectedColor: SmarturStyle.purple,
-                  backgroundColor: Colors.grey.shade100,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                  onSelected: (val) {
-                    if (!val) return;
-                    setState(() {
-                      _selectedCity = city;
-                      _currentCarousel = 0;
-                    });
-                    _loadWeatherForSelectedCity();
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+}
 
-  Widget _buildCarousel() {
-    if (_isLoadingContent) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: SkeletonContainer(height: 210, borderRadius: 24),
-      );
-    }
+class _CityShowcase {
+  final String city;
+  final String heroImageUrl;
+  final List<String> galleryUrls;
+  final String subtitle;
+  final String locationLine;
+  final double rating;
+  final IconData icon;
 
-    final images = _currentImages;
-    if (images.isEmpty) return const SizedBox.shrink();
+  const _CityShowcase({
+    required this.city,
+    required this.heroImageUrl,
+    required this.galleryUrls,
+    required this.subtitle,
+    required this.locationLine,
+    required this.rating,
+    required this.icon,
+  });
+}
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 210,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: PageView.builder(
-                itemCount: images.length,
-                onPageChanged: (index) {
-                  setState(() => _currentCarousel = index);
-                },
-                controller: PageController(viewportFraction: 0.96),
-                itemBuilder: (context, index) {
-                  final url = images[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Hero(
-                          tag: 'city_image_${_selectedCity}_$index',
-                          child: Image.network(
-                            url,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, progress) {
-                              if (progress == null) return child;
-                              return Container(
-                                color: Colors.grey.shade200,
-                              );
-                            },
-                          ),
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                              colors: [
-                                Colors.black.withOpacity(0.45),
-                                Colors.transparent,
-                              ],
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: 16,
-                          bottom: 16,
-                          right: 16,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Descubre $_selectedCity',
-                                style: const TextStyle(
-                                  fontFamily: 'CalSans',
-                                  fontSize: 20,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Rincones curados con IA para ti',
-                                style: TextStyle(
-                                  fontFamily: 'Outfit',
-                                  fontSize: 12,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              images.length,
-              (index) => AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                height: 6,
-                width: _currentCarousel == index ? 18 : 6,
-                decoration: BoxDecoration(
-                  color: _currentCarousel == index ? SmarturStyle.purple : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+class _GridCard {
+  final String title;
+  final String subtitle;
+  final String imageUrl;
+  final String heroTag;
+  final double rating;
+  final VoidCallback onTap;
 
-  Widget _buildCtaButton() {
-    if (_isLoadingContent) {
-      return const Padding(
-        padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
-        child: SkeletonContainer(height: 56, borderRadius: 20),
-      );
-    }
+  const _GridCard({
+    required this.title,
+    required this.subtitle,
+    required this.imageUrl,
+    required this.heroTag,
+    required this.rating,
+    required this.onTap,
+  });
+}
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => RecommendationScreen(city: _selectedCity),
-            ),
-          );
-        },
-        child: Container(
-          height: 56,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: const LinearGradient(
-              colors: [SmarturStyle.purple, SmarturStyle.pink],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: SmarturStyle.purple.withOpacity(0.35),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.auto_awesome_outlined, color: Colors.white),
-              SizedBox(width: 10),
-              Text(
-                'Generar recomendación',
-                style: TextStyle(
-                  fontFamily: 'Outfit',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+class _DestinationCard extends StatelessWidget {
+  final _GridCard card;
+  const _DestinationCard({required this.card});
 
-  Widget _buildMiniMap() {
-    if (_isLoadingContent) {
-      return const Padding(
-        padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
-        child: SkeletonContainer(height: 160, borderRadius: 20),
-      );
-    }
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
 
-    // Centro aproximado de la región de las Altas Montañas
-    const center = LatLng(18.8654, -97.0864);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: SizedBox(
-          height: 160,
-          child: FlutterMap(
-            options: const MapOptions(
-              initialCenter: center,
-              initialZoom: 12,
-              minZoom: 8,
-              maxZoom: 18,
-            ),
+    return InkWell(
+      onTap: card.onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: Hero(
+        tag: card.heroTag,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.smartur.app',
+              Image.network(card.imageUrl, fit: BoxFit.cover),
+              // overlay
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.05),
+                      Colors.black.withValues(alpha: 0.55),
+                    ],
+                  ),
+                ),
               ),
-              const MarkerLayer(
-                markers: [
-                  Marker(
-                    point: center,
-                    width: 40,
-                    height: 40,
-                    child: Icon(
-                      Icons.place,
-                      color: SmarturStyle.pink,
-                      size: 32,
+              Positioned(
+                top: 12,
+                left: 12,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: scheme.surface.withValues(alpha: 0.20),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.20),
                     ),
                   ),
-                ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded,
+                          size: 16, color: SmarturStyle.orange),
+                      const SizedBox(width: 6),
+                      Text(
+                        card.rating.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 14,
+                right: 14,
+                bottom: 14,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      card.subtitle.toUpperCase(),
+                      style: const TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 10,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      card.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'CalSans',
+                        fontSize: 20,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        height: 1.05,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTop3Title() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _isLoadingContent
-              ? const SkeletonText(width: 140, height: 18)
-              : Text(
-                  'Top 3 sugerencias',
-                  style: SmarturStyle.calSansTitle.copyWith(fontSize: 18),
-                ),
-          if (!_isLoadingContent)
-            const Text(
-              'IA Smartur',
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: SmarturStyle.purple,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  SliverList _buildTop3List() {
-    if (_isLoadingContent) {
-      return SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) => const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-            child: SkeletonContainer(height: 96, borderRadius: 20),
-          ),
-          childCount: 3,
-        ),
-      );
-    }
-
-    return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          final placeName = 'Lugar ${index + 1} en $_selectedCity';
-          final thumbUrl = _currentImages.isNotEmpty
-              ? _currentImages[index % _currentImages.length]
-              : null;
-
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-            child: Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              elevation: 3,
-              shadowColor: Colors.black.withOpacity(0.06),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(12),
-                leading: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    width: 56,
-                    height: 56,
-                    child: thumbUrl == null
-                        ? Container(color: Colors.grey.shade200)
-                        : Image.network(
-                            thumbUrl,
-                            fit: BoxFit.cover,
-                          ),
-                  ),
-                ),
-                title: Text(
-                  placeName,
-                  style: const TextStyle(
-                    fontFamily: 'Outfit',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-                subtitle: const Text(
-                  'Seleccionado por la IA según tu perfil turístico.',
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 12,
-                    color: SmarturStyle.textSecondary,
-                  ),
-                ),
-                trailing: const Icon(Icons.chevron_right, color: SmarturStyle.textSecondary),
-                onTap: () {
-                  SmarturNotifications.showInfo(
-                    context,
-                    'Aquí podrías ver más detalles del lugar.',
-                  );
-                },
-              ),
-            ),
-          );
-        },
-        childCount: 3,
       ),
     );
   }

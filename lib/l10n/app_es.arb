@@ -1,0 +1,102 @@
+{
+  "@@locale": "es",
+  "appTitle": "SMARTUR",
+  "settingsTitle": "Configuración",
+  "appearanceSection": "Apariencia",
+  "accountSection": "Cuenta",
+  "infoSection": "Información",
+  "darkMode": "Modo Oscuro",
+  "language": "Idioma",
+  "colorblindMode": "Modo Daltónico",
+  "changePassword": "Cambiar Contraseña",
+  "editName": "Editar Nombre",
+  "deleteAccount": "Eliminar Cuenta",
+  "appVersion": "Versión de la App",
+  "termsAndConditions": "Términos y Condiciones",
+  "logout": "Cerrar sesión",
+  "selectLanguage": "Seleccionar Idioma",
+  "cancel": "Cancelar",
+  "save": "Guardar",
+  "deleteAccountTitle": "Eliminar cuenta",
+  "deleteAccountConfirm": "¿Estás seguro de que deseas eliminar tu cuenta? Esta acción es irreversible y perderás tu historial de viajes.",
+  "deleteAccountYes": "Sí, eliminar",
+  "editNameTitle": "Editar nombre",
+  "yourName": "Tu nombre",
+  "changePasswordTitle": "Cambiar Contraseña",
+  "changePasswordStep0Hint": "Te enviaremos un código de verificación a tu correo electrónico.",
+  "changePasswordStep1Hint": "Ingresa el código y tu nueva contraseña.",
+  "verificationCode": "Código de verificación",
+  "newPassword": "Nueva contraseña",
+  "confirmPassword": "Confirmar contraseña",
+  "sendCode": "Enviar código",
+  "updatePassword": "Actualizar contraseña",
+  "resendCode": "Reenviar código",
+  "codeSixDigits": "Código de 6 dígitos",
+  "passwordMinChars": "Mínimo 8 caracteres",
+  "passwordNeedUpper": "Incluye al menos una mayúscula",
+  "passwordNeedLower": "Incluye al menos una minúscula",
+  "passwordNeedNumber": "Incluye al menos un número",
+  "passwordsDontMatch": "Las contraseñas no coinciden",
+  "codeSentToEmail": "Código enviado a {email}",
+  "@codeSentToEmail": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "emailNotFound": "No se encontró tu email",
+  "loading": "Cargando...",
+  "welcomeBack": "Bienvenido de nuevo",
+  "startNow": "Empezar ahora",
+  "loginSubtitle": "Ingresa tus credenciales para continuar.",
+  "registerSubtitle": "Regístrate para descubrir rutas personalizadas.",
+  "continueWithEmail": "Continuar con Email",
+  "registerWithEmail": "Registrarse con Email",
+  "tagline": "IA que guía, Turismo que une",
+  "start": "Comenzar",
+  "loginWithBiometrics": "Ingresar con huella",
+  "navHome": "Inicio",
+  "navDiary": "Diario",
+  "navRecommend": "Recomendar",
+  "navCommunity": "Comunidad",
+  "navUser": "Usuario",
+  "communityTitle": "Comunidad",
+  "uploadPhotoAction": "Acción para subir una foto",
+  "diaryTitle": "Mi Diario",
+  "favoritesTab": "Favoritos",
+  "historyTab": "Historial",
+  "offlineAvailable": "Disponible sin internet",
+  "recommendationsInCity": "Recomendaciones en {city}",
+  "@recommendationsInCity": {
+    "placeholders": {
+      "city": {}
+    }
+  },
+  "recommendationNumber": "Recomendación #{number}",
+  "@recommendationNumber": {
+    "placeholders": {
+      "number": {}
+    }
+  },
+  "recommendationSubtitle": "Sugerido por la IA de SMARTUR para tu visita a {city}.",
+  "@recommendationSubtitle": {
+    "placeholders": {
+      "city": {}
+    }
+  },
+  "mapDiscoverHint": "Descubre puntos clave sin rastrear tu ubicación en tiempo real.",
+  "mapTapPinHint": "Toca un pin para ver detalles generados por IA",
+  "filterAll": "Todos",
+  "filterMuseums": "Museos",
+  "filterCafes": "Cafés",
+  "filterViewpoints": "Miradores",
+  "filterMuseumsOnly": "Solo ver Museos",
+  "aiSmartur": "IA Smartur"
+  ,
+  "enableBiometricsHint": "Inicia sesión y activa la huella en tu perfil",
+  "deviceNotSupported": "Dispositivo no compatible",
+  "noBiometricsEnrolled": "No hay huellas registradas",
+  "biometricReason": "Accede a tus rutas de SMARTUR",
+  "sessionExpired": "Sesión expirada. Inicia sesión de nuevo.",
+  "biometricReadError": "Error al leer huella."
+}
+

@@ -1,0 +1,102 @@
+{
+  "@@locale": "fr",
+  "appTitle": "SMARTUR",
+  "settingsTitle": "Paramètres",
+  "appearanceSection": "Apparence",
+  "accountSection": "Compte",
+  "infoSection": "Informations",
+  "darkMode": "Mode sombre",
+  "language": "Langue",
+  "colorblindMode": "Mode daltonien",
+  "changePassword": "Changer le mot de passe",
+  "editName": "Modifier le nom",
+  "deleteAccount": "Supprimer le compte",
+  "appVersion": "Version de l’application",
+  "termsAndConditions": "Conditions d’utilisation",
+  "logout": "Se déconnecter",
+  "selectLanguage": "Choisir la langue",
+  "cancel": "Annuler",
+  "save": "Enregistrer",
+  "deleteAccountTitle": "Supprimer le compte",
+  "deleteAccountConfirm": "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible et vous perdrez votre historique de voyages.",
+  "deleteAccountYes": "Oui, supprimer",
+  "editNameTitle": "Modifier le nom",
+  "yourName": "Votre nom",
+  "changePasswordTitle": "Changer le mot de passe",
+  "changePasswordStep0Hint": "Nous vous enverrons un code de vérification par e-mail.",
+  "changePasswordStep1Hint": "Saisissez le code et votre nouveau mot de passe.",
+  "verificationCode": "Code de vérification",
+  "newPassword": "Nouveau mot de passe",
+  "confirmPassword": "Confirmer le mot de passe",
+  "sendCode": "Envoyer le code",
+  "updatePassword": "Mettre à jour le mot de passe",
+  "resendCode": "Renvoyer le code",
+  "codeSixDigits": "Code à 6 chiffres",
+  "passwordMinChars": "Minimum 8 caractères",
+  "passwordNeedUpper": "Incluez au moins une majuscule",
+  "passwordNeedLower": "Incluez au moins une minuscule",
+  "passwordNeedNumber": "Incluez au moins un chiffre",
+  "passwordsDontMatch": "Les mots de passe ne correspondent pas",
+  "codeSentToEmail": "Code envoyé à {email}",
+  "@codeSentToEmail": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "emailNotFound": "E-mail introuvable",
+  "loading": "Chargement...",
+  "welcomeBack": "Bon retour",
+  "startNow": "Commencer",
+  "loginSubtitle": "Saisissez vos identifiants pour continuer.",
+  "registerSubtitle": "Inscrivez-vous pour découvrir des itinéraires personnalisés.",
+  "continueWithEmail": "Continuer avec e-mail",
+  "registerWithEmail": "S’inscrire avec e-mail",
+  "tagline": "IA qui guide, tourisme qui unit",
+  "start": "Commencer",
+  "loginWithBiometrics": "Se connecter avec empreinte",
+  "navHome": "Accueil",
+  "navDiary": "Journal",
+  "navRecommend": "Recommander",
+  "navCommunity": "Communauté",
+  "navUser": "Profil",
+  "communityTitle": "Communauté",
+  "uploadPhotoAction": "Action pour téléverser une photo",
+  "diaryTitle": "Mon journal",
+  "favoritesTab": "Favoris",
+  "historyTab": "Historique",
+  "offlineAvailable": "Disponible hors ligne",
+  "recommendationsInCity": "Recommandations à {city}",
+  "@recommendationsInCity": {
+    "placeholders": {
+      "city": {}
+    }
+  },
+  "recommendationNumber": "Recommandation #{number}",
+  "@recommendationNumber": {
+    "placeholders": {
+      "number": {}
+    }
+  },
+  "recommendationSubtitle": "Suggéré par l’IA de SMARTUR pour votre visite à {city}.",
+  "@recommendationSubtitle": {
+    "placeholders": {
+      "city": {}
+    }
+  },
+  "mapDiscoverHint": "Découvrez des points clés sans suivre votre position en temps réel.",
+  "mapTapPinHint": "Touchez un repère pour voir des détails générés par l’IA",
+  "filterAll": "Tous",
+  "filterMuseums": "Musées",
+  "filterCafes": "Cafés",
+  "filterViewpoints": "Belvédères",
+  "filterMuseumsOnly": "Musées uniquement",
+  "aiSmartur": "IA Smartur"
+  ,
+  "enableBiometricsHint": "Connectez-vous et activez l’empreinte dans votre profil",
+  "deviceNotSupported": "Appareil non compatible",
+  "noBiometricsEnrolled": "Aucune empreinte enregistrée",
+  "biometricReason": "Accédez à vos itinéraires SMARTUR",
+  "sessionExpired": "Session expirée. Veuillez vous reconnecter.",
+  "biometricReadError": "Erreur lors de la lecture de l’empreinte."
+}
+

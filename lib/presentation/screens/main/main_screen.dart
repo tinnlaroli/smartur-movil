@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
 import 'home_screen.dart';
@@ -41,6 +42,8 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
@@ -60,7 +63,7 @@ class _MainScreenState extends State<MainScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: scheme.surface,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -76,11 +79,11 @@ class _MainScreenState extends State<MainScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _buildNavItem(Icons.explore_outlined, Icons.explore, 'Inicio', 0),
-                _buildNavItem(Icons.book_outlined, Icons.book, 'Diario', 1),
+                _buildNavItem(Icons.explore_outlined, Icons.explore, l10n.navHome, 0),
+                _buildNavItem(Icons.book_outlined, Icons.book, l10n.navDiary, 1),
                 _buildCentralCta(context),
-                _buildNavItem(Icons.people_outline, Icons.people, 'Comunidad', 2),
-                _buildNavItem(Icons.person_outline, Icons.person, 'Usuario', 3),
+                _buildNavItem(Icons.people_outline, Icons.people, l10n.navCommunity, 2),
+                _buildNavItem(Icons.person_outline, Icons.person, l10n.navUser, 3),
               ],
             ),
           ),
@@ -145,6 +148,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Widget _buildCentralCta(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -183,7 +187,7 @@ class _MainScreenState extends State<MainScreen> {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: SmarturStyle.purple.withOpacity(0.35),
+                            color: SmarturStyle.purple.withValues(alpha: 0.35),
                             blurRadius: 18,
                             offset: const Offset(0, 8),
                           ),
@@ -200,9 +204,9 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'Recomendar',
-                  style: TextStyle(
+                Text(
+                  l10n.navRecommend,
+                  style: const TextStyle(
                     fontFamily: 'Outfit',
                     fontSize: 11,
                     fontWeight: FontWeight.w700,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smartur/l10n/app_localizations.dart';
 
+import '../../../core/settings/app_settings_scope.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
@@ -20,41 +21,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _language = 'Español';
 
   @override
-  void initState() {
-    super.initState();
-    _loadLocalSettings();
-  }
-
-  Future<void> _loadLocalSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final settings = AppSettingsScope.of(context);
+    final locale = settings.value.locale.languageCode;
     setState(() {
-      _darkMode = prefs.getBool('dark_mode') ?? false;
-      _colorblindMode = prefs.getBool('colorblind_mode') ?? false;
-      _language = prefs.getString('language') ?? 'Español';
+      _darkMode = settings.isDarkMode;
+      _colorblindMode = settings.value.colorblindMode;
+      _language = _languageLabelFromCode(locale);
     });
   }
 
-  Future<void> _saveLocalSetting(String key, dynamic value) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (value is bool) {
-      await prefs.setBool(key, value);
-    } else if (value is String) {
-      await prefs.setString(key, value);
+  String _languageLabelFromCode(String code) {
+    switch (code) {
+      case 'en':
+        return 'English';
+      case 'fr':
+        return 'Français';
+      case 'pt':
+        return 'Português';
+      case 'es':
+      default:
+        return 'Español';
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Configuración',
+        title: Text(l10n.settingsTitle,
             style: SmarturStyle.calSansTitle.copyWith(fontSize: 20)),
-        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon:
-              const Icon(Icons.arrow_back, color: SmarturStyle.textPrimary),
+              Icon(Icons.arrow_back, color: scheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -62,10 +65,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
           // ── Apariencia ──────────────────────────────────────────────
-          _buildSectionHeader('Apariencia'),
+          _buildSectionHeader(l10n.appearanceSection),
           SwitchListTile(
-            title: const Text('Modo Oscuro',
-                style: TextStyle(fontFamily: 'Outfit')),
+            title: Text(l10n.darkMode,
+                style: const TextStyle(fontFamily: 'Outfit')),
             secondary: const Icon(Icons.dark_mode_outlined,
                 color: SmarturStyle.purple),
             value: _darkMode,
@@ -74,16 +77,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 (s) => s.contains(WidgetState.selected) ? SmarturStyle.purple : null),
             onChanged: (val) {
               setState(() => _darkMode = val);
-              _saveLocalSetting('dark_mode', val);
-              SmarturNotifications.showInfo(
-                  context, 'Modo oscuro se implementará pronto');
+              AppSettingsScope.of(context).setDarkMode(val);
             },
           ),
           ListTile(
             leading: const Icon(Icons.language_outlined,
                 color: SmarturStyle.purple),
             title:
-                const Text('Idioma', style: TextStyle(fontFamily: 'Outfit')),
+                Text(l10n.language, style: const TextStyle(fontFamily: 'Outfit')),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -91,15 +92,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: const TextStyle(
                         fontFamily: 'Outfit',
                         color: SmarturStyle.textSecondary)),
-                const Icon(Icons.chevron_right,
-                    color: SmarturStyle.textSecondary),
+                Icon(Icons.chevron_right,
+                    color: scheme.onSurfaceVariant),
               ],
             ),
             onTap: () => _showLanguageDialog(),
           ),
           SwitchListTile(
-            title: const Text('Modo Daltónico',
-                style: TextStyle(fontFamily: 'Outfit')),
+            title: Text(l10n.colorblindMode,
+                style: const TextStyle(fontFamily: 'Outfit')),
             secondary: const Icon(Icons.visibility_outlined,
                 color: SmarturStyle.purple),
             value: _colorblindMode,
@@ -108,38 +109,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 (s) => s.contains(WidgetState.selected) ? SmarturStyle.purple : null),
             onChanged: (val) {
               setState(() => _colorblindMode = val);
-              _saveLocalSetting('colorblind_mode', val);
-              SmarturNotifications.showInfo(
-                  context, 'Modo daltónico se implementará pronto');
+              AppSettingsScope.of(context).setColorblindMode(val);
             },
           ),
 
           const Divider(height: 32),
 
           // ── Cuenta ──────────────────────────────────────────────────
-          _buildSectionHeader('Cuenta'),
+          _buildSectionHeader(l10n.accountSection),
           ListTile(
             leading:
                 const Icon(Icons.lock_outline, color: SmarturStyle.blue),
-            title: const Text('Cambiar Contraseña',
-                style: TextStyle(fontFamily: 'Outfit')),
-            trailing: const Icon(Icons.chevron_right,
-                color: SmarturStyle.textSecondary),
+            title: Text(l10n.changePassword,
+                style: const TextStyle(fontFamily: 'Outfit')),
+            trailing: Icon(Icons.chevron_right,
+                color: scheme.onSurfaceVariant),
             onTap: () => _showChangePasswordSheet(),
           ),
           ListTile(
             leading: const Icon(Icons.person_outline,
                 color: SmarturStyle.blue),
-            title: const Text('Editar Nombre',
-                style: TextStyle(fontFamily: 'Outfit')),
-            trailing: const Icon(Icons.chevron_right,
-                color: SmarturStyle.textSecondary),
+            title: Text(l10n.editName,
+                style: const TextStyle(fontFamily: 'Outfit')),
+            trailing: Icon(Icons.chevron_right,
+                color: scheme.onSurfaceVariant),
             onTap: () => _showEditNameDialog(),
           ),
           ListTile(
             leading: const Icon(Icons.delete_outline,
                 color: SmarturStyle.pink),
-            title: const Text('Eliminar Cuenta',
+            title: Text(l10n.deleteAccount,
                 style: TextStyle(
                     fontFamily: 'Outfit', color: SmarturStyle.pink)),
             onTap: () => _confirmDeletion(context),
@@ -148,13 +147,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(height: 32),
 
           // ── Información ─────────────────────────────────────────────
-          _buildSectionHeader('Información'),
-          const ListTile(
-            leading: Icon(Icons.info_outline,
+          _buildSectionHeader(l10n.infoSection),
+          ListTile(
+            leading: const Icon(Icons.info_outline,
                 color: SmarturStyle.textSecondary),
-            title: Text('Versión de la App',
-                style: TextStyle(fontFamily: 'Outfit')),
-            trailing: Text('v1.0.0',
+            title: Text(l10n.appVersion,
+                style: const TextStyle(fontFamily: 'Outfit')),
+            trailing: const Text('v1.0.0',
                 style: TextStyle(
                     fontFamily: 'Outfit',
                     color: SmarturStyle.textSecondary)),
@@ -162,12 +161,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.description_outlined,
                 color: SmarturStyle.textSecondary),
-            title: const Text('Términos y Condiciones',
-                style: TextStyle(fontFamily: 'Outfit')),
-            trailing: const Icon(Icons.chevron_right,
-                color: SmarturStyle.textSecondary),
+            title: Text(l10n.termsAndConditions,
+                style: const TextStyle(fontFamily: 'Outfit')),
+            trailing: Icon(Icons.chevron_right,
+                color: scheme.onSurfaceVariant),
             onTap: () => SmarturNotifications.showInfo(
-                context, 'Abriendo TyC...'),
+                context, l10n.termsAndConditions),
           ),
 
           const SizedBox(height: 24),
@@ -178,9 +177,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: OutlinedButton.icon(
               onPressed: () => _logout(),
               icon: const Icon(Icons.logout, color: SmarturStyle.pink),
-              label: const Text(
-                'Cerrar sesión',
-                style: TextStyle(
+              label: Text(
+                l10n.logout,
+                style: const TextStyle(
                     fontFamily: 'Outfit',
                     color: SmarturStyle.pink,
                     fontWeight: FontWeight.w600),
@@ -220,6 +219,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Idioma ──────────────────────────────────────────────────────────────
 
   void _showLanguageDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final languages = ['Español', 'English', 'Français', 'Português'];
     showModalBottomSheet(
       context: context,
@@ -240,7 +240,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Seleccionar Idioma',
+            Text(l10n.selectLanguage,
                 style:
                     SmarturStyle.calSansTitle.copyWith(fontSize: 18)),
             const SizedBox(height: 8),
@@ -253,10 +253,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       : null,
                   onTap: () {
                     setState(() => _language = lang);
-                    _saveLocalSetting('language', lang);
+                    final code = switch (lang) {
+                      'English' => 'en',
+                      'Français' => 'fr',
+                      'Português' => 'pt',
+                      _ => 'es',
+                    };
+                    AppSettingsScope.of(context).setLocale(Locale(code));
                     Navigator.pop(ctx);
                     SmarturNotifications.showSuccess(
-                        context, 'Idioma cambiado a $lang');
+                        context, '${l10n.language}: $lang');
                   },
                 )),
             const SizedBox(height: 16),
@@ -282,6 +288,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Editar Nombre ──────────────────────────────────────────────────────
 
   void _showEditNameDialog() async {
+    final l10n = AppLocalizations.of(context)!;
     final currentName = await _authService.getUserName() ?? '';
     final controller = TextEditingController(text: currentName);
 
@@ -292,11 +299,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title:
-            const Text('Editar nombre', style: SmarturStyle.calSansTitle),
+            Text(l10n.editNameTitle, style: SmarturStyle.calSansTitle),
         content: TextField(
           controller: controller,
           decoration: InputDecoration(
-            hintText: 'Tu nombre',
+            hintText: l10n.yourName,
             hintStyle: const TextStyle(fontFamily: 'Outfit'),
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12)),
@@ -311,7 +318,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar',
+            child: Text(l10n.cancel,
                 style: TextStyle(color: SmarturStyle.textSecondary)),
           ),
           ElevatedButton(
@@ -328,7 +335,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 await _authService.updateUser({"name": newName});
                 if (mounted) {
                   SmarturNotifications.showSuccess(
-                      context, 'Nombre actualizado correctamente');
+                      context, l10n.editName);
                 }
               } on AuthException catch (e) {
                 if (mounted) {
@@ -336,8 +343,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 }
               }
             },
-            child: const Text('Guardar',
-                style: TextStyle(color: Colors.white)),
+            child: Text(l10n.save,
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -347,23 +354,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Eliminar Cuenta ────────────────────────────────────────────────────
 
   void _confirmDeletion(BuildContext parentCtx) {
+    final l10n = AppLocalizations.of(parentCtx)!;
     showDialog(
       context: parentCtx,
       builder: (ctx) => AlertDialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Eliminar cuenta',
+        title: Text(l10n.deleteAccountTitle,
             style: SmarturStyle.calSansTitle),
-        content: const Text(
-          '¿Estás seguro de que deseas eliminar tu cuenta? '
-          'Esta acción es irreversible y perderás tu historial de viajes.',
+        content: Text(
+          l10n.deleteAccountConfirm,
           style: TextStyle(
               fontFamily: 'Outfit', color: SmarturStyle.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar',
+            child: Text(l10n.cancel,
                 style: TextStyle(color: SmarturStyle.textSecondary)),
           ),
           ElevatedButton(
@@ -386,8 +393,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 }
               }
             },
-            child: const Text('Sí, eliminar',
-                style: TextStyle(color: Colors.white)),
+            child: Text(l10n.deleteAccountYes,
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -454,7 +461,8 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
 
   Future<void> _sendCode() async {
     if (_email.isEmpty) {
-      SmarturNotifications.showError(context, 'No se encontró tu email');
+      SmarturNotifications.showError(
+          context, AppLocalizations.of(context)!.emailNotFound);
       return;
     }
     setState(() => _loading = true);
@@ -466,7 +474,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
           _loading = false;
         });
         SmarturNotifications.showSuccess(
-            context, 'Código enviado a $_email');
+            context, AppLocalizations.of(context)!.codeSentToEmail(_email));
       }
     } on AuthException catch (e) {
       if (mounted) {
@@ -485,7 +493,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
       if (mounted) {
         Navigator.pop(context);
         SmarturNotifications.showSuccess(
-            context, 'Contraseña actualizada correctamente');
+            context, AppLocalizations.of(context)!.updatePassword);
       }
     } on AuthException catch (e) {
       if (mounted) {
@@ -497,6 +505,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.only(
         left: 24,
@@ -518,14 +527,14 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
             ),
             const SizedBox(height: 20),
             Text(
-              'Cambiar Contraseña',
+              l10n.changePasswordTitle,
               style: SmarturStyle.calSansTitle.copyWith(fontSize: 20),
             ),
             const SizedBox(height: 8),
             Text(
               _step == 0
-                  ? 'Te enviaremos un código de verificación a tu correo electrónico.'
-                  : 'Ingresa el código y tu nueva contraseña.',
+                  ? l10n.changePasswordStep0Hint
+                  : l10n.changePasswordStep1Hint,
               textAlign: TextAlign.center,
               style: const TextStyle(
                   fontFamily: 'Outfit',
@@ -542,6 +551,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
   }
 
   Widget _buildStep0() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Container(
@@ -557,7 +567,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  _email.isNotEmpty ? _email : 'Cargando...',
+                  _email.isNotEmpty ? _email : l10n.loading,
                   style: const TextStyle(
                       fontFamily: 'Outfit', fontWeight: FontWeight.w500),
                 ),
@@ -582,8 +592,8 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                     height: 22,
                     child: CircularProgressIndicator(
                         color: Colors.white, strokeWidth: 2.5))
-                : const Text('Enviar código',
-                    style: TextStyle(
+                : Text(l10n.sendCode,
+                    style: const TextStyle(
                         fontFamily: 'Outfit',
                         color: Colors.white,
                         fontSize: 16,
@@ -595,6 +605,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
   }
 
   Widget _buildStep1() {
+    final l10n = AppLocalizations.of(context)!;
     return Form(
       key: _formKey,
       child: Column(
@@ -604,7 +615,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
             keyboardType: TextInputType.number,
             maxLength: 6,
             decoration: _inputDecoration(
-              label: 'Código de verificación',
+              label: l10n.verificationCode,
               icon: Icons.pin_outlined,
             ),
             style: const TextStyle(
@@ -614,14 +625,14 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                 fontWeight: FontWeight.w600),
             textAlign: TextAlign.center,
             validator: (v) =>
-                (v == null || v.trim().length < 6) ? 'Código de 6 dígitos' : null,
+                (v == null || v.trim().length < 6) ? l10n.codeSixDigits : null,
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: _passCtrl,
             obscureText: _obscureNew,
             decoration: _inputDecoration(
-              label: 'Nueva contraseña',
+              label: l10n.newPassword,
               icon: Icons.lock_outline,
               suffixIcon: IconButton(
                 icon: Icon(
@@ -634,16 +645,16 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
             style: const TextStyle(fontFamily: 'Outfit'),
             validator: (v) {
               if (v == null || v.length < 8) {
-                return 'Mínimo 8 caracteres';
+                return l10n.passwordMinChars;
               }
               if (!RegExp(r'[A-Z]').hasMatch(v)) {
-                return 'Incluye al menos una mayúscula';
+                return l10n.passwordNeedUpper;
               }
               if (!RegExp(r'[a-z]').hasMatch(v)) {
-                return 'Incluye al menos una minúscula';
+                return l10n.passwordNeedLower;
               }
               if (!RegExp(r'[0-9]').hasMatch(v)) {
-                return 'Incluye al menos un número';
+                return l10n.passwordNeedNumber;
               }
               return null;
             },
@@ -653,7 +664,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
             controller: _confirmCtrl,
             obscureText: _obscureConfirm,
             decoration: _inputDecoration(
-              label: 'Confirmar contraseña',
+              label: l10n.confirmPassword,
               icon: Icons.lock_outline,
               suffixIcon: IconButton(
                 icon: Icon(
@@ -667,7 +678,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
             ),
             style: const TextStyle(fontFamily: 'Outfit'),
             validator: (v) =>
-                v != _passCtrl.text ? 'Las contraseñas no coinciden' : null,
+                v != _passCtrl.text ? l10n.passwordsDontMatch : null,
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -686,8 +697,8 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                       height: 22,
                       child: CircularProgressIndicator(
                           color: Colors.white, strokeWidth: 2.5))
-                  : const Text('Actualizar contraseña',
-                      style: TextStyle(
+                  : Text(l10n.updatePassword,
+                      style: const TextStyle(
                           fontFamily: 'Outfit',
                           color: Colors.white,
                           fontSize: 16,
@@ -697,8 +708,8 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
           const SizedBox(height: 12),
           TextButton(
             onPressed: _loading ? null : _sendCode,
-            child: const Text('Reenviar código',
-                style: TextStyle(
+            child: Text(l10n.resendCode,
+                style: const TextStyle(
                     fontFamily: 'Outfit', color: SmarturStyle.purple)),
           ),
         ],

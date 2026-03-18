@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
 
@@ -7,11 +8,11 @@ class CommunityScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Comunidad', style: SmarturStyle.calSansTitle.copyWith(fontSize: 20)),
-        backgroundColor: Colors.white,
+        title: Text(l10n.communityTitle,
+            style: SmarturStyle.calSansTitle.copyWith(fontSize: 20)),
         elevation: 0,
       ),
       body: ListView.builder(
@@ -24,7 +25,7 @@ class CommunityScreen extends StatelessWidget {
         onPressed: () {
           // Aquí integrarías ImagePicker para subir foto real
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Acción para subir una foto')),
+            SnackBar(content: Text(l10n.uploadPhotoAction)),
           );
         },
         child: const Icon(Icons.add_a_photo),
@@ -50,7 +51,7 @@ class _PostCard extends StatelessWidget {
           children: [
             ListTile(
               leading: CircleAvatar(
-                backgroundColor: SmarturStyle.purple.withOpacity(0.15),
+                backgroundColor: SmarturStyle.purple.withValues(alpha: 0.15),
                 child: const Icon(Icons.person, color: SmarturStyle.purple),
               ),
               title: Text(

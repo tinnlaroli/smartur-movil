@@ -117,8 +117,6 @@ class _PreferencesScreenState extends State<PreferencesScreen>
                   children: [
                     Row(
                       children: [
-                        Image.asset('assets/imgs/logo_costado.png', height: 32),
-                        const SizedBox(width: 8),
                         const Text('SMARTUR', style: TextStyle(fontFamily: 'CalSans', fontSize: 18, color: SmarturStyle.textPrimary)),
                         const Spacer(),
                         Text(

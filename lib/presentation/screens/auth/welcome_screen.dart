@@ -1,7 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:local_auth_android/local_auth_android.dart';
+import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
@@ -10,7 +9,11 @@ import '../../widgets/smartur_background.dart';
 import '../main/main_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
-  const WelcomeScreen({super.key});
+  /// Si viene del splash inicial con loader, retrasamos el inicio
+  /// de las animaciones para que no corran debajo del overlay.
+  final bool fromSplash;
+
+  const WelcomeScreen({super.key, this.fromSplash = false});
 
   @override
   State<WelcomeScreen> createState() => _WelcomeScreenState();
@@ -101,15 +104,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       ),
     );
 
-    // Importante: NO iniciar animaciones inmediatamente.
-    // Esperamos aproximadamente la duración del loader para que
-    // las animaciones se vean recién cuando el overlay desaparece.
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(const Duration(milliseconds: 4600));
-      if (mounted && !_controller.isAnimating && _controller.value == 0.0) {
-        _controller.forward();
-      }
-    });
+    // Si venimos del splash con loader, retrasamos el inicio para que
+    // las animaciones aparezcan justo después de que el overlay desaparezca.
+    if (widget.fromSplash) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await Future.delayed(const Duration(milliseconds: 4600));
+        if (mounted && !_controller.isAnimating && _controller.value == 0.0) {
+          _controller.forward();
+        }
+      });
+    } else {
+      // Navegación "normal" (logout, onboarding, etc.): animar de inmediato.
+      _controller.forward();
+    }
   }
 
   @override
@@ -139,6 +146,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
+            final scheme = Theme.of(context).colorScheme;
+            final l10n = AppLocalizations.of(context)!;
             double? height = isExpanded
                 ? MediaQuery.of(context).size.height * 0.75
                 : null;
@@ -147,9 +156,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
               height: height,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
               ),
               padding: EdgeInsets.only(
                 left: SmarturStyle.spacingLg,
@@ -170,21 +179,21 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.grey[300],
+                            color: scheme.onSurfaceVariant.withValues(alpha: 0.35),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        isLogin ? 'Bienvenido de nuevo' : 'Empezar ahora',
+                        isLogin ? l10n.welcomeBack : l10n.startNow,
                         style: SmarturStyle.calSansTitle,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         isLogin
-                            ? 'Ingresa tus credenciales para continuar.'
-                            : 'Regístrate para descubrir rutas personalizadas.',
+                            ? l10n.loginSubtitle
+                            : l10n.registerSubtitle,
                         style: const TextStyle(
                           fontFamily: 'Outfit',
                           color: SmarturStyle.textSecondary,
@@ -194,7 +203,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                       if (!isExpanded) ...[
                         ElevatedButton(
                           onPressed: () => setModalState(() => isExpanded = true),
-                          child: Text(isLogin ? 'Continuar con Email' : 'Registrarse con Email'),
+                          child: Text(isLogin ? l10n.continueWithEmail : l10n.registerWithEmail),
                         ),
                       ] else ...[
                         if (isWaitingOTP)
@@ -608,27 +617,34 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
 
   // --- RESTORED BIOMETRICS LOGIC ---
   Future<void> _checkBiometrics(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final bool biometricOn = await _authService.isBiometricEnabled();
       if (!biometricOn) {
-        if (context.mounted) SmarturNotifications.showWarning(context, 'Inicia sesión y activa la huella en tu perfil');
+        if (context.mounted) {
+          SmarturNotifications.showWarning(context, l10n.enableBiometricsHint);
+        }
         return;
       }
 
       final bool canAuth = await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
       if (!canAuth) {
-        if (context.mounted) SmarturNotifications.showWarning(context, 'Dispositivo no compatible');
+        if (context.mounted) {
+          SmarturNotifications.showWarning(context, l10n.deviceNotSupported);
+        }
         return;
       }
 
       final List<BiometricType> available = await _auth.getAvailableBiometrics();
       if (available.isEmpty) {
-        if (context.mounted) SmarturNotifications.showInfo(context, 'No hay huellas registradas');
+        if (context.mounted) {
+          SmarturNotifications.showInfo(context, l10n.noBiometricsEnrolled);
+        }
         return;
       }
 
       final bool didAuthenticate = await _auth.authenticate(
-        localizedReason: 'Accede a tus rutas de SMARTUR',
+        localizedReason: l10n.biometricReason,
         options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
       );
 
@@ -647,17 +663,20 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
         );
       } else if (context.mounted) {
         await _authService.clearSession();
-        SmarturNotifications.showInfo(context, 'Sesión expirada. Inicia sesión de nuevo.');
+        if (!context.mounted) return;
+        SmarturNotifications.showInfo(context, l10n.sessionExpired);
       }
     } catch (e) {
-      if (context.mounted) SmarturNotifications.showError(context, 'Error al leer huella.');
+      if (context.mounted) {
+        SmarturNotifications.showError(context, l10n.biometricReadError);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SmarturBackground(
         child: Stack(
           children: [
@@ -666,20 +685,23 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
             // cuando el controller del WelcomeScreen arranca, evitando "doble logo".
             Align(
               alignment: Alignment.center,
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: AnimatedBuilder(
-                  animation: _logoZoom,
-                  builder: (_, child) {
-                    return Transform.scale(
-                      scale: _logoZoom.value,
-                      child: child,
-                    );
-                  },
-                  child: Image.asset(
-                    'assets/imgs/logo.png',
-                    width: 170.42,
-                    height: 219.53,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 50),
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: AnimatedBuilder(
+                    animation: _logoZoom,
+                    builder: (_, child) {
+                      return Transform.scale(
+                        scale: _logoZoom.value,
+                        child: child,
+                      );
+                    },
+                    child: Image.asset(
+                      'assets/imgs/logo_arriba.png',
+                      width: 280.42,
+                      height: 330.53,
+                    ),
                   ),
                 ),
               ),
@@ -688,7 +710,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
             Positioned(
               left: SmarturStyle.spacingLg,
               right: SmarturStyle.spacingLg,
-              bottom: 130, // un poco por encima del botón (que está en bottom: 50)
+              bottom: 150, // más cerca del botón Comenzar
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -696,14 +718,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                     position: _textSlide,
                     child: FadeTransition(
                       opacity: _fadeAnimation,
-                      child: const Text(
-                        'Experiencias Únicas\nEmpiezan Aquí',
+                      child: Text(
+                        l10n.tagline,
                         style: SmarturStyle.calSansTitle,
                         textAlign: TextAlign.center,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 48),
                   FadeTransition(
                     opacity: _fadeAnimation,
                     child: ScaleTransition(
@@ -713,7 +735,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: SmarturStyle.purple.withOpacity(0.1),
+                            color: SmarturStyle.purple.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                             border: Border.all(color: SmarturStyle.purple, width: 2),
                           ),
@@ -725,9 +747,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                   const SizedBox(height: 8),
                   FadeTransition(
                     opacity: _fadeAnimation,
-                    child: const Text(
-                      'Ingresar con huella',
-                      style: TextStyle(
+                    child: Text(
+                      l10n.loginWithBiometrics,
+                      style: const TextStyle(
                         fontFamily: 'Outfit',
                         color: SmarturStyle.textSecondary,
                         fontWeight: FontWeight.w500,
@@ -736,7 +758,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                   ),
                 ],
               ),
-            ),
+            ), 
             Positioned(
               bottom: 50,
               left: SmarturStyle.spacingLg,
@@ -749,7 +771,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                     scale: _buttonScale,
                     child: ElevatedButton(
                       onPressed: () => _showAuthModal(context, isLogin: true),
-                      child: const Text('Comenzar'),
+                      child: Text(l10n.start),
                     ),
                   ),
                 ),

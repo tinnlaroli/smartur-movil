@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
+import 'package:smartur/l10n/app_localizations.dart';
+import 'package:color_blindness/color_blindness.dart';
 import 'core/theme/style_guide.dart';
+import 'core/settings/app_settings.dart';
+import 'core/settings/app_settings_scope.dart';
 import 'data/services/auth_service.dart';
 import 'presentation/screens/auth/onboarding_screen.dart';
 import 'presentation/screens/auth/welcome_screen.dart';
@@ -13,99 +17,193 @@ void main() async {
   SharedPreferences prefs = await SharedPreferences.getInstance();
   bool seenOnboarding = prefs.getBool('onboarding_seen') ?? false;
 
-  runApp(SmarturApp(seenOnboarding: seenOnboarding));
+  final settings = await AppSettingsNotifier.load();
+  runApp(SmarturApp(seenOnboarding: seenOnboarding, settings: settings));
 }
 
 class SmarturApp extends StatelessWidget {
   final bool seenOnboarding;
-  const SmarturApp({super.key, required this.seenOnboarding});
+  final AppSettingsNotifier settings;
+  const SmarturApp({super.key, required this.seenOnboarding, required this.settings});
 
   @override
   Widget build(BuildContext context) {
     return ToastificationWrapper(
-      child: MaterialApp(
-        title: 'SMARTUR',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          fontFamily: 'Outfit',
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: SmarturStyle.purple,
-            primary: SmarturStyle.purple,
-            secondary: SmarturStyle.pink,
-            surface: Colors.white,
-            brightness: Brightness.light,
-          ),
-          textTheme: const TextTheme(
-            displayLarge: TextStyle(fontFamily: 'CalSans', fontWeight: FontWeight.bold),
-            displayMedium: TextStyle(fontFamily: 'CalSans', fontWeight: FontWeight.bold),
-            titleLarge: TextStyle(fontFamily: 'CalSans', fontWeight: FontWeight.w600),
-          ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            elevation: 0,
-            centerTitle: true,
-            titleTextStyle: TextStyle(
-              fontFamily: 'CalSans',
-              fontSize: 20,
-              color: SmarturStyle.textPrimary,
+      child: ValueListenableBuilder<AppSettings>(
+        valueListenable: settings,
+        builder: (context, appSettings, _) {
+          return AppSettingsScope(
+            notifier: settings,
+            child: MaterialApp(
+              title: 'SMARTUR',
+              debugShowCheckedModeBanner: false,
+              themeMode: appSettings.themeMode,
+              theme: _buildLightTheme(appSettings.colorblindMode),
+              darkTheme: _buildDarkTheme(appSettings.colorblindMode),
+              locale: appSettings.locale,
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              home: _SplashGate(seenOnboarding: seenOnboarding),
             ),
-            iconTheme: IconThemeData(color: SmarturStyle.textPrimary),
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: SmarturStyle.purple,
-              foregroundColor: Colors.white,
-              elevation: 4,
-              shadowColor: SmarturStyle.purple.withValues(alpha: 0.3),
-              minimumSize: const Size(double.infinity, 56),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              textStyle: const TextStyle(
-                fontFamily: 'CalSans',
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          outlinedButtonTheme: OutlinedButtonThemeData(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: SmarturStyle.purple,
-              side: const BorderSide(color: SmarturStyle.purple, width: 2),
-              minimumSize: const Size(double.infinity, 56),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              textStyle: const TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: Colors.grey.shade50,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: SmarturStyle.purple, width: 2),
-            ),
-            labelStyle: const TextStyle(fontFamily: 'Outfit', color: SmarturStyle.textSecondary),
-          ),
-        ),
-        home: _SplashGate(seenOnboarding: seenOnboarding),
+          );
+        },
       ),
     );
   }
+}
+
+ThemeData _baseTheme(ColorScheme scheme) {
+  return ThemeData(
+    useMaterial3: true,
+    fontFamily: 'Outfit',
+    colorScheme: scheme,
+    scaffoldBackgroundColor: scheme.surface,
+    textTheme: TextTheme(
+      displayLarge: TextStyle(
+        fontFamily: 'CalSans',
+        fontWeight: FontWeight.bold,
+        color: scheme.onSurface,
+      ),
+      displayMedium: TextStyle(
+        fontFamily: 'CalSans',
+        fontWeight: FontWeight.bold,
+        color: scheme.onSurface,
+      ),
+      titleLarge: TextStyle(
+        fontFamily: 'CalSans',
+        fontWeight: FontWeight.w600,
+        color: scheme.onSurface,
+      ),
+      bodyMedium: TextStyle(color: scheme.onSurface),
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: scheme.surface,
+      elevation: 0,
+      centerTitle: true,
+      titleTextStyle: TextStyle(
+        fontFamily: 'CalSans',
+        fontSize: 20,
+        color: scheme.onSurface,
+      ),
+      iconTheme: IconThemeData(color: scheme.onSurface),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        elevation: 4,
+        shadowColor: scheme.primary.withValues(alpha: 0.3),
+        minimumSize: const Size(double.infinity, 56),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        textStyle: const TextStyle(
+          fontFamily: 'CalSans',
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: scheme.primary,
+        side: BorderSide(color: scheme.primary, width: 2),
+        minimumSize: const Size(double.infinity, 56),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        textStyle: const TextStyle(
+          fontFamily: 'Outfit',
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: scheme.surfaceContainerHighest,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: scheme.primary, width: 2),
+      ),
+      labelStyle: TextStyle(
+        fontFamily: 'Outfit',
+        color: scheme.onSurfaceVariant,
+      ),
+    ),
+  );
+}
+
+ThemeData _buildLightTheme(bool colorblindMode) {
+  var scheme = ColorScheme.fromSeed(
+    seedColor: SmarturStyle.purple,
+    primary: SmarturStyle.purple,
+    secondary: SmarturStyle.pink,
+    brightness: Brightness.light,
+  );
+  if (colorblindMode) {
+    scheme = _applyColorBlindnessToScheme(scheme, ColorBlindnessType.deuteranopia);
+  }
+  return _baseTheme(scheme);
+}
+
+ThemeData _buildDarkTheme(bool colorblindMode) {
+  var scheme = ColorScheme.fromSeed(
+    seedColor: SmarturStyle.purple,
+    primary: SmarturStyle.purple,
+    secondary: SmarturStyle.pink,
+    brightness: Brightness.dark,
+    surface: const Color(0xFF121212),
+  ).copyWith(
+    surface: const Color(0xFF121212),
+    surfaceContainer: const Color(0xFF1E1E1E),
+    surfaceContainerHighest: const Color(0xFF242424),
+  );
+  if (colorblindMode) {
+    scheme = _applyColorBlindnessToScheme(scheme, ColorBlindnessType.deuteranopia);
+  }
+  return _baseTheme(scheme);
+}
+
+ColorScheme _applyColorBlindnessToScheme(
+  ColorScheme scheme,
+  ColorBlindnessType type,
+) {
+  Color sim(Color c) => colorBlindness(c, type);
+  return scheme.copyWith(
+    primary: sim(scheme.primary),
+    onPrimary: sim(scheme.onPrimary),
+    primaryContainer: sim(scheme.primaryContainer),
+    onPrimaryContainer: sim(scheme.onPrimaryContainer),
+    secondary: sim(scheme.secondary),
+    onSecondary: sim(scheme.onSecondary),
+    secondaryContainer: sim(scheme.secondaryContainer),
+    onSecondaryContainer: sim(scheme.onSecondaryContainer),
+    tertiary: sim(scheme.tertiary),
+    onTertiary: sim(scheme.onTertiary),
+    tertiaryContainer: sim(scheme.tertiaryContainer),
+    onTertiaryContainer: sim(scheme.onTertiaryContainer),
+    surface: sim(scheme.surface),
+    onSurface: sim(scheme.onSurface),
+    surfaceContainerHighest: sim(scheme.surfaceContainerHighest),
+    surfaceContainerLow: sim(scheme.surfaceContainerLow),
+    surfaceContainer: sim(scheme.surfaceContainer),
+    onSurfaceVariant: sim(scheme.onSurfaceVariant),
+    outline: sim(scheme.outline),
+    outlineVariant: sim(scheme.outlineVariant),
+    error: sim(scheme.error),
+    onError: sim(scheme.onError),
+    errorContainer: sim(scheme.errorContainer),
+    onErrorContainer: sim(scheme.onErrorContainer),
+  );
 }
 
 class _SplashGate extends StatefulWidget {
@@ -124,6 +222,10 @@ class _SplashGateState extends State<_SplashGate> {
   @override
   void initState() {
     super.initState();
+    // Si es la primera vez (onboarding), no mostramos el loader encima.
+    if (!widget.seenOnboarding) {
+      _showLoader = false;
+    }
     _checkSession();
   }
 
@@ -142,13 +244,15 @@ class _SplashGateState extends State<_SplashGate> {
   @override
   Widget build(BuildContext context) {
     final destination = _destination();
+    // Nunca mostramos loader en el onboarding inicial.
+    final shouldShowLoader = _showLoader && widget.seenOnboarding;
 
     return Stack(
       children: [
         // Contenido real de la app (welcome / onboarding / main)
         destination,
         // Loader como overlay a pantalla completa para continuidad perfecta
-        if (_showLoader)
+        if (shouldShowLoader)
           Positioned.fill(
             child: SmartURLoader(
               key: const ValueKey('loader'),
@@ -164,7 +268,10 @@ class _SplashGateState extends State<_SplashGate> {
       return MainScreen(key: const ValueKey('main'), userName: _userName);
     }
     return widget.seenOnboarding
-        ? const WelcomeScreen(key: ValueKey('welcome'))
+        ? const WelcomeScreen(
+            key: ValueKey('welcome'),
+            fromSplash: true,
+          )
         : const OnboardingScreen(key: ValueKey('onboarding'));
   }
 }

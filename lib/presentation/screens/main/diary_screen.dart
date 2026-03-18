@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
 import '../../widgets/smartur_skeleton.dart';
@@ -23,22 +24,22 @@ class _DiaryScreenState extends State<DiaryScreen> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: Colors.white,
         appBar: AppBar(
-          title: Text('Mi Diario', style: SmarturStyle.calSansTitle.copyWith(fontSize: 20)),
-          backgroundColor: Colors.white,
+          title: Text(l10n.diaryTitle,
+              style: SmarturStyle.calSansTitle.copyWith(fontSize: 20)),
           elevation: 0,
-          bottom: const TabBar(
+          bottom: TabBar(
             indicatorColor: SmarturStyle.purple,
             labelColor: SmarturStyle.purple,
             unselectedLabelColor: SmarturStyle.textSecondary,
-            labelStyle: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600),
+            labelStyle: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600),
             tabs: [
-              Tab(text: 'Favoritos'),
-              Tab(text: 'Historial'),
+              Tab(text: l10n.favoritesTab),
+              Tab(text: l10n.historyTab),
             ],
           ),
         ),
@@ -59,18 +60,18 @@ class _DiaryScreenState extends State<DiaryScreen> with SingleTickerProviderStat
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.08),
+                  color: Colors.green.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.green.withOpacity(0.2)),
+                  border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.offline_bolt_outlined, size: 14, color: Colors.green),
-                    SizedBox(width: 6),
+                  children: [
+                    const Icon(Icons.offline_bolt_outlined, size: 14, color: Colors.green),
+                    const SizedBox(width: 6),
                     Text(
-                      'Disponible sin internet',
-                      style: TextStyle(
+                      l10n.offlineAvailable,
+                      style: const TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
@@ -120,7 +121,7 @@ class _FavoritesTab extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.35),
+                        color: Colors.black.withValues(alpha: 0.35),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: const Icon(
@@ -138,7 +139,7 @@ class _FavoritesTab extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.55),
+                      color: Colors.black.withValues(alpha: 0.55),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -187,7 +188,7 @@ class _HistoryTab extends StatelessWidget {
                     border: Border.all(color: Colors.white, width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: SmarturStyle.purple.withOpacity(0.3),
+                        color: SmarturStyle.purple.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -226,7 +227,7 @@ class _HistoryTab extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
+                            color: Colors.green.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: const Text(

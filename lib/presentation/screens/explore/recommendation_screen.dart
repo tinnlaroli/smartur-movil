@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
 
@@ -10,15 +11,14 @@ class RecommendationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayCity = city ?? 'Altas Montañas';
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
-          'Recomendaciones en $displayCity',
+          l10n.recommendationsInCity(displayCity),
           style: SmarturStyle.calSansTitle.copyWith(fontSize: 20),
         ),
-        backgroundColor: Colors.white,
         elevation: 0,
       ),
       body: ListView.builder(
@@ -28,16 +28,16 @@ class RecommendationScreen extends StatelessWidget {
           return Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             elevation: 3,
-            shadowColor: Colors.black.withOpacity(0.06),
+            shadowColor: Colors.black.withValues(alpha: 0.06),
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
               contentPadding: const EdgeInsets.all(16),
               leading: CircleAvatar(
-                backgroundColor: SmarturStyle.purple.withOpacity(0.1),
+                backgroundColor: SmarturStyle.purple.withValues(alpha: 0.1),
                 child: const Icon(Icons.star, color: SmarturStyle.purple),
               ),
               title: Text(
-                'Recomendación #${index + 1}',
+                l10n.recommendationNumber('${index + 1}'),
                 style: const TextStyle(
                   fontFamily: 'Outfit',
                   fontWeight: FontWeight.w700,
@@ -45,7 +45,7 @@ class RecommendationScreen extends StatelessWidget {
                 ),
               ),
               subtitle: Text(
-                'Sugerido por la IA de SMARTUR para tu visita a $displayCity.',
+                l10n.recommendationSubtitle(displayCity),
                 style: const TextStyle(
                   fontFamily: 'Outfit',
                   fontSize: 12,

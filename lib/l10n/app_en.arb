@@ -1,0 +1,102 @@
+{
+  "@@locale": "en",
+  "appTitle": "SMARTUR",
+  "settingsTitle": "Settings",
+  "appearanceSection": "Appearance",
+  "accountSection": "Account",
+  "infoSection": "Info",
+  "darkMode": "Dark Mode",
+  "language": "Language",
+  "colorblindMode": "Colorblind Mode",
+  "changePassword": "Change Password",
+  "editName": "Edit Name",
+  "deleteAccount": "Delete Account",
+  "appVersion": "App Version",
+  "termsAndConditions": "Terms and Conditions",
+  "logout": "Log out",
+  "selectLanguage": "Select Language",
+  "cancel": "Cancel",
+  "save": "Save",
+  "deleteAccountTitle": "Delete account",
+  "deleteAccountConfirm": "Are you sure you want to delete your account? This action is irreversible and you will lose your trip history.",
+  "deleteAccountYes": "Yes, delete",
+  "editNameTitle": "Edit name",
+  "yourName": "Your name",
+  "changePasswordTitle": "Change Password",
+  "changePasswordStep0Hint": "We will send you a verification code to your email.",
+  "changePasswordStep1Hint": "Enter the code and your new password.",
+  "verificationCode": "Verification code",
+  "newPassword": "New password",
+  "confirmPassword": "Confirm password",
+  "sendCode": "Send code",
+  "updatePassword": "Update password",
+  "resendCode": "Resend code",
+  "codeSixDigits": "6-digit code",
+  "passwordMinChars": "Minimum 8 characters",
+  "passwordNeedUpper": "Include at least one uppercase letter",
+  "passwordNeedLower": "Include at least one lowercase letter",
+  "passwordNeedNumber": "Include at least one number",
+  "passwordsDontMatch": "Passwords do not match",
+  "codeSentToEmail": "Code sent to {email}",
+  "@codeSentToEmail": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "emailNotFound": "Email not found",
+  "loading": "Loading...",
+  "welcomeBack": "Welcome back",
+  "startNow": "Get started",
+  "loginSubtitle": "Enter your credentials to continue.",
+  "registerSubtitle": "Sign up to discover personalized routes.",
+  "continueWithEmail": "Continue with Email",
+  "registerWithEmail": "Sign up with Email",
+  "tagline": "AI that guides, Tourism that unites",
+  "start": "Start",
+  "loginWithBiometrics": "Sign in with fingerprint",
+  "navHome": "Home",
+  "navDiary": "Diary",
+  "navRecommend": "Recommend",
+  "navCommunity": "Community",
+  "navUser": "User",
+  "communityTitle": "Community",
+  "uploadPhotoAction": "Action to upload a photo",
+  "diaryTitle": "My Diary",
+  "favoritesTab": "Favorites",
+  "historyTab": "History",
+  "offlineAvailable": "Available offline",
+  "recommendationsInCity": "Recommendations in {city}",
+  "@recommendationsInCity": {
+    "placeholders": {
+      "city": {}
+    }
+  },
+  "recommendationNumber": "Recommendation #{number}",
+  "@recommendationNumber": {
+    "placeholders": {
+      "number": {}
+    }
+  },
+  "recommendationSubtitle": "Suggested by SMARTUR AI for your visit to {city}.",
+  "@recommendationSubtitle": {
+    "placeholders": {
+      "city": {}
+    }
+  },
+  "mapDiscoverHint": "Discover key points without tracking your location in real time.",
+  "mapTapPinHint": "Tap a pin to see AI-generated details",
+  "filterAll": "All",
+  "filterMuseums": "Museums",
+  "filterCafes": "Cafés",
+  "filterViewpoints": "Viewpoints",
+  "filterMuseumsOnly": "Museums only",
+  "aiSmartur": "SMARTUR AI"
+  ,
+  "enableBiometricsHint": "Sign in and enable fingerprint in your profile",
+  "deviceNotSupported": "Device not supported",
+  "noBiometricsEnrolled": "No fingerprints enrolled",
+  "biometricReason": "Access your SMARTUR routes",
+  "sessionExpired": "Session expired. Please sign in again.",
+  "biometricReadError": "Error reading fingerprint."
+}
+

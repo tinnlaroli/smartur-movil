@@ -1,0 +1,102 @@
+{
+  "@@locale": "pt",
+  "appTitle": "SMARTUR",
+  "settingsTitle": "Configurações",
+  "appearanceSection": "Aparência",
+  "accountSection": "Conta",
+  "infoSection": "Informações",
+  "darkMode": "Modo escuro",
+  "language": "Idioma",
+  "colorblindMode": "Modo daltônico",
+  "changePassword": "Alterar senha",
+  "editName": "Editar nome",
+  "deleteAccount": "Excluir conta",
+  "appVersion": "Versão do app",
+  "termsAndConditions": "Termos e Condições",
+  "logout": "Sair",
+  "selectLanguage": "Selecionar idioma",
+  "cancel": "Cancelar",
+  "save": "Salvar",
+  "deleteAccountTitle": "Excluir conta",
+  "deleteAccountConfirm": "Tem certeza de que deseja excluir sua conta? Esta ação é irreversível e você perderá seu histórico de viagens.",
+  "deleteAccountYes": "Sim, excluir",
+  "editNameTitle": "Editar nome",
+  "yourName": "Seu nome",
+  "changePasswordTitle": "Alterar senha",
+  "changePasswordStep0Hint": "Enviaremos um código de verificação para o seu e-mail.",
+  "changePasswordStep1Hint": "Digite o código e sua nova senha.",
+  "verificationCode": "Código de verificação",
+  "newPassword": "Nova senha",
+  "confirmPassword": "Confirmar senha",
+  "sendCode": "Enviar código",
+  "updatePassword": "Atualizar senha",
+  "resendCode": "Reenviar código",
+  "codeSixDigits": "Código de 6 dígitos",
+  "passwordMinChars": "Mínimo de 8 caracteres",
+  "passwordNeedUpper": "Inclua pelo menos uma letra maiúscula",
+  "passwordNeedLower": "Inclua pelo menos uma letra minúscula",
+  "passwordNeedNumber": "Inclua pelo menos um número",
+  "passwordsDontMatch": "As senhas não coincidem",
+  "codeSentToEmail": "Código enviado para {email}",
+  "@codeSentToEmail": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "emailNotFound": "E-mail não encontrado",
+  "loading": "Carregando...",
+  "welcomeBack": "Bem-vindo de volta",
+  "startNow": "Começar",
+  "loginSubtitle": "Digite suas credenciais para continuar.",
+  "registerSubtitle": "Cadastre-se para descobrir rotas personalizadas.",
+  "continueWithEmail": "Continuar com e-mail",
+  "registerWithEmail": "Cadastrar com e-mail",
+  "tagline": "IA que guia, turismo que une",
+  "start": "Começar",
+  "loginWithBiometrics": "Entrar com impressão digital",
+  "navHome": "Início",
+  "navDiary": "Diário",
+  "navRecommend": "Recomendar",
+  "navCommunity": "Comunidade",
+  "navUser": "Usuário",
+  "communityTitle": "Comunidade",
+  "uploadPhotoAction": "Ação para enviar uma foto",
+  "diaryTitle": "Meu Diário",
+  "favoritesTab": "Favoritos",
+  "historyTab": "Histórico",
+  "offlineAvailable": "Disponível offline",
+  "recommendationsInCity": "Recomendações em {city}",
+  "@recommendationsInCity": {
+    "placeholders": {
+      "city": {}
+    }
+  },
+  "recommendationNumber": "Recomendação #{number}",
+  "@recommendationNumber": {
+    "placeholders": {
+      "number": {}
+    }
+  },
+  "recommendationSubtitle": "Sugerido pela IA da SMARTUR para sua visita a {city}.",
+  "@recommendationSubtitle": {
+    "placeholders": {
+      "city": {}
+    }
+  },
+  "mapDiscoverHint": "Descubra pontos-chave sem rastrear sua localização em tempo real.",
+  "mapTapPinHint": "Toque em um pin para ver detalhes gerados por IA",
+  "filterAll": "Todos",
+  "filterMuseums": "Museus",
+  "filterCafes": "Cafés",
+  "filterViewpoints": "Mirantes",
+  "filterMuseumsOnly": "Somente museus",
+  "aiSmartur": "IA Smartur"
+  ,
+  "enableBiometricsHint": "Faça login e ative a impressão digital no seu perfil",
+  "deviceNotSupported": "Dispositivo não compatível",
+  "noBiometricsEnrolled": "Nenhuma impressão digital cadastrada",
+  "biometricReason": "Acesse suas rotas da SMARTUR",
+  "sessionExpired": "Sessão expirada. Faça login novamente.",
+  "biometricReadError": "Erro ao ler a impressão digital."
+}
+

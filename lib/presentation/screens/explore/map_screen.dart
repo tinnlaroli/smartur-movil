@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
 
@@ -57,14 +58,14 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: Stack(
           children: [
             _buildMap(),
-            _buildTopFiltersBar(),
-            _buildBottomInfoCard(),
+            _buildTopFiltersBar(l10n),
+            _buildBottomInfoCard(l10n),
           ],
         ),
       ),
@@ -108,7 +109,7 @@ class _MapScreenState extends State<MapScreen> {
                               color: Colors.white,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.18),
+                                  color: Colors.black.withValues(alpha: 0.18),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 ),
@@ -133,7 +134,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _buildTopFiltersBar() {
+  Widget _buildTopFiltersBar(AppLocalizations l10n) {
     return Positioned(
       top: 8,
       left: 12,
@@ -148,7 +149,7 @@ class _MapScreenState extends State<MapScreen> {
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -160,7 +161,7 @@ class _MapScreenState extends State<MapScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Descubre puntos clave sin rastrear tu ubicación en tiempo real.',
+                    l10n.mapDiscoverHint,
                     style: const TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 12,
@@ -181,7 +182,15 @@ class _MapScreenState extends State<MapScreen> {
                   padding: const EdgeInsets.only(right: 8),
                   child: ActionChip(
                     label: Text(
-                      f == 'Museos' ? 'Solo ver Museos' : f,
+                      f == 'Museos'
+                          ? l10n.filterMuseumsOnly
+                          : switch (f) {
+                              'Todos' => l10n.filterAll,
+                              'Museos' => l10n.filterMuseums,
+                              'Cafés' => l10n.filterCafes,
+                              'Miradores' => l10n.filterViewpoints,
+                              _ => f,
+                            },
                       style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 12,
@@ -213,7 +222,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _buildBottomInfoCard() {
+  Widget _buildBottomInfoCard(AppLocalizations l10n) {
     final place = _selectedPlace;
     if (place == null) {
       return Positioned(
@@ -229,7 +238,7 @@ class _MapScreenState extends State<MapScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -237,12 +246,13 @@ class _MapScreenState extends State<MapScreen> {
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.touch_app_outlined, size: 18, color: SmarturStyle.textSecondary),
-                SizedBox(width: 8),
+              children: [
+                const Icon(Icons.touch_app_outlined,
+                    size: 18, color: SmarturStyle.textSecondary),
+                const SizedBox(width: 8),
                 Text(
-                  'Toca un pin para ver detalles generados por IA',
-                  style: TextStyle(
+                  l10n.mapTapPinHint,
+                  style: const TextStyle(
                     fontFamily: 'Outfit',
                     fontSize: 12,
                     color: SmarturStyle.textSecondary,
@@ -271,7 +281,7 @@ class _MapScreenState extends State<MapScreen> {
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 16,
                 offset: const Offset(0, 8),
               ),
@@ -284,7 +294,7 @@ class _MapScreenState extends State<MapScreen> {
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: place.color.withOpacity(0.15),
+                  color: place.color.withValues(alpha: 0.15),
                 ),
                 child: Icon(place.icon, color: place.color),
               ),
@@ -315,7 +325,7 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'IA Smartur · ${place.category}',
+                      '${l10n.aiSmartur} · ${place.category}',
                       style: const TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 11,
