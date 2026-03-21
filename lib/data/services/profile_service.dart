@@ -1,7 +1,10 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../core/constants/api_constants.dart';
+import 'auth_service.dart';
 
 class ProfileService {
   static const _prefsKey = 'preferences_saved';
@@ -44,13 +47,34 @@ class ProfileService {
       return false;
     }
   }
-  /// Obtiene los intereses guardados (simulado).
+  /// Intereses desde GET /profiles/me (traveler_profile.interests).
   static Future<List<String>> getSavedInterests() async {
-    // En una implementación real, esto se extraería de SharedPreferences o del backend.
-    // Por ahora simulamos que el usuario tiene algunos intereses guardados si `hasPreferencesSaved` es true.
-    final saved = await hasPreferencesSaved();
-    if (!saved) return [];
-    
-    return ['Cultura', 'Naturaleza', 'Historia', 'Aventura'];
+    final auth = AuthService();
+    final token = await auth.getToken();
+    if (token == null) return [];
+
+    final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.profilesMe}');
+    try {
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode != 200) return [];
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final profile = data['travelerProfile'];
+      if (profile == null) return [];
+      final interests = profile['interests'];
+      if (interests is List) {
+        return interests.map((e) => e.toString()).toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
   }
 }

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -16,6 +18,8 @@ class AuthService {
   static const _userIdKey = 'user_id';
   static const _userNameKey = 'user_name';
   static const _userEmailKey = 'user_email';
+  static const _userPhotoUrlKey = 'user_photo_url';
+  static const _userAvatarIconKey = 'user_avatar_icon_key';
 
   static final _googleSignIn = GoogleSignIn.instance;
 
@@ -70,6 +74,8 @@ class AuthService {
     await _storage.delete(key: _userIdKey);
     await _storage.delete(key: _userNameKey);
     await _storage.delete(key: _userEmailKey);
+    await _storage.delete(key: _userPhotoUrlKey);
+    await _storage.delete(key: _userAvatarIconKey);
   }
 
   // ── User data persistence ──────────────────────────────────────────────
@@ -79,12 +85,33 @@ class AuthService {
       await _storage.write(key: _userIdKey, value: user['id'].toString());
     }
     if (user['name'] != null) {
-      await _storage.write(key: _userNameKey, value: user['name']);
+      await _storage.write(key: _userNameKey, value: user['name'] as String);
     }
     if (user['email'] != null) {
-      await _storage.write(key: _userEmailKey, value: user['email']);
+      await _storage.write(key: _userEmailKey, value: user['email'] as String);
+    }
+    if (user.containsKey('photo_url')) {
+      final v = user['photo_url'];
+      if (v == null || (v is String && v.isEmpty)) {
+        await _storage.delete(key: _userPhotoUrlKey);
+      } else if (v is String) {
+        await _storage.write(key: _userPhotoUrlKey, value: v);
+      }
+    }
+    if (user.containsKey('avatar_icon_key')) {
+      final v = user['avatar_icon_key'];
+      if (v == null || (v is String && v.isEmpty)) {
+        await _storage.delete(key: _userAvatarIconKey);
+      } else if (v is String) {
+        await _storage.write(key: _userAvatarIconKey, value: v);
+      }
     }
   }
+
+  Future<String?> getUserPhotoUrl() async => await _storage.read(key: _userPhotoUrlKey);
+
+  Future<String?> getUserAvatarIconKey() async =>
+      await _storage.read(key: _userAvatarIconKey);
 
   Future<int?> getUserId() async {
     final val = await _storage.read(key: _userIdKey);
@@ -107,13 +134,22 @@ class AuthService {
     return null; // will be resolved async
   }
 
+  /// JWT puede decodificar `id` como int, double o (raro) string.
+  static int? _parseJwtUserId(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    if (raw is String) return int.tryParse(raw);
+    return null;
+  }
+
   Future<int?> resolveUserId() async {
     final stored = await _storage.read(key: _userIdKey);
     if (stored != null) return int.tryParse(stored);
     final token = await getToken();
     if (token == null) return null;
     final decoded = _decodeTokenPayload(token);
-    final id = decoded?['id'] as int?;
+    final id = _parseJwtUserId(decoded?['id']);
     if (id != null) {
       await _storage.write(key: _userIdKey, value: id.toString());
     }
@@ -333,18 +369,26 @@ class AuthService {
     if (userId == null || token == null) return null;
 
     final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.users}/$userId');
-    final response = await http.get(url, headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    });
+    try {
+      final response = await http
+          .get(url, headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          })
+          .timeout(const Duration(seconds: 15));
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final user = data['user'] as Map<String, dynamic>?;
-      if (user != null) await saveUserData(user);
-      return user;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final user = data['user'] as Map<String, dynamic>?;
+        if (user != null) await saveUserData(user);
+        return user;
+      }
+      return null;
+    } on TimeoutException {
+      return null;
+    } catch (_) {
+      return null;
     }
-    return null;
   }
 
   Future<Map<String, dynamic>?> updateUser(
@@ -378,6 +422,34 @@ class AuthService {
   Future<void> deactivateAccount() async {
     await updateUser({"is_active": false});
     await fullLogout();
+  }
+
+  /// Sube imagen de perfil (multipart, campo `avatar`). Requiere Cloudinary en el API.
+  Future<Map<String, dynamic>?> uploadAvatarImage(Uint8List bytes, String filename) async {
+    final userId = await resolveUserId();
+    final token = await getToken();
+    if (userId == null || token == null) return null;
+
+    final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.users}/$userId/avatar');
+    final request = http.MultipartRequest('POST', uri);
+    request.headers['Authorization'] = 'Bearer $token';
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'avatar',
+        bytes,
+        filename: filename,
+      ),
+    );
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final user = data['user'] as Map<String, dynamic>?;
+      if (user != null) await saveUserData(user);
+      return user;
+    }
+    final msg = jsonDecode(response.body)['message'] ?? 'Error al subir imagen';
+    throw AuthException(msg.toString());
   }
 }
 

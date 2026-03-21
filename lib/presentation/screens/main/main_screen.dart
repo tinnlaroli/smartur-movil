@@ -29,7 +29,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _screens = [
-      HomeScreen(userName: widget.userName, isNewLogin: widget.isNewLogin),
+      HomeScreen(
+        key: const ValueKey<String>('main_tab_home'),
+        userName: widget.userName,
+        isNewLogin: widget.isNewLogin,
+      ),
       const DiaryScreen(),
       const CommunityScreen(),
       const ProfileScreen(),

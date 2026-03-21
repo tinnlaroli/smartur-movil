@@ -16,6 +16,12 @@ class ApiConstants {
 
   // Profiles
   static const String preferences = '/profiles/preferences';
+  static const String profilesMe = '/profiles/me';
+
+  // User content (diario / comunidad)
+  static const String meFavorites = '/me/favorites';
+  static const String meVisits = '/me/visits';
+  static const String communityPosts = '/community/posts';
 
   // Explore
   static const String locations = '/locations';

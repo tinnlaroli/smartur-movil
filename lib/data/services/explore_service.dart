@@ -103,7 +103,7 @@ class ExploreService {
       String token, int locationId, String cityName) async {
     try {
       final uri = Uri.parse(
-        '${ApiConstants.baseUrl}${ApiConstants.touristServices}?active=true&limit=50',
+        '${ApiConstants.baseUrl}${ApiConstants.touristServices}?active=true&limit=50&id_location=$locationId',
       );
       final response = await http
           .get(uri, headers: _headers(token))
@@ -114,9 +114,7 @@ class ExploreService {
       final data = jsonDecode(response.body);
       final List<dynamic> services = data['services'] ?? [];
 
-      return services
-          .where((s) => s['id_location'] == locationId)
-          .map((s) {
+      return services.map((s) {
             final cat = _categoryFromServiceType(s['service_type'] as String?);
             if (cat == null) return null;
             return Place(

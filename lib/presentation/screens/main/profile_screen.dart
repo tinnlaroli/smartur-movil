@@ -5,6 +5,8 @@ import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/profile_service.dart';
+import '../../widgets/smartur_user_avatar.dart';
+import '../profile/edit_profile_avatar_screen.dart';
 import '../settings/settings_screen.dart';
 import '../auth/welcome_screen.dart';
 
@@ -22,12 +24,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _email = '';
   String _memberSince = '';
   List<String> _interests = [];
+  String? _photoUrl;
+  String? _avatarIconKey;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    // No usar AppLocalizations.of(context) ni otros InheritedWidget hasta
+    // después de que initState termine (primer frame).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadProfile();
+    });
   }
 
   Future<void> _loadProfile() async {
@@ -42,14 +50,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final email = profile?['email'] ??
           await _authService.getUserEmail() ??
           '';
-      final createdAt = profile?['created_at'] as String?;
+      final createdAt = _parseCreatedAt(profile?['created_at']);
 
       String memberSince = '';
       if (createdAt != null) {
-        final dt = DateTime.tryParse(createdAt);
-        if (dt != null) {
-          memberSince = '${dt.month}/${dt.year}';
-        }
+        memberSince = '${createdAt.month}/${createdAt.year}';
       }
 
       if (mounted) {
@@ -58,28 +63,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _email = email;
           _memberSince = memberSince;
           _interests = interests;
-          _loading = false;
+          _photoUrl = profile?['photo_url'] as String?;
+          _avatarIconKey = profile?['avatar_icon_key'] as String?;
         });
       }
     } catch (_) {
       final name = await _authService.getUserName() ?? l10n.defaultUserName;
       final email = await _authService.getUserEmail() ?? '';
+      final photo = await _authService.getUserPhotoUrl();
+      final icon = await _authService.getUserAvatarIconKey();
       if (mounted) {
         setState(() {
           _name = name;
           _email = email;
-          _loading = false;
+          _photoUrl = photo;
+          _avatarIconKey = icon;
         });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
       }
     }
   }
 
-  String get _initials {
-    final parts = _name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return _name.isNotEmpty ? _name[0].toUpperCase() : 'S';
+  /// API puede enviar `created_at` como String ISO o como otro tipo vía JSON.
+  static DateTime? _parseCreatedAt(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is DateTime) return raw;
+    if (raw is String) return DateTime.tryParse(raw);
+    return DateTime.tryParse(raw.toString());
   }
 
   @override
@@ -167,18 +180,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white30, width: 3),
                   ),
-                  child: CircleAvatar(
+                  child: SmarturUserAvatar(
                     radius: 44,
+                    photoUrl: _photoUrl,
+                    avatarIconKey: _avatarIconKey,
+                    displayName: _name,
                     backgroundColor: Colors.white.withAlpha(40),
-                    child: Text(
-                      _initials,
-                      style: const TextStyle(
-                        fontFamily: 'CalSans',
-                        fontSize: 32,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    foregroundColor: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -336,7 +344,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onTap: () async {
               await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                MaterialPageRoute(builder: (_) => const EditProfileAvatarScreen()),
               );
               _loadProfile();
             },

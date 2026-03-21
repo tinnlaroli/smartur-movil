@@ -16,6 +16,7 @@ import '../../../data/models/place_model.dart';
 import '../../../data/mock/city_mock_data.dart';
 import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/smartur_background.dart';
+import '../../widgets/smartur_user_avatar.dart';
 import '../preferences/preferences_screen.dart';
 import '../settings/settings_screen.dart';
 import '../auth/welcome_screen.dart';
@@ -32,13 +33,25 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const double _kHomeHeaderExpandedHeight = 140;
+
   final AuthService _authService = AuthService();
   final ExploreService _exploreService = ExploreService();
   final LocalAuthentication _auth = LocalAuthentication();
+  final ScrollController _homeScrollController = ScrollController();
+
+  /// 0 = header expandido (transparente), 1 = colapsado (fondo surface del tema).
+  double _homeHeaderCollapseT = 0;
+
   bool _isLoadingContent = true;
   bool _welcomeShown = false;
   static bool _welcomeShownOnce = false;
   static bool _preferencesCheckedOnce = false;
+
+  /// Evita volver a mostrar el diálogo de huella al cambiar de pestaña y regresar
+  /// a Inicio (cada vez Home se desmonta y vuelve a montar). Una vez por sesión
+  /// de la app; "No volver a recordar" sigue guardado en [AuthService].
+  static bool _biometricSetupOfferedThisSession = false;
 
   static final Map<String, String?> _weatherSummaryCache = {};
 
@@ -48,9 +61,17 @@ class _HomeScreenState extends State<HomeScreen> {
   // ── Selection state ──
   late CityData _selectedCity = _cities.first;
   PlaceCategory? _selectedCategory;
+  final GlobalKey _categoryFilterButtonKey = GlobalKey();
+  double _categoryFilterReservedWidth = 150; // Fallback mientras se mide.
 
   String? _weatherSummary;
   bool _weatherLoading = true;
+
+  String? _headerPhotoUrl;
+  String? _headerAvatarIconKey;
+
+  /// Nombre para el saludo: widget o almacenamiento (al volver al tab Home se recrea el State).
+  String? _greetingName;
 
   List<Place> get _filteredPlaces => _selectedCity.byCategory(_selectedCategory);
 
@@ -59,15 +80,62 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _homeScrollController.addListener(_onHomeScroll);
+    final w = widget.userName?.trim();
+    if (w != null && w.isNotEmpty) {
+      _greetingName = w;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadGreetingName();
       await _showWelcome();
       await _checkPreferences();
       await _offerBiometricSetup();
       await _loadCitiesFromApi();
       await _loadWeatherForSelectedCity();
+      await _loadHeaderAvatar();
 
       await Future.delayed(const Duration(milliseconds: 1500));
       if (mounted) setState(() => _isLoadingContent = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _homeScrollController.removeListener(_onHomeScroll);
+    _homeScrollController.dispose();
+    super.dispose();
+  }
+
+  void _onHomeScroll() {
+    if (!_homeScrollController.hasClients || !mounted) return;
+    final top = MediaQuery.paddingOf(context).top;
+    final collapsed = top + kToolbarHeight;
+    final range = _kHomeHeaderExpandedHeight - collapsed;
+    final offset = _homeScrollController.offset.clamp(0.0, double.infinity);
+    final t = range > 0 ? (offset / range).clamp(0.0, 1.0) : 1.0;
+    if ((t - _homeHeaderCollapseT).abs() < 0.008) return;
+    setState(() => _homeHeaderCollapseT = t);
+  }
+
+  @override
+  void didUpdateWidget(HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final w = widget.userName?.trim();
+    if (w != null && w.isNotEmpty && w != _greetingName) {
+      setState(() => _greetingName = w);
+    }
+  }
+
+  Future<void> _loadGreetingName() async {
+    final w = widget.userName?.trim();
+    if (w != null && w.isNotEmpty) {
+      if (mounted) setState(() => _greetingName = w);
+      return;
+    }
+    final stored = await _authService.getUserName();
+    if (!mounted) return;
+    setState(() {
+      _greetingName = (stored != null && stored.isNotEmpty) ? stored : _greetingName;
     });
   }
 
@@ -105,19 +173,36 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _offerBiometricSetup() async {
+    if (_biometricSetupOfferedThisSession) return;
+
     final alreadyEnabled = await _authService.isBiometricEnabled();
-    if (alreadyEnabled) return;
+    if (alreadyEnabled) {
+      _biometricSetupOfferedThisSession = true;
+      return;
+    }
 
     final dismissed = await _authService.isBiometricDismissed();
-    if (dismissed) return;
+    if (dismissed) {
+      _biometricSetupOfferedThisSession = true;
+      return;
+    }
 
     final canAuth = await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
-    if (!canAuth) return;
+    if (!canAuth) {
+      _biometricSetupOfferedThisSession = true;
+      return;
+    }
 
     final available = await _auth.getAvailableBiometrics();
-    if (available.isEmpty) return;
+    if (available.isEmpty) {
+      _biometricSetupOfferedThisSession = true;
+      return;
+    }
 
     if (!mounted) return;
+
+    // Una sola vez por apertura de la app (no en cada vuelta al tab Inicio).
+    _biometricSetupOfferedThisSession = true;
 
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
@@ -267,6 +352,29 @@ class _HomeScreenState extends State<HomeScreen> {
         _weatherSummary = null;
         _weatherLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadHeaderAvatar() async {
+    try {
+      final profile = await _authService.getUserProfile();
+      final photo = profile?['photo_url'] as String? ?? await _authService.getUserPhotoUrl();
+      final icon = profile?['avatar_icon_key'] as String? ?? await _authService.getUserAvatarIconKey();
+      if (mounted) {
+        setState(() {
+          _headerPhotoUrl = photo;
+          _headerAvatarIconKey = icon;
+        });
+      }
+    } catch (_) {
+      final photo = await _authService.getUserPhotoUrl();
+      final icon = await _authService.getUserAvatarIconKey();
+      if (mounted) {
+        setState(() {
+          _headerPhotoUrl = photo;
+          _headerAvatarIconKey = icon;
+        });
+      }
     }
   }
 
@@ -523,6 +631,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SmarturShimmer(
           enabled: _isLoadingContent,
           child: CustomScrollView(
+            controller: _homeScrollController,
             physics: const BouncingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics(),
             ),
@@ -530,7 +639,6 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildHeaderAppBar(),
               SliverToBoxAdapter(child: _buildExploreIntro()),
               SliverToBoxAdapter(child: _buildCityFilter()),
-              SliverToBoxAdapter(child: _buildCategoryFilter()),
               _buildPlaceGrid(),
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
             ],
@@ -545,88 +653,124 @@ class _HomeScreenState extends State<HomeScreen> {
   SliverAppBar _buildHeaderAppBar() {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final name = widget.userName;
+    final name = _greetingName ?? widget.userName;
     final greetingName = (name != null && name.isNotEmpty) ? ', $name' : '';
+
+    // El Material del SliverAppBar pinta detrás del título colapsado; el fondo del
+    // FlexibleSpaceBar no cubre esa franja — por eso el color debe ir aquí.
+    final headerBgOpacity =
+        Curves.easeOut.transform(_homeHeaderCollapseT).clamp(0.0, 1.0);
+    final headerBackground = headerBgOpacity <= 0.001
+        ? Colors.transparent
+        : (headerBgOpacity >= 0.999
+            ? scheme.surface
+            : scheme.surface.withValues(alpha: headerBgOpacity));
 
     return SliverAppBar(
       pinned: true,
-      expandedHeight: 140,
-      backgroundColor: Colors.transparent,
-      forceMaterialTransparency: true,
+      expandedHeight: _kHomeHeaderExpandedHeight,
+      backgroundColor: headerBackground,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
+      scrolledUnderElevation: 0,
+      shadowColor: Colors.transparent,
       flexibleSpace: FlexibleSpaceBar(
         titlePadding:
-            const EdgeInsetsDirectional.only(start: 20, end: 20, bottom: 16),
+            const EdgeInsetsDirectional.only(start: 20, end: 12, bottom: 14),
+        centerTitle: false,
         title: _isLoadingContent
             ? const SkeletonText(width: 180, height: 20)
             : Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.exploreGreeting(greetingName),
-                        style: SmarturStyle.calSansTitle.copyWith(fontSize: 20),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.highMountainsVeracruz,
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 11,
-                          color: scheme.onSurfaceVariant,
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.exploreGreeting(greetingName),
+                          style: SmarturStyle.calSansTitle.copyWith(fontSize: 20),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.highMountainsVeracruz,
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 11,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.person_outline, color: scheme.onSurface),
+                    padding: EdgeInsets.zero,
                     onPressed: _showProfile,
+                    icon: SmarturUserAvatar(
+                      radius: 18,
+                      photoUrl: _headerPhotoUrl,
+                      avatarIconKey: _headerAvatarIconKey,
+                      displayName: name ?? '',
+                      backgroundColor: SmarturStyle.purple.withValues(alpha: 0.12),
+                      foregroundColor: scheme.onSurface,
+                    ),
                   ),
                 ],
               ),
-        background: Container(
-          padding: const EdgeInsets.fromLTRB(20, 60, 20, 0),
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: _isLoadingContent
-                ? const SkeletonContainer(height: 40, borderRadius: 16)
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.wb_sunny_outlined,
-                          color: SmarturStyle.purple),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            l10n.weatherNow,
-                            style: TextStyle(
-                              fontFamily: 'Outfit',
-                              fontSize: 11,
-                              color: scheme.onSurfaceVariant,
-                            ),
+        background: LayoutBuilder(
+          builder: (context, constraints) {
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 60, 20, 0),
+                    child: _isLoadingContent
+                        ? const SkeletonContainer(height: 40, borderRadius: 16)
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.wb_sunny_outlined,
+                                  color: SmarturStyle.purple),
+                              const SizedBox(width: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    l10n.weatherNow,
+                                    style: TextStyle(
+                                      fontFamily: 'Outfit',
+                                      fontSize: 11,
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  Text(
+                                    _weatherLoading
+                                        ? l10n.loading
+                                        : (_weatherSummary ?? l10n.notAvailable),
+                                    style: TextStyle(
+                                      fontFamily: 'Outfit',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: scheme.onSurface,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          Text(
-                            _weatherLoading
-                                ? l10n.loading
-                                : (_weatherSummary ?? l10n.notAvailable),
-                            style: TextStyle(
-                              fontFamily: 'Outfit',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onSurface,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ),
-          ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -635,101 +779,122 @@ class _HomeScreenState extends State<HomeScreen> {
   // ── Explore intro ──
 
   Widget _buildExploreIntro() {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final name = widget.userName;
-    final who = (name != null && name.isNotEmpty) ? name : l10n.tourist;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.exploreHighMountains,
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: scheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.recommendationsForYou(who),
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 12,
-              color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   // ── City selector ──
 
   Widget _buildCityFilter() {
-    final scheme = Theme.of(context).colorScheme;
-
     return SizedBox(
       height: 52,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: _cities.length,
-        itemBuilder: (context, idx) {
-          final city = _cities[idx];
-          final isSelected = city.name == _selectedCity.name;
-          final accentColor = SmarturStyle.green;
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final scheme = Theme.of(context).colorScheme;
 
-          return Padding(
-            padding: EdgeInsets.only(right: idx == _cities.length - 1 ? 0 : 10),
-            child: ChoiceChip(
-              selected: isSelected,
-              showCheckmark: false,
-              side: BorderSide(
-                color: isSelected
-                    ? accentColor.withValues(alpha: 0.5)
-                    : scheme.outlineVariant,
-              ),
-              backgroundColor: scheme.surfaceContainerHighest,
-              selectedColor: accentColor.withValues(alpha: 0.20),
-              labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
-              ),
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    city.chipIcon,
-                    size: 16,
-                    color: isSelected ? accentColor : scheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    city.name,
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontWeight: FontWeight.w700,
-                      color: isSelected ? accentColor : scheme.onSurface,
-                      fontSize: 12,
+          // Limit the ListView viewport so chips cannot be painted under
+          // the filter button area.
+          final listWidth =
+              constraints.maxWidth - 20 - _categoryFilterReservedWidth - 1;
+
+          return Stack(
+            children: [
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: listWidth > 0 ? listWidth : 0,
+                child: ClipRect(
+                  child: ShaderMask(
+                    blendMode: BlendMode.dstIn,
+                    shaderCallback: (rect) {
+                      const double fadeWidth = 26; // ajusta si quieres mas suave
+                      final w = rect.width;
+                      final t = (w <= fadeWidth) ? 0.0 : (w - fadeWidth) / w;
+                      return LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: const [
+                          Colors.white,
+                          Colors.white,
+                          Colors.transparent,
+                        ],
+                        stops: [0.0, t, 1.0],
+                      ).createShader(rect);
+                    },
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.only(left: 20),
+                      itemCount: _cities.length,
+                      itemBuilder: (context, idx) {
+                        final city = _cities[idx];
+                        final isSelected = city.name == _selectedCity.name;
+                        final accentColor = SmarturStyle.green;
+
+                        return Padding(
+                          padding: EdgeInsets.only(
+                              right: idx == _cities.length - 1 ? 0 : 10),
+                          child: ChoiceChip(
+                            selected: isSelected,
+                            showCheckmark: false,
+                            side: BorderSide(
+                              color: isSelected
+                                  ? accentColor.withValues(alpha: 0.5)
+                                  : scheme.outlineVariant,
+                            ),
+                            backgroundColor:
+                                scheme.surfaceContainerHighest,
+                            selectedColor: accentColor.withValues(alpha: 0.20),
+                            labelPadding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  city.chipIcon,
+                                  size: 16,
+                                  color: isSelected
+                                      ? accentColor
+                                      : scheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  city.name,
+                                  style: TextStyle(
+                                    fontFamily: 'Outfit',
+                                    fontWeight: FontWeight.w700,
+                                    color: isSelected
+                                        ? accentColor
+                                        : scheme.onSurface,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            onSelected: (v) {
+                              if (!v) return;
+                              setState(() {
+                                _selectedCity = city;
+                                _selectedCategory = null;
+                              });
+                              _loadWeatherForSelectedCity();
+                            },
+                          ),
+                        );
+                      },
                     ),
                   ),
-                ],
+                ),
               ),
-              onSelected: (v) {
-                if (!v) return;
-                setState(() {
-                  _selectedCity = city;
-                  _selectedCategory = null;
-                });
-                _loadWeatherForSelectedCity();
-              },
-            ),
+              Positioned(
+                right: 20,
+                top: 0,
+                bottom: 0,
+                child: Center(child: _buildCategoryFilter()),
+              ),
+            ],
           );
         },
       ),
@@ -747,78 +912,95 @@ class _HomeScreenState extends State<HomeScreen> {
     final activeLabel = hasFilter ? _selectedCategory!.label : l10n.allCategories;
     final activeIcon = hasFilter ? _selectedCategory!.icon : Icons.filter_list_rounded;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-      child: Row(
-        children: [
-          PopupMenuButton<PlaceCategory?>(
-            onSelected: (cat) => setState(() => _selectedCategory = cat),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            color: scheme.surface,
-            elevation: 8,
-            offset: const Offset(0, 44),
-            itemBuilder: (_) => [
-              _buildCategoryMenuItem(
-                value: null,
-                icon: Icons.apps_rounded,
-                label: l10n.allCategories,
-                color: SmarturStyle.purple,
-                count: _selectedCity.places.length,
-                isSelected: _selectedCategory == null,
-                scheme: scheme,
-              ),
-              ...categories.map((cat) => _buildCategoryMenuItem(
-                    value: cat,
-                    icon: cat.icon,
-                    label: cat.label,
-                    color: cat.color,
-                    count: _selectedCity.byCategory(cat).length,
-                    isSelected: _selectedCategory == cat,
-                    scheme: scheme,
-                  )),
-            ],
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-              decoration: BoxDecoration(
-                color: hasFilter
-                    ? activeColor.withValues(alpha: 0.12)
-                    : scheme.surfaceContainerHighest.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: hasFilter
-                      ? activeColor.withValues(alpha: 0.45)
-                      : scheme.outlineVariant.withValues(alpha: 0.5),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(activeIcon, size: 16, color: hasFilter ? activeColor : scheme.onSurfaceVariant),
-                  const SizedBox(width: 8),
-                  Text(
-                    activeLabel,
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: hasFilter ? activeColor : scheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(Icons.keyboard_arrow_down_rounded,
-                      size: 18, color: hasFilter ? activeColor : scheme.onSurfaceVariant),
-                ],
+    // Use an int sentinel instead of `null` so "All categories" can be selected
+    // (Flutter treats `null` as "menu dismissed").
+    // Defer a que el layout termine para medir el ancho real del botón.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _categoryFilterButtonKey.currentContext;
+      final ro = ctx?.findRenderObject();
+      if (ro is RenderBox) {
+        final w = ro.size.width;
+        if (w > 0 && (w - _categoryFilterReservedWidth).abs() > 0.5) {
+          if (mounted) {
+            setState(() => _categoryFilterReservedWidth = w);
+          }
+        }
+      }
+    });
+
+    return PopupMenuButton<int>(
+      onSelected: (id) {
+        setState(() {
+          _selectedCategory =
+              id == 0 ? null : categories[id - 1]; // 0 means "all"
+        });
+      },
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: scheme.surface,
+      elevation: 8,
+      offset: const Offset(0, 44),
+      itemBuilder: (_) => [
+        _buildCategoryMenuItem(
+          value: 0,
+          icon: Icons.apps_rounded,
+          label: l10n.allCategories,
+          color: SmarturStyle.purple,
+          count: _selectedCity.places.length,
+          isSelected: _selectedCategory == null,
+          scheme: scheme,
+        ),
+        ...categories.asMap().entries.map((e) {
+          final idx = e.key;
+          final cat = e.value;
+          return _buildCategoryMenuItem(
+            value: idx + 1,
+            icon: cat.icon,
+            label: cat.label,
+            color: cat.color,
+            count: _selectedCity.byCategory(cat).length,
+            isSelected: _selectedCategory == cat,
+            scheme: scheme,
+          );
+        }),
+      ],
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        // Transparent button style; the clipping in `_buildCityFilter`
+        // prevents city chips from being visible under it.
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        key: _categoryFilterButtonKey,
+        child: Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(activeIcon,
+                size: 16, color: hasFilter ? activeColor : scheme.onSurface),
+            const SizedBox(width: 6),
+            Text(
+              activeLabel,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: hasFilter ? activeColor : scheme.onSurface,
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 2),
+            Icon(Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: hasFilter ? activeColor : scheme.onSurfaceVariant),
+          ],
+        ),
       ),
     );
   }
 
-  PopupMenuEntry<PlaceCategory?> _buildCategoryMenuItem({
-    required PlaceCategory? value,
+  PopupMenuEntry<int> _buildCategoryMenuItem({
+    required int value,
     required IconData icon,
     required String label,
     required Color color,
@@ -826,7 +1008,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required bool isSelected,
     required ColorScheme scheme,
   }) {
-    return PopupMenuItem<PlaceCategory?>(
+    return PopupMenuItem<int>(
       value: value,
       child: Row(
         children: [
@@ -930,6 +1112,7 @@ class _HomeScreenState extends State<HomeScreen> {
           locationLine: '${place.locationLine} · ${place.city}',
           rating: place.rating,
           galleryUrls: place.galleryUrls,
+          placeId: place.id,
         ),
         transitionsBuilder: (context, anim, secondaryAnim, child) {
           return FadeTransition(opacity: anim, child: child);
@@ -965,25 +1148,31 @@ class _PlaceCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Image
-              Image.network(
-                place.imageUrl,
-                fit: BoxFit.cover,
-                frameBuilder: (_, child, frame, loaded) {
-                  if (loaded) return child;
-                  return AnimatedOpacity(
-                    opacity: frame != null ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeOut,
-                    child: child,
-                  );
-                },
-                errorBuilder: (context, error, stack) => Container(
-                  color: scheme.outlineVariant,
-                  child: const Icon(Icons.image_not_supported_outlined,
-                      color: Colors.white54, size: 32),
-                ),
-              ),
+              // Image — placeholder when empty (BD sin image_url)
+              place.imageUrl.isEmpty
+                  ? Container(
+                      color: scheme.outlineVariant,
+                      child: const Icon(Icons.image_not_supported_outlined,
+                          color: Colors.white54, size: 32),
+                    )
+                  : Image.network(
+                      place.imageUrl,
+                      fit: BoxFit.cover,
+                      frameBuilder: (_, child, frame, loaded) {
+                        if (loaded) return child;
+                        return AnimatedOpacity(
+                          opacity: frame != null ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeOut,
+                          child: child,
+                        );
+                      },
+                      errorBuilder: (context, error, stack) => Container(
+                        color: scheme.outlineVariant,
+                        child: const Icon(Icons.image_not_supported_outlined,
+                            color: Colors.white54, size: 32),
+                      ),
+                    ),
 
               // Gradient overlay — stronger at the bottom
               const DecoratedBox(

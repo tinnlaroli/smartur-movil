@@ -307,14 +307,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                             rememberMe: rememberMe,
                                           );
                                           if (token != null && context.mounted) {
+                                            final savedName = await _authService.getUserName();
+                                            if (!context.mounted) return;
                                             Navigator.pop(context);
                                             Navigator.pushReplacement(
                                               context,
                                               MaterialPageRoute(
                                                 builder: (_) => MainScreen(
-                                                  userName: nameController.text.trim().isNotEmpty
-                                                      ? nameController.text.trim()
-                                                      : null,
+                                                  userName: savedName,
                                                   isNewLogin: true,
                                                 ),
                                               ),
@@ -370,12 +370,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                       rememberMe: rememberMe,
                                     );
                                     if (response != null && context.mounted) {
+                                      final savedName = await _authService.getUserName();
+                                      if (!context.mounted) return;
                                       Navigator.pop(context);
                                       Navigator.pushReplacement(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => const MainScreen(
-                                            userName: null,
+                                          builder: (_) => MainScreen(
+                                            userName: savedName,
                                             isNewLogin: true,
                                           ),
                                         ),

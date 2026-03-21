@@ -2,9 +2,114 @@ import 'package:flutter/material.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
+import '../../../data/services/user_content_service.dart';
+import '../../widgets/smartur_user_avatar.dart';
 
-class CommunityScreen extends StatelessWidget {
+class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
+
+  @override
+  State<CommunityScreen> createState() => _CommunityScreenState();
+}
+
+class _CommunityScreenState extends State<CommunityScreen> {
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _posts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final data = await UserContentService().fetchCommunityPosts();
+      final list = data['posts'] as List<dynamic>? ?? [];
+      if (mounted) {
+        setState(() {
+          _posts = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _showCreateDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final captionCtrl = TextEditingController();
+    final imageCtrl = TextEditingController();
+    final scheme = Theme.of(context).colorScheme;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(l10n.uploadPhotoAction, style: SmarturStyle.calSansTitle),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: captionCtrl,
+                decoration: InputDecoration(
+                  labelText: l10n.stepDetails,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: imageCtrl,
+                decoration: InputDecoration(
+                  labelText: 'URL imagen (opcional)',
+                  hintText: 'https://...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel, style: TextStyle(color: scheme.onSurfaceVariant)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: SmarturStyle.purple),
+            child: const Text('Publicar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await UserContentService().createCommunityPost(
+        caption: captionCtrl.text.trim(),
+        imageUrl: imageCtrl.text.trim().isEmpty ? null : imageCtrl.text.trim(),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.profileReady)));
+        await _load();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,20 +119,34 @@ class CommunityScreen extends StatelessWidget {
         title: Text(l10n.communityTitle,
             style: SmarturStyle.calSansTitle.copyWith(fontSize: 20)),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _load,
+          ),
+        ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 80),
-        itemCount: 8,
-        itemBuilder: (context, index) => _PostCard(index: index),
-      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: SmarturStyle.purple))
+          : _error != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(_error!, textAlign: TextAlign.center),
+                  ),
+                )
+              : RefreshIndicator(
+                  color: SmarturStyle.purple,
+                  onRefresh: _load,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 80),
+                    itemCount: _posts.length,
+                    itemBuilder: (context, index) => _PostCard(data: _posts[index]),
+                  ),
+                ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: SmarturStyle.purple,
-        onPressed: () {
-          // Aquí integrarías ImagePicker para subir foto real
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.uploadPhotoAction)),
-          );
-        },
+        onPressed: _showCreateDialog,
         child: const Icon(Icons.add_a_photo),
       ),
     );
@@ -35,13 +154,20 @@ class CommunityScreen extends StatelessWidget {
 }
 
 class _PostCard extends StatelessWidget {
-  final int index;
+  final Map<String, dynamic> data;
 
-  const _PostCard({required this.index});
+  const _PostCard({required this.data});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final caption = data['caption']?.toString() ?? '';
+    final imageUrl = data['image_url']?.toString() ?? '';
+    final author = data['author'] as Map<String, dynamic>? ?? {};
+    final name = author['name']?.toString() ?? 'Usuario';
+    final photoUrl = author['photo_url'] as String?;
+    final iconKey = author['avatar_icon_key'] as String?;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Card(
@@ -51,53 +177,42 @@ class _PostCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ListTile(
-              leading: CircleAvatar(
-                backgroundColor: SmarturStyle.purple.withValues(alpha: 0.15),
-                child: const Icon(Icons.person, color: SmarturStyle.purple),
+              leading: SmarturUserAvatar(
+                radius: 22,
+                photoUrl: photoUrl,
+                avatarIconKey: iconKey,
+                displayName: name,
+                backgroundColor: SmarturStyle.purple.withValues(alpha: 0.12),
+                foregroundColor: SmarturStyle.purple,
               ),
               title: Text(
-                'Turista ${index + 1}',
+                name,
                 style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600),
               ),
-              subtitle: const Text(
-                'Lugar destacado en las Altas Montañas',
-                style: TextStyle(fontFamily: 'Outfit', fontSize: 12),
-              ),
             ),
-            AspectRatio(
-              aspectRatio: 4 / 3,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: scheme.outlineVariant,
+            if (imageUrl.isNotEmpty)
+              AspectRatio(
+                aspectRatio: 4 / 3,
+                child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
-                ),
-                child: Icon(Icons.photo, size: 64, color: scheme.onSurfaceVariant),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.favorite_border),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.bookmark_border),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'Hace ${index + 1} h',
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 11,
-                      color: scheme.onSurfaceVariant,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: scheme.outlineVariant,
+                      child: Icon(Icons.photo, size: 64, color: scheme.onSurfaceVariant),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            if (caption.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Text(
+                  caption,
+                  style: const TextStyle(fontFamily: 'Outfit', fontSize: 14),
+                ),
+              ),
           ],
         ),
       ),

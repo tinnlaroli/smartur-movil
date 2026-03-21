@@ -1,10 +1,12 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
-
 import 'package:smartur/l10n/app_localizations.dart';
-import '../../../core/theme/style_guide.dart';
 
-class DetailViewPage extends StatelessWidget {
+import '../../../core/theme/style_guide.dart';
+import '../../../data/services/user_content_service.dart';
+
+class DetailViewPage extends StatefulWidget {
   final String title;
   final String heroTag;
   final String heroImageUrl;
@@ -12,6 +14,9 @@ class DetailViewPage extends StatelessWidget {
   final String locationLine;
   final double rating;
   final List<String> galleryUrls;
+
+  /// Referencia del lugar (`svc_` / `poi_` + id) para favoritos e historial API.
+  final String? placeId;
 
   const DetailViewPage({
     super.key,
@@ -22,7 +27,67 @@ class DetailViewPage extends StatelessWidget {
     required this.locationLine,
     required this.rating,
     required this.galleryUrls,
+    this.placeId,
   });
+
+  @override
+  State<DetailViewPage> createState() => _DetailViewPageState();
+}
+
+(String?, int?) _parsePlaceRef(String? raw) {
+  if (raw == null) return (null, null);
+  if (raw.startsWith('svc_')) {
+    return ('svc', int.tryParse(raw.substring(4)));
+  }
+  if (raw.startsWith('poi_')) {
+    return ('poi', int.tryParse(raw.substring(4)));
+  }
+  return (null, null);
+}
+
+class _DetailViewPageState extends State<DetailViewPage> {
+  bool _favBusy = false;
+  bool _isFavorite = false;
+  String? _kind;
+  int? _pid;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _setupPlace());
+  }
+
+  Future<void> _setupPlace() async {
+    final ref = _parsePlaceRef(widget.placeId);
+    _kind = ref.$1;
+    _pid = ref.$2;
+    if (_kind == null || _pid == null) {
+      if (mounted) setState(() {});
+      return;
+    }
+    final svc = UserContentService();
+    await svc.recordVisit(_kind!, _pid!);
+    try {
+      final fav = await svc.isFavorite(_kind!, _pid!);
+      if (mounted) setState(() => _isFavorite = fav);
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_kind == null || _pid == null || _favBusy) return;
+    setState(() => _favBusy = true);
+    final svc = UserContentService();
+    try {
+      if (_isFavorite) {
+        await svc.removeFavorite(_kind!, _pid!);
+        if (mounted) setState(() => _isFavorite = false);
+      } else {
+        await svc.addFavorite(_kind!, _pid!);
+        if (mounted) setState(() => _isFavorite = true);
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _favBusy = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,17 +98,23 @@ class DetailViewPage extends StatelessWidget {
           children: [
             // Hero background image
             Hero(
-              tag: heroTag,
+              tag: widget.heroTag,
               child: SizedBox.expand(
-                child: Image.network(
-                  heroImageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stack) => Container(
-                    color: Colors.grey.shade900,
-                    child: const Icon(Icons.image_not_supported_outlined,
-                        color: Colors.white38, size: 48),
-                  ),
-                ),
+                child: widget.heroImageUrl.isEmpty
+                    ? Container(
+                        color: Colors.grey.shade900,
+                        child: const Icon(Icons.image_not_supported_outlined,
+                            color: Colors.white38, size: 48),
+                      )
+                    : Image.network(
+                        widget.heroImageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stack) => Container(
+                          color: Colors.grey.shade900,
+                          child: const Icon(Icons.image_not_supported_outlined,
+                              color: Colors.white38, size: 48),
+                        ),
+                      ),
               ),
             ),
 
@@ -83,18 +154,32 @@ class DetailViewPage extends StatelessWidget {
                     top: 8,
                     right: 8,
                     child: _GlassCircle(
-                      onTap: () {},
-                      child: const Icon(Icons.bookmark_border_rounded,
-                          color: Colors.white, size: 22),
+                      onTap: _kind != null && _pid != null ? _toggleFavorite : () {},
+                      child: _favBusy
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white54,
+                              ),
+                            )
+                          : Icon(
+                              _isFavorite
+                                  ? Icons.bookmark_rounded
+                                  : Icons.bookmark_border_rounded,
+                              color: Colors.white,
+                              size: 22,
+                            ),
                     ),
                   ),
 
                   // Right mosaic thumbnails
-                  if (galleryUrls.length > 1)
+                  if (widget.galleryUrls.length > 1)
                     Positioned(
                       top: 130,
                       right: 16,
-                      child: _RightMosaic(galleryUrls: galleryUrls),
+                      child: _RightMosaic(galleryUrls: widget.galleryUrls),
                     ),
 
                   // Main content — bottom sheet style
@@ -103,10 +188,10 @@ class DetailViewPage extends StatelessWidget {
                     right: 0,
                     bottom: 0,
                     child: _BottomContent(
-                      title: title,
-                      locationLine: locationLine,
-                      rating: rating,
-                      subtitle: subtitle,
+                      title: widget.title,
+                      locationLine: widget.locationLine,
+                      rating: widget.rating,
+                      subtitle: widget.subtitle,
                     ),
                   ),
                 ],

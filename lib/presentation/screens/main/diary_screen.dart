@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
+import '../../../data/services/user_content_service.dart';
 import '../../widgets/smartur_skeleton.dart';
 
 class DiaryScreen extends StatefulWidget {
@@ -12,14 +13,41 @@ class DiaryScreen extends StatefulWidget {
 }
 
 class _DiaryScreenState extends State<DiaryScreen> with SingleTickerProviderStateMixin {
-  bool _isLoading = true;
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _favorites = [];
+  List<Map<String, dynamic>> _visits = [];
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (mounted) setState(() => _isLoading = false);
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
     });
+    try {
+      final svc = UserContentService();
+      final fav = await svc.fetchFavorites();
+      final vis = await svc.fetchVisits(limit: 40);
+      if (mounted) {
+        setState(() {
+          _favorites = fav;
+          _visits = vis;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -44,46 +72,35 @@ class _DiaryScreenState extends State<DiaryScreen> with SingleTickerProviderStat
             ],
           ),
         ),
-        body: Stack(
-          children: [
-            SmarturShimmer(
-              enabled: _isLoading,
-              child: const TabBarView(
-                children: [
-                  _FavoritesTab(),
-                  _HistoryTab(),
-                ],
-              ),
-            ),
-            Positioned(
-              top: 12,
-              right: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.offline_bolt_outlined, size: 14, color: Colors.green),
-                    const SizedBox(width: 6),
-                    Text(
-                      l10n.offlineAvailable,
-                      style: const TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.green,
+        body: RefreshIndicator(
+          color: SmarturStyle.purple,
+          onRefresh: _load,
+          child: SmarturShimmer(
+            enabled: _loading,
+            child: _loading
+                ? const SizedBox.shrink()
+                : _error != null
+                    ? ListView(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              _error!,
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                color: scheme.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : TabBarView(
+                        children: [
+                          _FavoritesTab(items: _favorites),
+                          _HistoryTab(items: _visits),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -91,91 +108,148 @@ class _DiaryScreenState extends State<DiaryScreen> with SingleTickerProviderStat
 }
 
 class _FavoritesTab extends StatelessWidget {
-  const _FavoritesTab();
+  final List<Map<String, dynamic>> items;
+
+  const _FavoritesTab({required this.items});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
+    if (items.isEmpty) {
+      return ListView(
+        children: [
+          const SizedBox(height: 48),
+          Icon(Icons.favorite_border, size: 48, color: scheme.outlineVariant),
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              AppLocalizations.of(context)!.noCategoryPlaces,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurfaceVariant),
+            ),
+          ),
+        ],
+      );
+    }
+    return GridView.builder(
       padding: const EdgeInsets.all(16),
-      child: GridView.builder(
-        itemCount: 8,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 3 / 4,
-        ),
-        itemBuilder: (context, index) {
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
+      itemCount: items.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 3 / 4,
+      ),
+      itemBuilder: (context, index) {
+        final it = items[index];
+        final name = it['name']?.toString() ?? '';
+        final url = it['image_url']?.toString() ?? '';
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (url.isNotEmpty)
+                Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: scheme.outlineVariant,
+                    child: Icon(Icons.place_outlined, color: scheme.onSurfaceVariant),
+                  ),
+                )
+              else
                 Container(
                   color: scheme.outlineVariant,
                   child: Icon(Icons.photo_outlined, color: scheme.onSurfaceVariant),
                 ),
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: const Icon(
-                        Icons.favorite,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 8,
-                  right: 8,
-                  bottom: 8,
+              Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.black.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(999),
                     ),
-                    child: Text(
-                      'Recuerdo ${index + 1}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 12,
-                        color: Colors.white,
-                      ),
+                    child: const Icon(Icons.favorite, size: 14, color: Colors.white),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 8,
+                right: 8,
+                bottom: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 12,
+                      color: Colors.white,
                     ),
                   ),
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
 class _HistoryTab extends StatelessWidget {
-  const _HistoryTab();
+  final List<Map<String, dynamic>> items;
+
+  const _HistoryTab({required this.items});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    if (items.isEmpty) {
+      return ListView(
+        children: [
+          const SizedBox(height: 48),
+          Icon(Icons.history, size: 48, color: scheme.outlineVariant),
+          const SizedBox(height: 16),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                l10n.noCategoryPlaces,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurfaceVariant),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-      itemCount: 6,
+      itemCount: items.length,
       itemBuilder: (context, index) {
-        final isLast = index == 5;
+        final it = items[index];
+        final name = it['name']?.toString() ?? '';
+        final visited = it['visited_at'];
+        String dateStr = '';
+        if (visited is String) {
+          final dt = DateTime.tryParse(visited);
+          if (dt != null) {
+            dateStr = '${dt.day}/${dt.month}/${dt.year}';
+          }
+        }
+        final isLast = index == items.length - 1;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -188,13 +262,6 @@ class _HistoryTab extends StatelessWidget {
                     color: SmarturStyle.purple,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: SmarturStyle.purple.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
                   ),
                   child: const Icon(Icons.check, size: 12, color: Colors.white),
                 ),
@@ -219,49 +286,21 @@ class _HistoryTab extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Lugar visitado #${index + 1}',
-                          style: SmarturStyle.calSansTitle.copyWith(fontSize: 16),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: const Text(
-                            '¡Visitado!',
-                            style: TextStyle(
-                              fontFamily: 'Outfit',
-                              fontSize: 11,
-                              color: Colors.green,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
                     Text(
-                      '12 de octubre, 2023 · 16:45',
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 12,
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      name,
+                      style: SmarturStyle.calSansTitle.copyWith(fontSize: 16),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Pequeña nota de cómo te sentiste en este lugar y qué te gustó más.',
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 12,
-                        color: scheme.onSurfaceVariant,
+                    if (dateStr.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        dateStr,
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 12,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
