@@ -146,8 +146,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: SmarturStyle.purple,
+        foregroundColor: Colors.white,
         onPressed: _showCreateDialog,
-        child: const Icon(Icons.add_a_photo),
+        tooltip: l10n.communityCreatePost,
+        child: const Icon(Icons.post_add),
       ),
     );
   }

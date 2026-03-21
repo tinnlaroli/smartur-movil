@@ -180,7 +180,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get communityTitle => 'Communauté';
 
   @override
-  String get uploadPhotoAction => 'Action pour téléverser une photo';
+  String get uploadPhotoAction => 'Ajouter une photo';
+
+  @override
+  String get communityCreatePost => 'Créer une publication';
 
   @override
   String get diaryTitle => 'Mon journal';
@@ -355,6 +358,17 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get noCategoryPlaces =>
       'Aucun lieu dans cette catégorie pour le moment';
+
+  @override
+  String get exploreNoCities =>
+      'Aucune ville avec des lieux depuis le serveur.';
+
+  @override
+  String get exploreCouldNotLoad =>
+      'Impossible de charger les lieux. Vérifiez votre connexion.';
+
+  @override
+  String get exploreAllCities => 'Toutes les villes';
 
   @override
   String get tabHistory => 'Histoire';
@@ -585,7 +599,31 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get editProfileSubtitle =>
-      'Modifiez votre nom et vos données personnelles';
+      'Changez votre photo de profil ou choisissez une icône';
+
+  @override
+  String get profilePhotoFormatsHint =>
+      'Formats : JPEG, PNG, GIF, WebP ou HEIC. Maximum 5 Mo.';
+
+  @override
+  String get profilePhotoInvalidFormat =>
+      'Format non autorisé. Utilisez JPEG, PNG, GIF, WebP ou HEIC.';
+
+  @override
+  String get profilePhotoTooLarge => 'L\'image dépasse 5 Mo.';
+
+  @override
+  String get profileOpenGallery => 'Galerie';
+
+  @override
+  String get profileOpenCamera => 'Appareil photo';
+
+  @override
+  String get removeProfilePhoto => 'Supprimer la photo';
+
+  @override
+  String get avatarIconsSectionHint =>
+      'Ou choisissez une icône à la place d\'une photo';
 
   @override
   String get changePasswordSubtitle =>

@@ -24,6 +24,7 @@ class ApiConstants {
   static const String communityPosts = '/community/posts';
 
   // Explore
+  static const String exploreHome = '/explore/home';
   static const String locations = '/locations';
   static const String touristServices = '/tourist-services';
   static const String pointsOfInterest = '/points-of-interest';

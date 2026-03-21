@@ -21,11 +21,12 @@ class SmarturStyle {
   static const double spacingLg = 24.0;  // 1.5rem
   static const double spacingXl = 32.0;  // 2rem
 
-  // TEXTO 
+  /// Títulos con Cal Sans. Sin [TextStyle.color] fijo: el texto usa el color del
+  /// tema ([ColorScheme.onSurface]) y se lee bien en claro y oscuro. No usar
+  /// [textPrimary] aquí; ese valor es solo para superficies claras puntuales.
   static const TextStyle calSansTitle = TextStyle(
-    fontFamily: 'CalSans', // Fuente para títulos
+    fontFamily: 'CalSans',
     fontSize: 28,
     fontWeight: FontWeight.bold,
-    color: textPrimary,
   );
 }

@@ -4,9 +4,11 @@ import 'dart:typed_data';
 
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/env_config.dart';
+import '../../core/utils/profile_photo_validation.dart';
 
 class AuthService {
   static const _storage = FlutterSecureStorage();
@@ -425,10 +427,38 @@ class AuthService {
   }
 
   /// Sube imagen de perfil (multipart, campo `avatar`). Requiere Cloudinary en el API.
-  Future<Map<String, dynamic>?> uploadAvatarImage(Uint8List bytes, String filename) async {
+  /// [platformMime] es el que reporta `image_picker` (XFile.mimeType), si existe.
+  Future<Map<String, dynamic>?> uploadAvatarImage(
+    Uint8List bytes,
+    String filename, {
+    String? platformMime,
+  }) async {
     final userId = await resolveUserId();
     final token = await getToken();
-    if (userId == null || token == null) return null;
+    if (userId == null || token == null) {
+      throw AuthException('Sesión no válida. Inicia sesión de nuevo.');
+    }
+
+    final issue = ProfilePhotoValidation.validate(
+      bytes: bytes,
+      filename: filename,
+      platformMime: platformMime,
+    );
+    if (issue == ProfilePhotoIssue.tooLarge) {
+      throw AuthException('La imagen supera 5 MB.');
+    }
+    if (issue == ProfilePhotoIssue.invalidFormat) {
+      throw AuthException(
+        'Formato no permitido. Usa JPEG, PNG, GIF, WebP o HEIC.',
+      );
+    }
+
+    final mime = ProfilePhotoValidation.detectMimeType(
+      bytes: bytes,
+      filename: filename,
+      platformMime: platformMime,
+    )!;
+    final safeName = ProfilePhotoValidation.effectiveFilename(filename, mime);
 
     final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.users}/$userId/avatar');
     final request = http.MultipartRequest('POST', uri);
@@ -437,19 +467,29 @@ class AuthService {
       http.MultipartFile.fromBytes(
         'avatar',
         bytes,
-        filename: filename,
+        filename: safeName,
+        contentType: MediaType.parse(mime),
       ),
     );
     final streamed = await request.send().timeout(const Duration(seconds: 60));
     final response = await http.Response.fromStream(streamed);
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       final user = data['user'] as Map<String, dynamic>?;
       if (user != null) await saveUserData(user);
       return user;
     }
-    final msg = jsonDecode(response.body)['message'] ?? 'Error al subir imagen';
-    throw AuthException(msg.toString());
+    final msg = _parseApiMessage(response.bodyBytes);
+    throw AuthException(msg);
+  }
+
+  static String _parseApiMessage(Uint8List bodyBytes) {
+    try {
+      final map = jsonDecode(utf8.decode(bodyBytes)) as Map<String, dynamic>?;
+      final m = map?['message'];
+      if (m != null && m.toString().isNotEmpty) return m.toString();
+    } catch (_) {}
+    return 'Error al subir imagen';
   }
 }
 

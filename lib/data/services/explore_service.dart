@@ -16,67 +16,87 @@ class ExploreService {
         'Authorization': 'Bearer $token',
       };
 
-  // Maps API service_type values to our PlaceCategory enum
+  /// tourism_type en BD: 1=Naturaleza, 2=Cultura, 3=Gastronomía
+  static PlaceCategory _categoryFromPoiType(int? idType) {
+    switch (idType) {
+      case 1:
+        return PlaceCategory.adventures;
+      case 2:
+        return PlaceCategory.museums;
+      case 3:
+        return PlaceCategory.restaurants;
+      default:
+        return PlaceCategory.museums;
+    }
+  }
+
   static PlaceCategory? _categoryFromServiceType(String? type) {
     if (type == null) return null;
     final lower = type.toLowerCase();
-    if (lower.contains('hotel') || lower.contains('hospedaje') || lower.contains('alojamiento')) {
+    if (lower.contains('hotel') ||
+        lower.contains('hospedaje') ||
+        lower.contains('alojamiento')) {
       return PlaceCategory.hotels;
     }
-    if (lower.contains('restaurante') || lower.contains('comida') || lower.contains('gastro')) {
+    if (lower.contains('restaurante') ||
+        lower.contains('comida') ||
+        lower.contains('gastro')) {
       return PlaceCategory.restaurants;
     }
-    if (lower.contains('museo') || lower.contains('cultural') || lower.contains('galería')) {
+    if (lower.contains('museo') ||
+        lower.contains('cultural') ||
+        lower.contains('galería')) {
       return PlaceCategory.museums;
     }
-    if (lower.contains('aventura') || lower.contains('deporte') || lower.contains('ecoturismo')) {
+    if (lower.contains('tour') ||
+        lower.contains('aventura') ||
+        lower.contains('deporte') ||
+        lower.contains('ecoturismo') ||
+        lower.contains('senderismo') ||
+        lower.contains('excurs')) {
       return PlaceCategory.adventures;
     }
     return null;
   }
 
-  static PlaceCategory? _categoryFromPoiType(int? idType) {
-    if (idType == null) return null;
-    switch (idType) {
-      case 1:
-        return PlaceCategory.museums;
-      case 2:
-        return PlaceCategory.adventures;
-      case 3:
-        return PlaceCategory.restaurants;
-      default:
-        return null;
-    }
-  }
-
-  /// Fetches all locations from the API and converts them to [CityData].
-  /// Each city is fetched with its places (services + POIs).
+  /// Un solo GET: ubicaciones + servicios turísticos + POIs (API `/explore/home`).
   Future<List<CityData>> fetchCities() async {
     final token = await _auth.getToken();
     if (token == null) throw AuthException('No auth token available');
 
     final uri = Uri.parse(
-      '${ApiConstants.baseUrl}${ApiConstants.locations}?limit=50',
+      '${ApiConstants.baseUrl}${ApiConstants.exploreHome}',
     );
     final response = await http
         .get(uri, headers: _headers(token))
-        .timeout(const Duration(seconds: 15));
+        .timeout(const Duration(seconds: 20));
 
     if (response.statusCode != 200) {
-      throw ExploreException('Failed to load locations (${response.statusCode})');
+      throw ExploreException(
+        'Failed to load explore home (${response.statusCode})',
+      );
     }
 
-    final data = jsonDecode(response.body);
-    final List<dynamic> rawLocations = data['locations'] ?? [];
+    final data =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    final List<dynamic> rawCities = data['cities'] ?? [];
 
     final List<CityData> cities = [];
-    for (final loc in rawLocations) {
-      final int locationId = loc['id_location'] as int;
-      final double lat = _toDouble(loc['latitude']);
-      final double lon = _toDouble(loc['longitude']);
-      final String name = (loc['name'] ?? '') as String;
+    for (final raw in rawCities) {
+      final c = raw as Map<String, dynamic>;
+      final String name = (c['name'] ?? '') as String;
+      final double lat = _toDouble(c['latitude']);
+      final double lon = _toDouble(c['longitude']);
 
-      final places = await _fetchPlacesForLocation(token, locationId, name);
+      final places = <Place>[];
+
+      for (final s in (c['services'] as List<dynamic>? ?? [])) {
+        final place = _placeFromService(s as Map<String, dynamic>, name);
+        if (place != null) places.add(place);
+      }
+      for (final p in (c['points'] as List<dynamic>? ?? [])) {
+        places.add(_placeFromPoi(p as Map<String, dynamic>, name));
+      }
 
       cities.add(CityData(
         name: name,
@@ -89,91 +109,39 @@ class ExploreService {
     return cities;
   }
 
-  /// Fetches tourist services + points of interest for a single location.
-  Future<List<Place>> _fetchPlacesForLocation(
-      String token, int locationId, String cityName) async {
-    final results = await Future.wait([
-      _fetchTouristServices(token, locationId, cityName),
-      _fetchPointsOfInterest(token, locationId, cityName),
-    ]);
-    return [...results[0], ...results[1]];
+  static Place? _placeFromService(Map<String, dynamic> s, String cityName) {
+    final cat = _categoryFromServiceType(s['service_type'] as String?);
+    if (cat == null) return null;
+    final rating = _toDouble(s['total_score'], fallback: 4.0);
+    return Place(
+      id: 'svc_${s['id_service']}',
+      name: (s['name'] ?? '') as String,
+      city: cityName,
+      category: cat,
+      imageUrl: (s['image_url'] as String?) ?? '',
+      rating: rating,
+      shortDescription: _truncate(s['description'] as String?, 80),
+      description: (s['description'] ?? '') as String,
+      locationLine: cityName,
+      galleryUrls: const [],
+    );
   }
 
-  Future<List<Place>> _fetchTouristServices(
-      String token, int locationId, String cityName) async {
-    try {
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}${ApiConstants.touristServices}?active=true&limit=50&id_location=$locationId',
-      );
-      final response = await http
-          .get(uri, headers: _headers(token))
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 200) return [];
-
-      final data = jsonDecode(response.body);
-      final List<dynamic> services = data['services'] ?? [];
-
-      return services.map((s) {
-            final cat = _categoryFromServiceType(s['service_type'] as String?);
-            if (cat == null) return null;
-            return Place(
-              id: 'svc_${s['id_service']}',
-              name: (s['name'] ?? '') as String,
-              city: cityName,
-              category: cat,
-              imageUrl: (s['image_url'] as String?) ?? '',
-              rating: _toDouble(s['total_score'], fallback: 4.0),
-              shortDescription: _truncate(s['description'] as String?, 80),
-              description: (s['description'] ?? '') as String,
-              locationLine: cityName,
-              galleryUrls: const [],
-            );
-          })
-          .whereType<Place>()
-          .toList();
-    } catch (_) {
-      return [];
-    }
+  static Place _placeFromPoi(Map<String, dynamic> p, String cityName) {
+    final cat = _categoryFromPoiType(p['id_type'] as int?);
+    return Place(
+      id: 'poi_${p['id_point']}',
+      name: (p['name'] ?? '') as String,
+      city: cityName,
+      category: cat,
+      imageUrl: (p['image_url'] as String?) ?? '',
+      rating: _toDouble(p['rating'], fallback: 4.0),
+      shortDescription: _truncate(p['description'] as String?, 80),
+      description: (p['description'] ?? '') as String,
+      locationLine: cityName,
+      galleryUrls: const [],
+    );
   }
-
-  Future<List<Place>> _fetchPointsOfInterest(
-      String token, int locationId, String cityName) async {
-    try {
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}${ApiConstants.pointsOfInterest}?id_location=$locationId&limit=50',
-      );
-      final response = await http
-          .get(uri, headers: _headers(token))
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 200) return [];
-
-      final data = jsonDecode(response.body);
-      final List<dynamic> points = data['points'] ?? [];
-
-      return points.map((p) {
-        final cat =
-            _categoryFromPoiType(p['id_type'] as int?) ?? PlaceCategory.museums;
-        return Place(
-          id: 'poi_${p['id_point']}',
-          name: (p['name'] ?? '') as String,
-          city: cityName,
-          category: cat,
-          imageUrl: (p['image_url'] as String?) ?? '',
-          rating: _toDouble(p['rating'], fallback: 4.0),
-          shortDescription: _truncate(p['description'] as String?, 80),
-          description: (p['description'] ?? '') as String,
-          locationLine: cityName,
-          galleryUrls: const [],
-        );
-      }).toList();
-    } catch (_) {
-      return [];
-    }
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
 
   static double _toDouble(dynamic value, {double fallback = 0.0}) {
     if (value is double) return value;
@@ -187,16 +155,28 @@ class ExploreService {
     return '${text.substring(0, maxLen)}…';
   }
 
+  /// Normaliza para coincidir aunque el API devuelva sin acentos.
+  static String _normCity(String name) {
+    return name
+        .toLowerCase()
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ñ', 'n')
+        .replaceAll('ü', 'u');
+  }
+
   static IconData _iconForCity(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('orizaba')) return Icons.cable;
-    if (lower.contains('córdoba') || lower.contains('cordoba')) {
-      return Icons.local_cafe;
-    }
-    if (lower.contains('fortín') || lower.contains('fortin')) {
-      return Icons.local_florist;
-    }
-    return Icons.location_city;
+    final n = _normCity(name);
+    if (n.contains('xalapa')) return Icons.park_outlined;
+    if (n.contains('coatepec')) return Icons.coffee_rounded;
+    if (n.contains('cordoba')) return Icons.account_balance_rounded;
+    if (n.contains('orizaba')) return Icons.landscape_rounded;
+    if (n.contains('fortin')) return Icons.local_florist_rounded;
+    if (n.contains('xico')) return Icons.water_drop_outlined;
+    return Icons.location_city_rounded;
   }
 }
 

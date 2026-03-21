@@ -5,6 +5,7 @@ import 'package:smartur/l10n/app_localizations.dart';
 import '../../../core/constants/avatar_icon_map.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
+import '../../../core/utils/profile_photo_validation.dart';
 import '../../../data/services/auth_service.dart';
 import '../../widgets/smartur_user_avatar.dart';
 
@@ -41,20 +42,47 @@ class _EditProfileAvatarScreenState extends State<EditProfileAvatarScreen> {
     });
   }
 
-  Future<void> _pickAndUpload() async {
+  Future<void> _pickAndUpload(ImageSource source) async {
     final l10n = AppLocalizations.of(context)!;
-    final x = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 1200, imageQuality: 85);
-    if (x == null) return;
+    final x = await _picker.pickImage(
+      source: source,
+      maxWidth: 1600,
+      maxHeight: 1600,
+      imageQuality: 88,
+      requestFullMetadata: true,
+    );
+    if (x == null || !mounted) return;
+
+    final bytes = await x.readAsBytes();
+    final issue = ProfilePhotoValidation.validate(
+      bytes: bytes,
+      filename: x.name,
+      platformMime: x.mimeType,
+    );
+    if (issue != ProfilePhotoIssue.none) {
+      if (!mounted) return;
+      if (issue == ProfilePhotoIssue.tooLarge) {
+        SmarturNotifications.showError(context, l10n.profilePhotoTooLarge);
+      } else {
+        SmarturNotifications.showError(context, l10n.profilePhotoInvalidFormat);
+      }
+      return;
+    }
+
     setState(() => _busy = true);
     try {
-      final bytes = await x.readAsBytes();
-      await _auth.uploadAvatarImage(bytes, x.name);
+      await _auth.uploadAvatarImage(
+        bytes,
+        x.name,
+        platformMime: x.mimeType,
+      );
       if (mounted) SmarturNotifications.showSuccess(context, l10n.profileReady);
       await _load();
     } on AuthException catch (e) {
       if (mounted) SmarturNotifications.showError(context, e.message);
     } catch (e) {
-      if (mounted) SmarturNotifications.showError(context, e.toString());
+      if (!mounted) return;
+      SmarturNotifications.showError(context, e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -117,18 +145,48 @@ class _EditProfileAvatarScreenState extends State<EditProfileAvatarScreen> {
                   l10n.editProfileSubtitle,
                   style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurfaceVariant),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.profilePhotoFormatsHint,
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
                 const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: _pickAndUpload,
-                  icon: const Icon(Icons.photo_library_outlined),
-                  label: Text(l10n.uploadPhotoAction, style: const TextStyle(fontFamily: 'Outfit')),
-                  style: FilledButton.styleFrom(backgroundColor: SmarturStyle.purple),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () => _pickAndUpload(ImageSource.gallery),
+                        icon: const Icon(Icons.photo_library_outlined),
+                        label: Text(l10n.profileOpenGallery, style: const TextStyle(fontFamily: 'Outfit')),
+                        style: FilledButton.styleFrom(backgroundColor: SmarturStyle.purple),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _pickAndUpload(ImageSource.camera),
+                        icon: Icon(Icons.photo_camera_outlined, color: scheme.onSurface),
+                        label: Text(l10n.profileOpenCamera, style: const TextStyle(fontFamily: 'Outfit')),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: scheme.onSurface,
+                          side: BorderSide(color: scheme.outlineVariant),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 if (_photoUrl != null && _photoUrl!.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: _clearPhoto,
-                    child: Text(l10n.cancel, style: TextStyle(color: scheme.error)),
+                    child: Text(
+                      l10n.removeProfilePhoto,
+                      style: TextStyle(color: scheme.error, fontFamily: 'Outfit'),
+                    ),
                   ),
                 ],
                 const SizedBox(height: 28),
@@ -138,7 +196,7 @@ class _EditProfileAvatarScreenState extends State<EditProfileAvatarScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  l10n.editProfileSubtitle,
+                  l10n.avatarIconsSectionHint,
                   style: TextStyle(fontFamily: 'Outfit', fontSize: 12, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 12),

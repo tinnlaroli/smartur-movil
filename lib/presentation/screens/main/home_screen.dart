@@ -13,7 +13,6 @@ import '../../../data/services/auth_service.dart';
 import '../../../data/services/explore_service.dart';
 import '../../../data/services/profile_service.dart';
 import '../../../data/models/place_model.dart';
-import '../../../data/mock/city_mock_data.dart';
 import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/smartur_background.dart';
 import '../../widgets/smartur_user_avatar.dart';
@@ -56,10 +55,27 @@ class _HomeScreenState extends State<HomeScreen> {
   static final Map<String, String?> _weatherSummaryCache = {};
 
   // ── Data ──
-  List<CityData> _cities = kCities;
+  List<CityData> _cities = [];
+  String? _exploreError;
+  bool _exploreLoaded = false;
 
   // ── Selection state ──
-  late CityData _selectedCity = _cities.first;
+  /// `null` = mostrar lugares de todas las ciudades a la vez.
+  CityData? _selectedCity;
+
+  /// Clima: ciudad concreta o la primera si el modo es "todas".
+  CityData? get _weatherCity =>
+      _selectedCity ?? (_cities.isNotEmpty ? _cities.first : null);
+
+  /// Lugares según chip de ciudad (todas o una).
+  List<Place> get _placesInScope {
+    if (_cities.isEmpty) return const [];
+    if (_selectedCity == null) {
+      return _cities.expand((c) => c.places).toList();
+    }
+    return _selectedCity!.places;
+  }
+
   PlaceCategory? _selectedCategory;
   final GlobalKey _categoryFilterButtonKey = GlobalKey();
   double _categoryFilterReservedWidth = 150; // Fallback mientras se mide.
@@ -73,7 +89,11 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Nombre para el saludo: widget o almacenamiento (al volver al tab Home se recrea el State).
   String? _greetingName;
 
-  List<Place> get _filteredPlaces => _selectedCity.byCategory(_selectedCategory);
+  List<Place> get _filteredPlaces {
+    final scope = _placesInScope;
+    if (_selectedCategory == null) return scope;
+    return scope.where((p) => p.category == _selectedCategory).toList();
+  }
 
   // ───────────────────────── Lifecycle ─────────────────────────
 
@@ -283,7 +303,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadWeatherForSelectedCity() async {
-    final cityName = _selectedCity.name;
+    final city = _weatherCity;
+    if (city == null) {
+      if (mounted) {
+        setState(() {
+          _weatherSummary = null;
+          _weatherLoading = false;
+        });
+      }
+      return;
+    }
+    final cityName = city.name;
     final cached = _weatherSummaryCache[cityName];
     if (cached != null) {
       setState(() {
@@ -306,8 +336,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final uri = Uri.parse(
       'https://api.openweathermap.org/data/2.5/weather'
-      '?lat=${_selectedCity.lat.toStringAsFixed(4)}'
-      '&lon=${_selectedCity.lon.toStringAsFixed(4)}'
+      '?lat=${city.lat.toStringAsFixed(4)}'
+      '&lon=${city.lon.toStringAsFixed(4)}'
       '&appid=$apiKey'
       '&units=metric'
       '&lang=es',
@@ -381,15 +411,22 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadCitiesFromApi() async {
     try {
       final apiCities = await _exploreService.fetchCities();
-      if (apiCities.isNotEmpty && mounted) {
-        setState(() {
-          _cities = apiCities;
-          _selectedCity = apiCities.first;
-          _selectedCategory = null;
-        });
-      }
-    } catch (_) {
-      // Silently fall back to kCities mock data
+      if (!mounted) return;
+      setState(() {
+        _exploreLoaded = true;
+        _exploreError = null;
+        _cities = apiCities;
+        _selectedCity = null;
+        _selectedCategory = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _exploreLoaded = true;
+        _cities = [];
+        _selectedCity = null;
+        _exploreError = e.toString();
+      });
     }
   }
 
@@ -790,6 +827,30 @@ class _HomeScreenState extends State<HomeScreen> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final scheme = Theme.of(context).colorScheme;
+          final l10n = AppLocalizations.of(context)!;
+
+          if (_cities.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  !_exploreLoaded
+                      ? l10n.loading
+                      : (_exploreError != null
+                          ? l10n.exploreCouldNotLoad
+                          : l10n.exploreNoCities),
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            );
+          }
 
           // Limit the ListView viewport so chips cannot be painted under
           // the filter button area.
@@ -824,15 +885,73 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.only(left: 20),
-                      itemCount: _cities.length,
+                      itemCount: 1 + _cities.length,
                       itemBuilder: (context, idx) {
-                        final city = _cities[idx];
-                        final isSelected = city.name == _selectedCity.name;
                         final accentColor = SmarturStyle.green;
+                        final isLast = idx == _cities.length;
 
+                        if (idx == 0) {
+                          final allSelected = _selectedCity == null;
+                          return Padding(
+                            padding: EdgeInsets.only(right: isLast ? 0 : 10),
+                            child: ChoiceChip(
+                              selected: allSelected,
+                              showCheckmark: false,
+                              side: BorderSide(
+                                color: allSelected
+                                    ? accentColor.withValues(alpha: 0.5)
+                                    : scheme.outlineVariant,
+                              ),
+                              backgroundColor: scheme.surfaceContainerHighest,
+                              selectedColor:
+                                  accentColor.withValues(alpha: 0.20),
+                              labelPadding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              label: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.public_rounded,
+                                    size: 16,
+                                    color: allSelected
+                                        ? accentColor
+                                        : scheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    l10n.exploreAllCities,
+                                    style: TextStyle(
+                                      fontFamily: 'Outfit',
+                                      fontWeight: FontWeight.w700,
+                                      color: allSelected
+                                          ? accentColor
+                                          : scheme.onSurface,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              onSelected: (v) {
+                                if (!v) return;
+                                setState(() {
+                                  _selectedCity = null;
+                                  _selectedCategory = null;
+                                });
+                                _loadWeatherForSelectedCity();
+                              },
+                            ),
+                          );
+                        }
+
+                        final city = _cities[idx - 1];
+                        final isSelected =
+                            _selectedCity?.name == city.name;
                         return Padding(
                           padding: EdgeInsets.only(
-                              right: idx == _cities.length - 1 ? 0 : 10),
+                              right: isLast ? 0 : 10),
                           child: ChoiceChip(
                             selected: isSelected,
                             showCheckmark: false,
@@ -906,6 +1025,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCategoryFilter() {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    if (_cities.isEmpty) {
+      return const SizedBox(width: 48, height: 48);
+    }
+    final scope = _placesInScope;
+    if (scope.isEmpty) {
+      return const SizedBox(width: 48, height: 48);
+    }
+    int countFor(PlaceCategory cat) =>
+        scope.where((p) => p.category == cat).length;
+
     final categories = PlaceCategory.values;
     final hasFilter = _selectedCategory != null;
     final activeColor = hasFilter ? _selectedCategory!.color : SmarturStyle.purple;
@@ -945,7 +1074,7 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: Icons.apps_rounded,
           label: l10n.allCategories,
           color: SmarturStyle.purple,
-          count: _selectedCity.places.length,
+          count: scope.length,
           isSelected: _selectedCategory == null,
           scheme: scheme,
         ),
@@ -957,7 +1086,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: cat.icon,
             label: cat.label,
             color: cat.color,
-            count: _selectedCity.byCategory(cat).length,
+            count: countFor(cat),
             isSelected: _selectedCategory == cat,
             scheme: scheme,
           );

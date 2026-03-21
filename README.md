@@ -1,156 +1,203 @@
-# 🏔️ Smartur Mobile
+# Smartur Mobile
 
-## *Tu portal inteligente a las Altas Montañas*
+Cliente Flutter para **Smartur**: exploración de destinos, perfil de viajero, diario (favoritos y visitas), comunidad y autenticación frente al API REST del backend.
 
-**Smartur** es una aplicación móvil de última generación diseñada para exploradores modernos. Combina una estética visual premium con procesos de seguridad avanzados y una experiencia de usuario fluida, permitiendo conectar con guías locales y descubrir rutas auténticas mediante inteligencia artificial.
+Este documento describe la estructura del repositorio, el flujo de la aplicación, la configuración del entorno y las dependencias principales.
 
 ---
 
-## 🚀 Inicio Rápido
+## Requisitos
 
-Para poner en marcha el proyecto en tu entorno local:
+- Flutter SDK compatible con `environment.sdk: ^3.11.1` (ver `pubspec.yaml`).
+- Dispositivo o emulador Android o iOS.
+- Backend Smartur accesible desde la red del dispositivo (misma LAN o URL pública).
 
-1. **Clona el repositorio**
+---
 
-   ```bash
-   git clone https://github.com/tinnlaroli/smartur-movil.git
-   ```
+## Inicio rápido
 
-2. **Instala las dependencias**
+1. Clonar el repositorio e instalar dependencias:
 
    ```bash
    flutter pub get
    ```
 
-3. **Configura la conectividad (IMPORTANTE)**
+2. Configurar variables de entorno y API (ver sección [Configuración](#configuración)).
 
-   Para que el dispositivo físico o emulador conecte con el backend, abre `lib/core/constants/api_constants.dart` y cambia la `baseUrl` por tu IP local:
+3. Generar localizaciones si se modifican los `.arb`:
 
-   ```dart
-   static const String baseUrl = 'http://192.168.1.X:3000/api/v2';
+   ```bash
+   flutter gen-l10n
    ```
 
-4. **Corre la aplicación**
+4. Ejecutar la aplicación:
 
    ```bash
    flutter run
    ```
 
+5. Análisis estático recomendado antes de commits:
+
+   ```bash
+   flutter analyze
+   ```
+
 ---
 
-## 📂 Arquitectura del Proyecto
+## Configuración
 
-Smartur sigue una estructura orientada a **Clean Architecture** simplificada para Flutter, con pantallas agrupadas por feature y separación clara de responsabilidades:
+### URL del API y claves
+
+La base del API no se obtiene de un archivo `.env` en tiempo de ejecución: se define mediante **`dart-define`** o valores por defecto en código.
+
+| Símbolo | Archivo | Uso |
+|--------|---------|-----|
+| `API_BASE_URL_DEV` | `lib/core/constants/env_config.dart` | URL base del API (por defecto apunta a un despliegue de ejemplo). |
+| `GOOGLE_SERVER_CLIENT_ID` | `env_config.dart` | Server Client ID de Google Sign-In (OAuth). |
+| `OPENWEATHER_API_KEY` | `env_config.dart` | Clave para datos meteorológicos en pantalla de inicio. |
+
+`lib/core/constants/api_constants.dart` expone `baseUrl` leyendo `EnvConfig.apiBaseUrl` y concatena rutas relativas (`/login`, `/explore/home`, etc.).
+
+Ejemplo de ejecución con API local:
+
+```bash
+flutter run --dart-define=API_BASE_URL_DEV=http://192.168.1.10:3000/api/v2
+```
+
+### Internacionalización
+
+- Archivos fuente: `lib/l10n/app_*.arb` (plantilla: `app_es.arb`, configuración en `l10n.yaml`).
+- Código generado: `lib/l10n/app_localizations*.dart` (no editar a mano; usar `flutter gen-l10n`).
+
+### Activos
+
+Rutas declaradas en `pubspec.yaml` bajo `flutter.assets`: imágenes, Lottie, SVG y fuentes (`assets/imgs/`, `assets/lottie/`, `assets/svg/`, `assets/fonts/`).
+
+---
+
+## Arquitectura y organización del código
+
+El proyecto combina una **separación por capas** (`core`, `data`, `presentation`) con **agrupación por funcionalidad** dentro de `presentation/screens`. No se usa un contenedor de inyección de dependencias global: los servicios se instancian donde se necesitan (por ejemplo `AuthService()`).
+
+### Principios
+
+- **core**: utilidades transversales sin acoplar la UI a un feature concreto (tema, constantes, ajustes globales, validadores).
+- **data**: modelos serializables y servicios HTTP que hablan con el backend.
+- **presentation**: widgets de pantalla y componentes reutilizables; el estado suele ser local (`StatefulWidget`) o persistido vía `SharedPreferences` / `FlutterSecureStorage` según el caso.
+
+### Árbol de carpetas (`lib/`)
 
 ```text
 lib/
-├── main.dart                        # Punto de entrada de la aplicación
-│
-├── core/                            # Capa núcleo (sin dependencias de negocio)
-│   ├── constants/
-│   │   └── api_constants.dart       # Base URL y endpoints del API
-│   ├── theme/
-│   │   └── style_guide.dart         # Tokens de diseño (colores, tipografía, medidas)
-│   └── utils/
-│       └── notifications.dart       # Toasts/notificaciones reutilizables
-│
-├── data/                            # Capa de datos
-│   ├── models/
-│   │   ├── onboarding_model.dart    # Contenido de las pantallas de onboarding
-│   │   └── traveler_profile_model.dart  # Modelo del perfil del viajero
-│   └── services/
-│       ├── auth_service.dart        # Autenticación, JWT, gestión de usuario
-│       └── profile_service.dart     # Preferencias y perfil del viajero
-│
-└── presentation/                    # Capa de interfaz (UI)
-    ├── screens/
-    │   ├── auth/                    # Flujo de autenticación
-    │   │   ├── onboarding_screen.dart
-    │   │   └── welcome_screen.dart  # Login, registro, OTP, Google Sign-In
-    │   ├── main/                    # Tabs principales del app
-    │   │   ├── main_screen.dart     # Contenedor con bottom navigation
-    │   │   ├── home_screen.dart     # Explorar ciudades, clima, mapa
-    │   │   ├── diary_screen.dart    # Favoritos e historial de visitas
-    │   │   ├── community_screen.dart # Feed de la comunidad
-    │   │   └── profile_screen.dart  # Perfil del usuario (datos del API)
-    │   ├── settings/
-    │   │   └── settings_screen.dart # Configuración, cambio de contraseña, cuenta
-    │   ├── preferences/             # Onboarding de preferencias (3 pasos)
-    │   │   ├── preferences_screen.dart
-    │   │   ├── step1_personal_screen.dart
-    │   │   ├── step2_interests_screen.dart
-    │   │   └── step3_extra_screen.dart
-    │   └── explore/                 # Exploración y recomendaciones IA
-    │       ├── map_screen.dart
-    │       └── recommendation_screen.dart
-    └── widgets/                     # Componentes reutilizables
-        ├── smartur_background.dart  # Fondo animado con glassmorphism
-        ├── smartur_loader.dart      # Splash animado del logo
-        └── smartur_skeleton.dart    # Shimmer y skeleton loading
+├── main.dart                 # Punto de entrada: splash, sesión, tema, localización, ToastificationWrapper
+├── core/
+│   ├── constants/            # api_constants, env_config, avatar_icon_map
+│   ├── theme/                # style_guide (colores, tipografía, tokens)
+│   ├── utils/                # notifications, profile_photo_validation
+│   └── settings/             # AppSettings: tema, idioma, modo daltónico (color_blindness)
+├── data/
+│   ├── models/               # onboarding, traveler_profile, place, etc.
+│   └── services/             # auth_service, profile_service, explore_service, user_content_service
+├── presentation/
+│   ├── screens/
+│   │   ├── auth/             # onboarding, welcome (login, registro, OTP, Google)
+│   │   ├── main/             # shell con tabs: home, diario, comunidad, perfil; edición de avatar
+│   │   ├── settings/         # ajustes de cuenta y app
+│   │   ├── preferences/      # wizard de preferencias del viajero (pasos)
+│   │   └── explore/          # mapa, detalle de lugar, recomendaciones
+│   └── widgets/              # fondo, loader, skeleton, avatar de usuario
+└── l10n/                     # ARB + generados AppLocalizations
 ```
 
----
+### Carpetas raíz adicionales
 
-## ✨ Características UX Premium
+| Carpeta | Rol |
+|---------|-----|
+| `android/`, `ios/` | Proyectos nativos; permisos de cámara/galería y configuración de firma según plataforma. |
+| `assets/` | Recursos estáticos referenciados en `pubspec.yaml`. |
+| `test/` | Pruebas unitarias/widget (ampliar según necesidad). |
 
-### 1. Atmósfera Dinámica e Infinita
+### Convención aplicada
 
-Utilizamos el widget `SmarturBackground` para crear una sensación de profundidad. Este componente cicla suavemente entre 5 colores armónicos (Rosa, Morado, Naranja, Azul, Verde) con un efecto de **Glassmorphism** (cristal esmerilado) que no distrae al usuario.
-
-### 2. Autenticación Robusta y Segura
-
-- **OTP (Two Factor Auth)**: Confirmación visual del correo y opción de cambio rápido de identidad si se cometió un error.
-- **Validación en Tiempo Real**: Checklist interactivo que verifica requisitos de contraseña (Mayúsculas, Números, Longitud) mientras el usuario escribe.
-- **Biometría Nativa**: Integración con sensor de huellas/rostro para accesos rápidos.
-- **Smart Google Login**: Botón persistente con diseño oficial y estados de carga integrados.
-
-### 3. Onboarding de Parallax
-
-Navegación intuitiva con efectos de movimiento sincronizados, soportando tanto animaciones **Lottie** (JSON) como vectores **SVG** de alta fidelidad, garantizando tiempos de carga ínfimos.
+Las pantallas del área **Perfil** (pestaña principal y edición de foto/icono) residen en `presentation/screens/main/` para mantener cohesión con `profile_screen.dart` y evitar una carpeta `profile/` con un solo archivo.
 
 ---
 
-## 🧩 Componentes Core (Para Desarrolladores)
+## Flujos principales
 
-Si necesitas extender o modificar la app, estos son los widgets clave:
+### 1. Arranque y sesión (`main.dart`)
 
-| Widget | Descripción |
-| :--- | :--- |
-| `SmarturBackground` | Fondo animado con degradado cíclico y desenfoque gausiano. |
-| `SmarturShimmer` | Generador de efecto de brillo para cargas (Skeleton loading). |
-| `SkeletonContainer` | Forma base para crear esqueletos de carga rectangulares o circulares. |
-| `SmarturNotifications` | Capa de abstracción sobre Snackbars/Toasts con diseño personalizado. |
+1. `WidgetsFlutterBinding.ensureInitialized()`.
+2. Lectura de `onboarding_seen` en `SharedPreferences`.
+3. Carga de `AppSettingsNotifier` (tema, locale, accesibilidad de color).
+4. `_SplashGate`: comprueba token y expiración vía `AuthService.hasSession()`.
+5. Destino:
+   - Sin onboarding visto: `OnboardingScreen`.
+   - Onboarding visto y sin sesión: `WelcomeScreen`.
+   - Sesión válida: `MainScreen` con nombre de usuario opcional.
+6. Si el usuario ya había visto el onboarding, se puede mostrar `SmartURLoader` como overlay hasta finalizar la animación.
 
-### Cómo añadir una pantalla de carga (Skeleton)
+### 2. Autenticación (`data/services/auth_service.dart`, pantallas en `auth/`)
 
-```dart
-SmarturShimmer(
-  enabled: _isLoading,
-  child: _isLoading 
-    ? SkeletonText(width: 200) 
-    : Text("Datos cargados")
-)
-```
+- Registro, login, recuperación de contraseña, verificación en dos pasos cuando aplique.
+- Token JWT almacenado con `flutter_secure_storage`.
+- Google Sign-In inicializado con `EnvConfig.googleServerClientId`.
+- Perfil y avatar: lectura/actualización de usuario, subida multipart de imagen con tipo MIME correcto (`http_parser`).
+
+### 3. Contenedor principal (`main_screen.dart`)
+
+- Cuatro pestañas: **Inicio** (`HomeScreen`), **Diario** (`DiaryScreen`), **Comunidad** (`CommunityScreen`), **Perfil** (`ProfileScreen`).
+- La ruta de **recomendaciones IA** se enlaza desde la UI de inicio hacia `RecommendationScreen` (no es una pestaña del `BottomNavigationBar`).
+
+### 4. Exploración y datos de inicio (`explore_service.dart`, `home_screen.dart`)
+
+- Ciudades y contenido de exploración desde el endpoint configurado en `ApiConstants.exploreHome`.
+- Modelos como `Place` en `data/models/` para listados y filtros en UI.
+
+### 5. Diario y comunidad (`user_content_service.dart`)
+
+- Favoritos y visitas bajo rutas `meFavorites` / `meVisits`.
+- Publicaciones de comunidad bajo `communityPosts`.
+
+### 6. Preferencias del viajero (`preferences/`)
+
+- Flujo multipaso posterior al registro o según navegación; persiste vía `profile_service` / API de perfiles.
+
+### 7. Ajustes globales (`settings/`, `AppSettings`)
+
+- Tema claro/oscuro, idioma y simulación daltónica (`color_blindness`) propagados con `AppSettingsScope` y `ValueListenableBuilder` en `main.dart`.
 
 ---
 
-## 🛠 Stack Tecnológico
+## Dependencias principales (`pubspec.yaml`)
 
-- **Framework**: Flutter ^3.11.1
-- **State Management**: Stateful widgets (local) + SharedPreferences (persistente).
-- **Seguridad**: `flutter_secure_storage` para tokens JWT.
-- **Animaciones**: `Lottie` + `AnimatedBuilder` (Custom).
-- **Iconografía**: `flutter_svg` para vectores limpios.
+| Paquete | Función |
+|---------|---------|
+| `http`, `http_parser` | Cliente HTTP y tipos MIME para multipart. |
+| `flutter_secure_storage` | Almacenamiento seguro del JWT. |
+| `shared_preferences` | Flags y preferencias no sensibles (p. ej. onboarding). |
+| `google_sign_in` | Inicio de sesión con Google. |
+| `local_auth` (+ `local_auth_android`) | Autenticación biométrica opcional. |
+| `flutter_map`, `latlong2` | Mapas y coordenadas. |
+| `image_picker` | Selección de imagen para avatar. |
+| `lottie`, `flutter_svg` | Animaciones y gráficos vectoriales. |
+| `toastification` | Notificaciones tipo toast envueltas en `ToastificationWrapper`. |
+| `intl`, `flutter_localizations` | Fechas, formatos e i18n oficial de Flutter. |
+| `color_blindness` | Ajuste de paleta para accesibilidad. |
+
+Desarrollo: `flutter_lints`, `flutter_launcher_icons`, `flutter_test`.
 
 ---
 
-## 👨‍💻 Guía de Contribución
+## Extensión y buenas prácticas
 
-1. Crea un **Feature Branch** (`git checkout -b feature/novedad`).
-2. Sigue los tokens de color definidos en `lib/core/theme/style_guide.dart`.
-3. Documenta cualquier nuevo servicio en la sección de `lib/data/services/`.
-4. Asegúrate de pasar el análisis estático (`flutter analyze`).
+- Nuevos endpoints: añadir constantes en `api_constants.dart` y métodos en el servicio correspondiente bajo `lib/data/services/`.
+- Textos visibles: claves en `lib/l10n/app_*.arb` y regenerar con `flutter gen-l10n`.
+- Estilo visual: tokens en `lib/core/theme/style_guide.dart`.
+- Tras cambios estructurales, ejecutar `flutter analyze` y probar los flujos de login, home y perfil.
 
 ---
 
-© 2026 **SMARTUR Project**. Diseñado con ❤️ para la exploración consciente.
+## Licencia y proyecto
+
+Proyecto **SMARTUR** (2026). Consulte los términos del repositorio o del equipo de producto para uso y distribución.

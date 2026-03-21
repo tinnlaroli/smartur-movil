@@ -435,8 +435,14 @@ abstract class AppLocalizations {
   /// No description provided for @uploadPhotoAction.
   ///
   /// In es, this message translates to:
-  /// **'Acción para subir una foto'**
+  /// **'Añadir foto'**
   String get uploadPhotoAction;
+
+  /// No description provided for @communityCreatePost.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear publicación'**
+  String get communityCreatePost;
 
   /// No description provided for @diaryTitle.
   ///
@@ -743,6 +749,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No hay lugares en esta categoría aún'**
   String get noCategoryPlaces;
+
+  /// No description provided for @exploreNoCities.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay ciudades con lugares desde el servidor.'**
+  String get exploreNoCities;
+
+  /// No description provided for @exploreCouldNotLoad.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar los lugares. Revisa tu conexión e inténtalo de nuevo.'**
+  String get exploreCouldNotLoad;
+
+  /// No description provided for @exploreAllCities.
+  ///
+  /// In es, this message translates to:
+  /// **'Todas las ciudades'**
+  String get exploreAllCities;
 
   /// No description provided for @tabHistory.
   ///
@@ -1179,8 +1203,50 @@ abstract class AppLocalizations {
   /// No description provided for @editProfileSubtitle.
   ///
   /// In es, this message translates to:
-  /// **'Cambia tu nombre y datos personales'**
+  /// **'Cambia tu foto de perfil o elige un icono'**
   String get editProfileSubtitle;
+
+  /// No description provided for @profilePhotoFormatsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Formatos: JPEG, PNG, GIF, WebP o HEIC. Máximo 5 MB.'**
+  String get profilePhotoFormatsHint;
+
+  /// No description provided for @profilePhotoInvalidFormat.
+  ///
+  /// In es, this message translates to:
+  /// **'Formato no permitido. Usa JPEG, PNG, GIF, WebP o HEIC.'**
+  String get profilePhotoInvalidFormat;
+
+  /// No description provided for @profilePhotoTooLarge.
+  ///
+  /// In es, this message translates to:
+  /// **'La imagen supera 5 MB.'**
+  String get profilePhotoTooLarge;
+
+  /// No description provided for @profileOpenGallery.
+  ///
+  /// In es, this message translates to:
+  /// **'Galería'**
+  String get profileOpenGallery;
+
+  /// No description provided for @profileOpenCamera.
+  ///
+  /// In es, this message translates to:
+  /// **'Cámara'**
+  String get profileOpenCamera;
+
+  /// No description provided for @removeProfilePhoto.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar foto'**
+  String get removeProfilePhoto;
+
+  /// No description provided for @avatarIconsSectionHint.
+  ///
+  /// In es, this message translates to:
+  /// **'O elige un icono en lugar de foto'**
+  String get avatarIconsSectionHint;
 
   /// No description provided for @changePasswordSubtitle.
   ///

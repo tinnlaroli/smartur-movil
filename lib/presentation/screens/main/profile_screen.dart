@@ -6,7 +6,7 @@ import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/profile_service.dart';
 import '../../widgets/smartur_user_avatar.dart';
-import '../profile/edit_profile_avatar_screen.dart';
+import 'edit_profile_avatar_screen.dart';
 import '../settings/settings_screen.dart';
 import '../auth/welcome_screen.dart';
 
