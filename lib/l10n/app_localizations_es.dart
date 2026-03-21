@@ -390,6 +390,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get invalidCode => 'Código inválido o expirado.';
 
   @override
+  String get tooManyAttempts =>
+      'Demasiados intentos. Intenta de nuevo en 1 minuto.';
+
+  @override
   String get accountCreated =>
       'Cuenta creada exitosamente. Por favor, inicia sesión.';
 

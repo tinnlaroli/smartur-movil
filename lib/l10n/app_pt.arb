@@ -129,6 +129,7 @@
 
   "invalidCredentials": "Credenciais inválidas.",
   "invalidCode": "Código inválido ou expirado.",
+  "tooManyAttempts": "Muitas tentativas. Tente novamente em 1 minuto.",
   "accountCreated": "Conta criada com sucesso. Faça login.",
   "connectionError": "Erro de conexão.",
   "changeEmail": "Alterar e-mail",

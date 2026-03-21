@@ -202,11 +202,12 @@ class AuthService {
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
-    } else {
-      final errorMsg =
-          jsonDecode(response.body)['message'] ?? 'Credenciales incorrectas.';
-      throw AuthException(errorMsg);
     }
+    if (response.statusCode == 429) {
+      throw AuthRateLimitException();
+    }
+    // Siempre "credenciales incorrectas" para no revelar si el usuario existe
+    throw AuthException('Credenciales incorrectas.');
   }
 
   // ── LOGIN PASO 2 (OTP) ────────────────────────────────────────────────
@@ -228,6 +229,9 @@ class AuthService {
         await saveUserData(data['user'] as Map<String, dynamic>);
       }
       return token;
+    }
+    if (response.statusCode == 429) {
+      throw AuthRateLimitException();
     }
     return null;
   }
@@ -389,4 +393,11 @@ class AuthException implements Exception {
 class AuthCancelledException extends AuthException {
   AuthCancelledException()
       : super('Inicio de sesión cancelado por el usuario');
+}
+
+/// Thrown when the API returns 429 (rate limit exceeded).
+/// Show only when attempts are exhausted, not "X attempts remaining".
+class AuthRateLimitException extends AuthException {
+  AuthRateLimitException()
+      : super('Demasiados intentos. Intenta de nuevo en 1 minuto.');
 }

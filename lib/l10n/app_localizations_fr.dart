@@ -395,6 +395,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get invalidCode => 'Code invalide ou expiré.';
 
   @override
+  String get tooManyAttempts => 'Trop de tentatives. Réessayez dans 1 minute.';
+
+  @override
   String get accountCreated =>
       'Compte créé avec succès. Veuillez vous connecter.';
 

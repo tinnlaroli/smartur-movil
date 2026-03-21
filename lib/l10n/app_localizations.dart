@@ -816,6 +816,12 @@ abstract class AppLocalizations {
   /// **'Código inválido o expirado.'**
   String get invalidCode;
 
+  /// No description provided for @tooManyAttempts.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiados intentos. Intenta de nuevo en 1 minuto.'**
+  String get tooManyAttempts;
+
   /// No description provided for @accountCreated.
   ///
   /// In es, this message translates to:

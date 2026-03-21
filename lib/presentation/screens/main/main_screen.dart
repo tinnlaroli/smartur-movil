@@ -18,10 +18,12 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
 
   late final List<Widget> _screens;
+  late final AnimationController _diaryBookCtrl;
+  late final Animation<double> _diaryFlip;
 
   @override
   void initState() {
@@ -32,12 +34,37 @@ class _MainScreenState extends State<MainScreen> {
       const CommunityScreen(),
       const ProfileScreen(),
     ];
+
+    _diaryBookCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _diaryFlip = CurvedAnimation(
+      parent: _diaryBookCtrl,
+      curve: Curves.easeOutBack,
+      reverseCurve: Curves.easeInCubic,
+    );
+  }
+
+  @override
+  void dispose() {
+    _diaryBookCtrl.dispose();
+    super.dispose();
   }
 
   void _onTabTapped(int index) {
+    final wasDiary = _currentIndex == 1;
+    final isDiary = index == 1;
+
     setState(() {
       _currentIndex = index;
     });
+
+    if (isDiary && !wasDiary) {
+      _diaryBookCtrl.forward();
+    } else if (!isDiary && wasDiary) {
+      _diaryBookCtrl.reverse();
+    }
   }
 
   @override
@@ -129,23 +156,41 @@ class _MainScreenState extends State<MainScreen> {
   ) {
     final iconData = isSelected ? solidIcon : outlineIcon;
 
-    // Micro-animaciones:
-    // 0: Inicio      → brújula gira una vuelta corta
-    // 1–3: resto de pestañas sin animación extra (solo cambio de color)
-
     switch (index) {
       case 0:
-        // Inicio: giro tipo brújula
         return AnimatedRotation(
           duration: const Duration(milliseconds: 260),
           curve: Curves.easeOut,
           turns: isSelected ? 1.0 : 0.0,
           child: Icon(iconData, color: color, size: 26),
         );
+      case 1:
+        return _buildDiaryBookIcon(color);
       default:
-        // Otras pestañas: sin animación extra
         return Icon(iconData, color: color, size: 26);
     }
+  }
+
+  Widget _buildDiaryBookIcon(Color color) {
+    return AnimatedBuilder(
+      animation: _diaryFlip,
+      builder: (context, child) {
+        final t = _diaryFlip.value;
+        final scale = 1.0 + 0.12 * t;
+        final icon = t > 0.5 ? Icons.menu_book_rounded : Icons.book_outlined;
+
+        return Transform.scale(
+          scale: scale,
+          child: Transform(
+            alignment: Alignment.centerLeft,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001)
+              ..rotateY(-0.5 * t),
+            child: Icon(icon, color: color, size: 26),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildCentralCta(BuildContext context) {

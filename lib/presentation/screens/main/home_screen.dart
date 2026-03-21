@@ -736,86 +736,136 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Category selector ──
+  // ── Category selector (filter icon + popup menu) ──
 
   Widget _buildCategoryFilter() {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final categories = PlaceCategory.values;
-    final allCount = _selectedCity.places.length;
+    final hasFilter = _selectedCategory != null;
+    final activeColor = hasFilter ? _selectedCategory!.color : SmarturStyle.purple;
+    final activeLabel = hasFilter ? _selectedCategory!.label : l10n.allCategories;
+    final activeIcon = hasFilter ? _selectedCategory!.icon : Icons.filter_list_rounded;
 
-    return SizedBox(
-      height: 46,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
-        itemCount: categories.length + 1,
-        itemBuilder: (context, idx) {
-          final isAll = idx == 0;
-          final cat = isAll ? null : categories[idx - 1];
-          final isSelected = _selectedCategory == cat;
-          final count = isAll ? allCount : _selectedCity.byCategory(cat).length;
-          final color = isAll ? SmarturStyle.purple : cat!.color;
-
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedCategory = cat),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? color.withValues(alpha: 0.14)
-                      : scheme.surfaceContainerHighest.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: isSelected ? color.withValues(alpha: 0.5) : Colors.transparent,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isAll ? Icons.apps_rounded : cat!.icon,
-                      size: 15,
-                      color: isSelected ? color : scheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      isAll ? l10n.allCategories : cat!.label,
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: isSelected ? color : scheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? color.withValues(alpha: 0.18)
-                            : scheme.outlineVariant.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        '$count',
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: isSelected ? color : scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+      child: Row(
+        children: [
+          PopupMenuButton<PlaceCategory?>(
+            onSelected: (cat) => setState(() => _selectedCategory = cat),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            color: scheme.surface,
+            elevation: 8,
+            offset: const Offset(0, 44),
+            itemBuilder: (_) => [
+              _buildCategoryMenuItem(
+                value: null,
+                icon: Icons.apps_rounded,
+                label: l10n.allCategories,
+                color: SmarturStyle.purple,
+                count: _selectedCity.places.length,
+                isSelected: _selectedCategory == null,
+                scheme: scheme,
+              ),
+              ...categories.map((cat) => _buildCategoryMenuItem(
+                    value: cat,
+                    icon: cat.icon,
+                    label: cat.label,
+                    color: cat.color,
+                    count: _selectedCity.byCategory(cat).length,
+                    isSelected: _selectedCategory == cat,
+                    scheme: scheme,
+                  )),
+            ],
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              decoration: BoxDecoration(
+                color: hasFilter
+                    ? activeColor.withValues(alpha: 0.12)
+                    : scheme.surfaceContainerHighest.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: hasFilter
+                      ? activeColor.withValues(alpha: 0.45)
+                      : scheme.outlineVariant.withValues(alpha: 0.5),
                 ),
               ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(activeIcon, size: 16, color: hasFilter ? activeColor : scheme.onSurfaceVariant),
+                  const SizedBox(width: 8),
+                  Text(
+                    activeLabel,
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: hasFilter ? activeColor : scheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(Icons.keyboard_arrow_down_rounded,
+                      size: 18, color: hasFilter ? activeColor : scheme.onSurfaceVariant),
+                ],
+              ),
             ),
-          );
-        },
+          ),
+        ],
+      ),
+    );
+  }
+
+  PopupMenuEntry<PlaceCategory?> _buildCategoryMenuItem({
+    required PlaceCategory? value,
+    required IconData icon,
+    required String label,
+    required Color color,
+    required int count,
+    required bool isSelected,
+    required ColorScheme scheme,
+  }) {
+    return PopupMenuItem<PlaceCategory?>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: isSelected ? color : scheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? color : scheme.onSurface,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? color.withValues(alpha: 0.15)
+                  : scheme.outlineVariant.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: isSelected ? color : scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          if (isSelected) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.check_rounded, size: 18, color: color),
+          ],
+        ],
       ),
     );
   }

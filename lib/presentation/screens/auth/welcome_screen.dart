@@ -132,6 +132,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     bool isLoadingEmail = false;
     bool isLoadingGoogle = false;
     bool rememberMe = false;
+    bool obscurePassword = true;
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
     final TextEditingController emailController = TextEditingController();
@@ -249,6 +250,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                             emailController,
                             passwordController,
                             setModalState,
+                            obscurePassword: obscurePassword,
+                            onTogglePassword: () => setModalState(() => obscurePassword = !obscurePassword),
                           ),
                           if (isLogin) ...[
                             const SizedBox(height: 8),
@@ -333,6 +336,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                           SmarturNotifications.showSuccess(context, l10n.accountCreated);
                                         }
                                       }
+                                    } on AuthRateLimitException {
+                                      if (context.mounted) {
+                                        SmarturNotifications.showError(context, l10n.tooManyAttempts);
+                                      }
+                                    } on AuthException {
+                                      if (context.mounted) {
+                                        SmarturNotifications.showError(context, l10n.invalidCredentials);
+                                      }
                                     } catch (e) {
                                       if (context.mounted) {
                                         SmarturNotifications.showError(context, l10n.connectionError);
@@ -370,9 +381,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                         ),
                                       );
                                     }
+                                  } on AuthRateLimitException {
+                                    if (context.mounted) {
+                                      SmarturNotifications.showError(context, l10n.tooManyAttempts);
+                                    }
+                                  } on AuthException {
+                                    if (context.mounted) {
+                                      SmarturNotifications.showError(context, l10n.invalidCredentials);
+                                    }
                                   } catch (e) {
                                     if (context.mounted) {
-                                      SmarturNotifications.showError(context, e.toString());
+                                      SmarturNotifications.showError(context, l10n.connectionError);
                                     }
                                   } finally {
                                     setModalState(() => isLoadingGoogle = false);
@@ -441,8 +460,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     TextEditingController nameCtrl,
     TextEditingController emailCtrl,
     TextEditingController passCtrl,
-    StateSetter setModalState,
-  ) {
+    StateSetter setModalState, {
+    bool obscurePassword = true,
+    VoidCallback? onTogglePassword,
+  }) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     String password = passCtrl.text;
@@ -492,11 +513,20 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
         const SizedBox(height: 16),
         TextFormField(
           controller: passCtrl,
-          obscureText: true,
+          obscureText: obscurePassword,
           onChanged: (value) => setModalState(() {}),
           decoration: InputDecoration(
             labelText: l10n.password,
             prefixIcon: const Icon(Icons.lock_outline, color: SmarturStyle.purple),
+            suffixIcon: onTogglePassword != null
+                ? IconButton(
+                    icon: Icon(
+                      obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    onPressed: onTogglePassword,
+                  )
+                : null,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           validator: (v) {
