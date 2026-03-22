@@ -7,6 +7,7 @@ import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../core/utils/profile_photo_validation.dart';
 import '../../../data/services/auth_service.dart';
+import '../../widgets/smartur_background.dart';
 import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/smartur_user_avatar.dart';
 
@@ -122,11 +123,15 @@ class _EditProfileAvatarScreenState extends State<EditProfileAvatarScreen> {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: scheme.surface,
       appBar: AppBar(
         title: Text(l10n.editProfile, style: SmarturStyle.calSansTitle.copyWith(fontSize: 20)),
         elevation: 0,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
       ),
-      body: SmarturShimmer(
+      body: SmarturBackgroundTop(
+        child: SmarturShimmer(
         enabled: _busy,
         child: _busy
             ? ListView(
@@ -270,6 +275,7 @@ class _EditProfileAvatarScreenState extends State<EditProfileAvatarScreen> {
                 ),
               ],
             ),
+      ),
       ),
     );
   }

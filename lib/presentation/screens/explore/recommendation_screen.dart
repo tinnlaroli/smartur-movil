@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
+import '../../widgets/smartur_background.dart';
 
 class RecommendationScreen extends StatelessWidget {
   final String? city;
@@ -15,14 +16,18 @@ class RecommendationScreen extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: scheme.surface,
       appBar: AppBar(
         title: Text(
           l10n.recommendationsInCity(displayCity),
           style: SmarturStyle.calSansTitle.copyWith(fontSize: 20),
         ),
         elevation: 0,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
       ),
-      body: ListView.builder(
+      body: SmarturBackgroundTop(
+        child: ListView.builder(
         padding: const EdgeInsets.all(20),
         itemCount: 5,
         itemBuilder: (context, index) {
@@ -58,6 +63,7 @@ class RecommendationScreen extends StatelessWidget {
             ),
           );
         },
+      ),
       ),
     );
   }

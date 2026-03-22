@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 import 'package:http/http.dart' as http;
@@ -682,7 +683,7 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SmarturBackgroundTop(
         child: SmarturShimmer(
           enabled: _isLoadingContent,
@@ -695,7 +696,7 @@ class HomeScreenState extends State<HomeScreen> {
               _buildHeaderAppBar(),
               SliverToBoxAdapter(child: _buildExploreIntro()),
               SliverToBoxAdapter(child: _buildCityFilter()),
-              _buildPlaceGrid(),
+              ..._buildPlaceBentoSlivers(),
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
             ],
           ),
@@ -1236,72 +1237,85 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Place grid ──
+  // ── Place grid (bento / quilted) ──
 
-  SliverPadding _buildPlaceGrid() {
+  static final _bentoGridDelegate = SliverQuiltedGridDelegate(
+    crossAxisCount: 4,
+    mainAxisSpacing: 12,
+    crossAxisSpacing: 12,
+    repeatPattern: QuiltedGridRepeatPattern.inverted,
+    pattern: [
+      QuiltedGridTile(2, 2),
+      QuiltedGridTile(1, 1),
+      QuiltedGridTile(1, 1),
+      QuiltedGridTile(1, 2),
+    ],
+  );
+
+  List<Widget> _buildPlaceBentoSlivers() {
     final l10n = AppLocalizations.of(context)!;
 
     if (!_exploreLoaded) {
-      return SliverPadding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-        sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            childAspectRatio: 0.72,
-          ),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) => const SkeletonPlaceTile(),
-            childCount: 6,
+      return [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          sliver: SliverGrid(
+            gridDelegate: _bentoGridDelegate,
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => const SkeletonBentoTile(),
+              childCount: 8,
+            ),
           ),
         ),
-      );
+      ];
     }
 
     final places = _filteredPlaces;
 
     if (places.isEmpty) {
-      return SliverPadding(
-        padding: const EdgeInsets.all(40),
-        sliver: SliverToBoxAdapter(
-          child: Center(
-            child: Text(
-              l10n.noCategoryPlaces,
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+      return [
+        SliverPadding(
+          padding: const EdgeInsets.all(40),
+          sliver: SliverToBoxAdapter(
+            child: Center(
+              child: Text(
+                l10n.noCategoryPlaces,
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ),
         ),
-      );
+      ];
     }
 
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      sliver: SliverGrid(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final place = places[index];
-            return _PlaceCard(
-              place: place,
-              onTap: () => _openPlaceDetail(place),
-            );
-          },
-          childCount: places.length,
-        ),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 14,
-          crossAxisSpacing: 14,
-          childAspectRatio: 0.72,
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        sliver: SliverGrid(
+          gridDelegate: _bentoGridDelegate,
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final place = places[index];
+              return _PlaceCard(
+                place: place,
+                bentoSlot: index % 4,
+                onTap: () => _openPlaceDetail(place),
+              );
+            },
+            childCount: places.length,
+          ),
         ),
       ),
-    );
+    ];
   }
 
   void _openPlaceDetail(Place place) {
+    if (place.imageUrl.isNotEmpty) {
+      precacheImage(NetworkImage(place.imageUrl), context);
+    }
     Navigator.push(
       context,
       PageRouteBuilder(
@@ -1329,15 +1343,40 @@ class HomeScreenState extends State<HomeScreen> {
 // Private widgets
 // ═══════════════════════════════════════════════════════════════════
 
+int _cacheWidthForBentoSlot(BuildContext context, int slot) {
+  final w = MediaQuery.sizeOf(context).width - 40 - 12;
+  final dpr = MediaQuery.devicePixelRatioOf(context);
+  final logical = switch (slot % 4) {
+    0 || 3 => w * 0.52,
+    _ => w * 0.24,
+  };
+  return (logical * dpr).round().clamp(360, 1280);
+}
+
 class _PlaceCard extends StatelessWidget {
   final Place place;
+  final int bentoSlot;
   final VoidCallback onTap;
 
-  const _PlaceCard({required this.place, required this.onTap});
+  const _PlaceCard({
+    required this.place,
+    required this.bentoSlot,
+    required this.onTap,
+  });
+
+  bool get _isHeroTile => bentoSlot % 4 == 0;
+  bool get _isCompactTile => bentoSlot % 4 == 1 || bentoSlot % 4 == 2;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final titleSize = _isHeroTile ? 18.0 : (_isCompactTile ? 14.0 : 16.0);
+    final descSize = _isHeroTile ? 11.0 : (_isCompactTile ? 9.0 : 10.0);
+    final descLines = _isCompactTile ? 1 : 2;
+    final pillIcon = _isCompactTile ? 10.0 : 12.0;
+    final pillFont = _isCompactTile ? 8.0 : 9.0;
+    final elevation = _isHeroTile ? 6.0 : 4.0;
+
     return GestureDetector(
       onTap: onTap,
       child: Hero(
@@ -1346,7 +1385,7 @@ class _PlaceCard extends StatelessWidget {
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           clipBehavior: Clip.antiAlias,
-          elevation: 4,
+          elevation: elevation,
           shadowColor: Colors.black.withValues(alpha: 0.18),
           child: Stack(
             fit: StackFit.expand,
@@ -1361,6 +1400,8 @@ class _PlaceCard extends StatelessWidget {
                   : Image.network(
                       place.imageUrl,
                       fit: BoxFit.cover,
+                      filterQuality: FilterQuality.medium,
+                      cacheWidth: _cacheWidthForBentoSlot(context, bentoSlot),
                       frameBuilder: (_, child, frame, loaded) {
                         if (loaded) return child;
                         return AnimatedOpacity(
@@ -1395,10 +1436,13 @@ class _PlaceCard extends StatelessWidget {
 
               // Category pill top-left
               Positioned(
-                top: 10,
-                left: 10,
+                top: _isCompactTile ? 8 : 10,
+                left: _isCompactTile ? 8 : 10,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: _isCompactTile ? 6 : 8,
+                    vertical: _isCompactTile ? 3 : 4,
+                  ),
                   decoration: BoxDecoration(
                     color: place.category.color.withValues(alpha: 0.85),
                     borderRadius: BorderRadius.circular(999),
@@ -1406,13 +1450,15 @@ class _PlaceCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(place.category.icon, size: 12, color: Colors.white),
+                      Icon(place.category.icon, size: pillIcon, color: Colors.white),
                       const SizedBox(width: 4),
                       Text(
                         place.category.label,
-                        style: const TextStyle(
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
                           fontFamily: 'Outfit',
-                          fontSize: 9,
+                          fontSize: pillFont,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                           letterSpacing: 0.3,
@@ -1425,8 +1471,8 @@ class _PlaceCard extends StatelessWidget {
 
               // Rating top-right
               Positioned(
-                top: 10,
-                right: 10,
+                top: _isCompactTile ? 8 : 10,
+                right: _isCompactTile ? 8 : 10,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                   decoration: BoxDecoration(
@@ -1436,15 +1482,18 @@ class _PlaceCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.star_rounded,
-                          size: 13, color: SmarturStyle.orange),
+                      Icon(
+                        Icons.star_rounded,
+                        size: _isCompactTile ? 11 : 13,
+                        color: SmarturStyle.orange,
+                      ),
                       const SizedBox(width: 3),
                       Text(
                         place.rating.toStringAsFixed(1),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Outfit',
                           fontWeight: FontWeight.w800,
-                          fontSize: 11,
+                          fontSize: _isCompactTile ? 10 : 11,
                           color: Colors.white,
                         ),
                       ),
@@ -1455,9 +1504,9 @@ class _PlaceCard extends StatelessWidget {
 
               // Bottom text
               Positioned(
-                left: 12,
-                right: 12,
-                bottom: 12,
+                left: _isCompactTile ? 10 : 12,
+                right: _isCompactTile ? 10 : 12,
+                bottom: _isCompactTile ? 10 : 12,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -1466,22 +1515,22 @@ class _PlaceCard extends StatelessWidget {
                       place.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'CalSans',
-                        fontSize: 16,
+                        fontSize: titleSize,
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         height: 1.1,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: _isCompactTile ? 2 : 4),
                     Text(
                       place.shortDescription,
-                      maxLines: 2,
+                      maxLines: descLines,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'Outfit',
-                        fontSize: 10,
+                        fontSize: descSize,
                         color: Colors.white.withValues(alpha: 0.78),
                         height: 1.25,
                       ),

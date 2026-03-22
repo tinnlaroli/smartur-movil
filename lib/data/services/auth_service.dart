@@ -60,11 +60,20 @@ class AuthService {
     return true;
   }
 
+  /// Cierra la sesión en el dispositivo: **siempre** borra token y datos de usuario.
+  /// Mantiene preferencias como biométricos y «recordarme» (el usuario puede volver
+  /// a entrar con contraseña y seguir usando huella si la tenía activada).
+  ///
+  /// Importante: antes no se borraba el token si la biometría estaba activa, y al
+  /// reiniciar la app [hasSession] seguía siendo `true` → se abría el home en lugar del welcome.
   Future<void> clearSession() async {
-    final biometric = await isBiometricEnabled();
-    if (!biometric) {
-      await _storage.delete(key: _tokenKey);
-    }
+    await _storage.delete(key: _tokenKey);
+    await _storage.delete(key: _sessionExpiryKey);
+    await _storage.delete(key: _userIdKey);
+    await _storage.delete(key: _userNameKey);
+    await _storage.delete(key: _userEmailKey);
+    await _storage.delete(key: _userPhotoUrlKey);
+    await _storage.delete(key: _userAvatarIconKey);
   }
 
   Future<void> fullLogout() async {

@@ -109,6 +109,9 @@ class _DetailViewPageState extends State<DetailViewPage> {
                     : Image.network(
                         widget.heroImageUrl,
                         fit: BoxFit.cover,
+                        filterQuality: FilterQuality.high,
+                        isAntiAlias: true,
+                        gaplessPlayback: true,
                         errorBuilder: (context, error, stack) => Container(
                           color: Colors.grey.shade900,
                           child: const Icon(Icons.image_not_supported_outlined,
@@ -494,7 +497,12 @@ class _MiniThumb extends StatelessWidget {
         border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
       ),
       child: ClipOval(
-        child: Image.network(url, fit: BoxFit.cover),
+        child: Image.network(
+          url,
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.medium,
+          cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round().clamp(80, 256),
+        ),
       ),
     );
   }

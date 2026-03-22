@@ -189,6 +189,24 @@ class SkeletonPlaceTile extends StatelessWidget {
   }
 }
 
+/// Celda que rellena el tile en grid tipo bento / quilted (sin filas extra).
+class SkeletonBentoTile extends StatelessWidget {
+  const SkeletonBentoTile({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SkeletonContainer(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          borderRadius: 20,
+        );
+      },
+    );
+  }
+}
+
 /// Tarjeta tipo fila (diario / listas).
 class SkeletonListRow extends StatelessWidget {
   const SkeletonListRow({super.key});

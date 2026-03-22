@@ -6,6 +6,7 @@ import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
 import '../../widgets/smartur_background.dart';
+import '../../widgets/terms_and_conditions_modal.dart';
 import '../main/main_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -132,6 +133,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     bool isLoadingEmail = false;
     bool isLoadingGoogle = false;
     bool rememberMe = false;
+    bool acceptedTerms = false;
     bool obscurePassword = true;
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
@@ -278,6 +280,60 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               ],
                             ),
                           ],
+                          if (!isLogin && !isWaitingOTP) ...[
+                            const SizedBox(height: 16),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Checkbox(
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
+                                  value: acceptedTerms,
+                                  activeColor: SmarturStyle.purple,
+                                  onChanged: (v) => setModalState(
+                                    () => acceptedTerms = v ?? false,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 10),
+                                    child: RichText(
+                                      text: TextSpan(
+                                        style: TextStyle(
+                                          color: scheme.onSurface,
+                                          fontSize: 13,
+                                          fontFamily: 'Outfit',
+                                          height: 1.4,
+                                        ),
+                                        children: [
+                                          TextSpan(text: l10n.registerAcceptTermsPrefix),
+                                          WidgetSpan(
+                                            alignment: PlaceholderAlignment.baseline,
+                                            baseline: TextBaseline.alphabetic,
+                                            child: GestureDetector(
+                                              onTap: () => showTermsAndConditionsModal(context),
+                                              child: Text(
+                                                l10n.termsAndConditions,
+                                                style: const TextStyle(
+                                                  color: SmarturStyle.purple,
+                                                  fontWeight: FontWeight.w600,
+                                                  decoration: TextDecoration.underline,
+                                                  decorationColor: SmarturStyle.purple,
+                                                  fontFamily: 'Outfit',
+                                                  fontSize: 13,
+                                                  height: 1.4,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                         const SizedBox(height: 24),
                         ElevatedButton(
@@ -285,6 +341,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               ? null
                               : () async {
                                   if (formKey.currentState!.validate()) {
+                                    if (!isLogin && !acceptedTerms) {
+                                      if (context.mounted) {
+                                        SmarturNotifications.showWarning(
+                                          context,
+                                          l10n.termsMustAccept,
+                                        );
+                                      }
+                                      return;
+                                    }
                                     setModalState(() => isLoadingEmail = true);
                                     try {
                                       if (isLogin) {
@@ -446,6 +511,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                         onPressed: () => setModalState(() {
                           isLogin = !isLogin;
                           isWaitingOTP = false; // Reset OTP state when switching
+                          acceptedTerms = false;
                           otpController.clear();
                         }),
                         child: RichText(
@@ -726,6 +792,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: scheme.surface,
       body: SmarturBackground(
         child: Stack(
           children: [

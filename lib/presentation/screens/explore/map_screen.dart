@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
+import '../../widgets/smartur_background.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -59,14 +60,18 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            _buildMap(),
-            _buildTopFiltersBar(l10n),
-            _buildBottomInfoCard(l10n),
-          ],
+      backgroundColor: scheme.surface,
+      body: SmarturBackgroundTop(
+        child: SafeArea(
+          child: Stack(
+            children: [
+              _buildMap(),
+              _buildTopFiltersBar(l10n),
+              _buildBottomInfoCard(l10n),
+            ],
+          ),
         ),
       ),
     );

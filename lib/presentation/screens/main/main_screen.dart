@@ -60,6 +60,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: scheme.surface,
       body: IndexedStack(
         index: _currentIndex,
         children: [

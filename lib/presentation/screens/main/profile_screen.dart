@@ -4,6 +4,7 @@ import 'package:smartur/l10n/app_localizations.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/profile_service.dart';
+import '../../widgets/smartur_background.dart';
 import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/smartur_user_avatar.dart';
 import 'edit_profile_avatar_screen.dart';
@@ -97,82 +98,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<Widget> _profileSkeletonSlivers() {
     return [
       SliverAppBar(
-        expandedHeight: 260,
         pinned: true,
         automaticallyImplyLeading: false,
-        backgroundColor: SmarturStyle.purple,
-        flexibleSpace: FlexibleSpaceBar(
-          background: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  SmarturStyle.purple,
-                  Color(0xFF6C2BD9),
-                ],
-              ),
-            ),
-            child: SafeArea(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 16),
-                  Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: 96,
-                        height: 96,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.22),
-                          border: Border.all(color: Colors.white30, width: 3),
-                        ),
-                      ),
-                      Positioned(
-                        right: -2,
-                        bottom: -2,
-                        child: Container(
-                          width: 26,
-                          height: 26,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.88),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.22),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Container(
-                    height: 22,
-                    width: 160,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.28),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    height: 14,
-                    width: 220,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: const SkeletonText(width: 140, height: 22),
+      ),
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(height: 16),
+              const Center(child: SkeletonCircle(size: 96)),
+              const SizedBox(height: 16),
+              const Center(child: SkeletonText(width: 180, height: 22)),
+              const SizedBox(height: 10),
+              const Center(child: SkeletonText(width: 220, height: 14)),
+              const SizedBox(height: 24),
+            ],
           ),
         ),
       ),
@@ -180,7 +125,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         sliver: SliverList(
           delegate: SliverChildListDelegate([
-            const SizedBox(height: 24),
             const SkeletonText(width: 140, height: 18),
             const SizedBox(height: 12),
             const SkeletonContainer(height: 100, borderRadius: 16),
@@ -194,188 +138,193 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      body: SmarturShimmer(
-        enabled: _loading,
-        child: _loading
-            ? CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: _profileSkeletonSlivers(),
-              )
-            : RefreshIndicator(
-                color: SmarturStyle.purple,
-                onRefresh: _loadProfile,
-                child: CustomScrollView(
+      backgroundColor: scheme.surface,
+      body: SmarturBackgroundTop(
+        child: SmarturShimmer(
+          enabled: _loading,
+          child: _loading
+              ? CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    _buildHeader(context),
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate([
-                          const SizedBox(height: 24),
-                          if (_interests.isNotEmpty) ...[
-                            _buildSection(l10n.myInterests),
-                            const SizedBox(height: 12),
-                            _buildInterestChips(),
-                          ] else ...[
-                            _buildSection(l10n.myInterests),
-                            const SizedBox(height: 12),
-                            _buildEmptyInterestsHint(context, l10n),
-                          ],
-                          const SizedBox(height: 40),
-                        ]),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-      ),
-    );
-  }
-
-  // ── Header con perfil ───────────────────────────────────────────────────
-
-  SliverAppBar _buildHeader(BuildContext context) {
-    return SliverAppBar(
-      expandedHeight: 260,
-      floating: false,
-      pinned: true,
-      automaticallyImplyLeading: false,
-      backgroundColor: SmarturStyle.purple,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings_outlined, color: Colors.white),
-          onPressed: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            );
-            _loadProfile();
-          },
-        ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                SmarturStyle.purple,
-                Color(0xFF6C2BD9),
-              ],
-            ),
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 16),
-                Tooltip(
-                  message: AppLocalizations.of(context)!.editProfile,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white30, width: 3),
+                  slivers: _profileSkeletonSlivers(),
+                )
+              : RefreshIndicator(
+                  color: SmarturStyle.purple,
+                  onRefresh: _loadProfile,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverAppBar(
+                        pinned: true,
+                        automaticallyImplyLeading: false,
+                        backgroundColor: Colors.transparent,
+                        surfaceTintColor: Colors.transparent,
+                        elevation: 0,
+                        title: Text(
+                          l10n.myProfile,
+                          style: SmarturStyle.calSansTitle.copyWith(fontSize: 20),
                         ),
-                        child: SmarturUserAvatar(
-                          radius: 44,
-                          photoUrl: _photoUrl,
-                          avatarIconKey: _avatarIconKey,
-                          displayName: _name,
-                          backgroundColor: Colors.white.withAlpha(40),
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                      Positioned(
-                        right: -2,
-                        bottom: -2,
-                        child: Material(
-                          color: Colors.transparent,
-                          elevation: 3,
-                          shadowColor: Colors.black.withValues(alpha: 0.35),
-                          shape: const CircleBorder(),
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: () async {
+                        actions: [
+                          IconButton(
+                            icon: Icon(Icons.settings_outlined, color: scheme.onSurface),
+                            onPressed: () async {
                               await Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) =>
-                                      const EditProfileAvatarScreen(),
+                                  builder: (_) => const SettingsScreen(),
                                 ),
                               );
                               _loadProfile();
                             },
-                            customBorder: const CircleBorder(),
-                            child: Container(
-                              width: 28,
-                              height: 28,
-                              alignment: Alignment.center,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white,
-                              ),
-                              child: const Icon(
-                                Icons.edit_rounded,
-                                size: 14,
-                                color: SmarturStyle.purple,
-                              ),
-                            ),
                           ),
+                        ],
+                      ),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 8),
+                              _buildAvatarHeader(context, scheme),
+                              const SizedBox(height: 16),
+                              Text(
+                                _name,
+                                textAlign: TextAlign.center,
+                                style: SmarturStyle.calSansTitle.copyWith(
+                                  fontSize: 22,
+                                  color: scheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _email,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 14,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                              if (_memberSince.isNotEmpty) ...[
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: SmarturStyle.purple.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: SmarturStyle.purple.withValues(alpha: 0.25),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    l10n.memberSince(_memberSince),
+                                    style: TextStyle(
+                                      fontFamily: 'Outfit',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: SmarturStyle.purple,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 28),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            if (_interests.isNotEmpty) ...[
+                              _buildSection(l10n.myInterests),
+                              const SizedBox(height: 12),
+                              _buildInterestChips(),
+                            ] else ...[
+                              _buildSection(l10n.myInterests),
+                              const SizedBox(height: 12),
+                              _buildEmptyInterestsHint(context, l10n),
+                            ],
+                            const SizedBox(height: 40),
+                          ]),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 14),
-                Text(
-                  _name,
-                  style: const TextStyle(
-                    fontFamily: 'CalSans',
-                    fontSize: 22,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _email,
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 14,
-                    color: Colors.white.withAlpha(200),
-                  ),
-                ),
-                if (_memberSince.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(30),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      AppLocalizations.of(context)!.memberSince(_memberSince),
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 12,
-                        color: Colors.white.withAlpha(180),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatarHeader(BuildContext context, ColorScheme scheme) {
+    return Tooltip(
+      message: AppLocalizations.of(context)!.editProfile,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: SmarturStyle.purple.withValues(alpha: 0.35),
+                width: 3,
+              ),
+            ),
+            child: SmarturUserAvatar(
+              radius: 44,
+              photoUrl: _photoUrl,
+              avatarIconKey: _avatarIconKey,
+              displayName: _name,
+              backgroundColor: SmarturStyle.purple.withValues(alpha: 0.12),
+              foregroundColor: scheme.onSurface,
             ),
           ),
-        ),
+          Positioned(
+            right: -2,
+            bottom: -2,
+            child: Material(
+              color: Colors.transparent,
+              elevation: 3,
+              shadowColor: Colors.black.withValues(alpha: 0.2),
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const EditProfileAvatarScreen(),
+                    ),
+                  );
+                  _loadProfile();
+                },
+                customBorder: const CircleBorder(),
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: scheme.surface,
+                    border: Border.all(color: scheme.outlineVariant),
+                  ),
+                  child: const Icon(
+                    Icons.edit_rounded,
+                    size: 14,
+                    color: SmarturStyle.purple,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

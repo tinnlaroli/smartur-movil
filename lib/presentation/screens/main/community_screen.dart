@@ -9,6 +9,7 @@ import '../../../core/utils/notifications.dart';
 import '../../../data/models/place_model.dart';
 import '../../../data/services/explore_service.dart';
 import '../../../data/services/user_content_service.dart';
+import '../../widgets/smartur_background.dart';
 import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/smartur_user_avatar.dart';
 
@@ -90,12 +91,16 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text(l10n.communityTitle,
             style: SmarturStyle.calSansTitle.copyWith(fontSize: 20)),
         elevation: 0,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
       ),
-      body: _error != null && !_loading
+      body: SmarturBackgroundTop(
+        child: _error != null && !_loading
           ? Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -125,6 +130,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       ),
               ),
             ),
+      ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: SmarturStyle.purple,
         foregroundColor: Colors.white,

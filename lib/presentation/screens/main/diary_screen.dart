@@ -4,6 +4,7 @@ import 'package:smartur/l10n/app_localizations.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../data/services/user_content_service.dart';
 import '../../utils/diary_place_detail.dart';
+import '../../widgets/smartur_background.dart';
 import '../../widgets/smartur_skeleton.dart';
 
 class DiaryScreen extends StatefulWidget {
@@ -71,10 +72,13 @@ class _DiaryScreenState extends State<DiaryScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: scheme.surface,
         appBar: AppBar(
           title: Text(l10n.diaryTitle,
               style: SmarturStyle.calSansTitle.copyWith(fontSize: 20)),
           elevation: 0,
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
           bottom: TabBar(
             indicatorColor: SmarturStyle.purple,
             labelColor: SmarturStyle.purple,
@@ -86,7 +90,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
             ],
           ),
         ),
-        body: RefreshIndicator(
+        body: SmarturBackgroundTop(
+          child: RefreshIndicator(
           color: SmarturStyle.purple,
           onRefresh: _load,
           child: SmarturShimmer(
@@ -123,6 +128,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
                         ],
                       ),
           ),
+        ),
         ),
       ),
     );

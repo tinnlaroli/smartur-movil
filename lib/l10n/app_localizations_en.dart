@@ -45,6 +45,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get termsAndConditions => 'Terms and Conditions';
 
   @override
+  String get registerAcceptTermsPrefix => 'I accept the ';
+
+  @override
+  String get termsMustAccept =>
+      'You must accept the terms and conditions to sign up.';
+
+  @override
+  String get termsCloseButton => 'Got it';
+
+  @override
+  String get termsAndConditionsBody =>
+      'Last updated: March 2025.\n\n1. Purpose\nSMARTUR is a mobile app to explore tourist destinations, recommendations, and community features.\n\n2. Registration and account\nBy creating an account you confirm your information is accurate. You are responsible for keeping your password confidential and for activity under your account.\n\n3. Permitted use\nYou agree to use the service lawfully, without infringing third-party rights or disrupting the platform.\n\n4. Content and intellectual property\nApp content (text, design, trademarks) is protected. Unauthorized reproduction is not allowed.\n\n5. Personal data\nProcessing of your personal data complies with applicable law. By using SMARTUR you accept the practices described in the service privacy policy.\n\n6. Changes\nWe may update these terms. Material changes will be communicated by reasonable means; continued use after updates means you accept the new terms.\n\n7. Contact\nFor questions about these terms, use the support channels provided in the app or on the official website.';
+
+  @override
   String get logout => 'Log out';
 
   @override

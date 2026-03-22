@@ -15,8 +15,8 @@ class SmarturBackgroundTop extends StatefulWidget {
     super.key,
     required this.child,
     this.blurSigma = 14.0,
-    this.opacity = 0.62,
-    this.bandFraction = 0.15,
+    this.opacity = 0.25,
+    this.bandFraction = 0.35,
   });
 
   @override
@@ -68,7 +68,7 @@ class _SmarturBackgroundTopState extends State<SmarturBackgroundTop>
 
         return Stack(
           children: [
-            // Full surface base so nothing is transparent
+            // Full surface base (claro u oscuro según tema) — evita franja negra bajo status bar
             Positioned.fill(child: ColoredBox(color: surface)),
             // Animated color band at the top
             Positioned(
@@ -90,19 +90,21 @@ class _SmarturBackgroundTopState extends State<SmarturBackgroundTop>
                 ),
               ),
             ),
-            // Soft blur on band for frosted look
+            // Soft blur on band — ClipRect evita artefactos negros en el borde superior
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               height: bandH,
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: widget.blurSigma,
-                  sigmaY: widget.blurSigma,
-                ),
-                child: ColoredBox(
-                  color: surface.withValues(alpha: widget.opacity),
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(
+                    sigmaX: widget.blurSigma,
+                    sigmaY: widget.blurSigma,
+                  ),
+                  child: ColoredBox(
+                    color: surface.withValues(alpha: widget.opacity),
+                  ),
                 ),
               ),
             ),
@@ -171,12 +173,16 @@ class _SmarturBackgroundState extends State<SmarturBackground> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
+    final surface = Theme.of(context).colorScheme.surface;
     return AnimatedBuilder(
       animation: _colorAnimation,
       builder: (context, child) {
+        final accent = _colorAnimation.value ?? SmarturStyle.pink;
         return Stack(
           children: [
-            // Animated Base Gradient
+            // Base del tema (blanco / gris oscuro) — nunca negro “del sistema”
+            Positioned.fill(child: ColoredBox(color: surface)),
+            // Degradado desde el color de superficie hacia la paleta animada
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
@@ -184,26 +190,27 @@ class _SmarturBackgroundState extends State<SmarturBackground> with SingleTicker
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.white,
-                      _colorAnimation.value ?? SmarturStyle.pink,
+                      surface,
+                      Color.lerp(surface, accent, 0.72) ?? accent,
                     ],
-                    stops: const [0.3, 1.0],
+                    stops: const [0.12, 1.0],
                   ),
                 ),
               ),
             ),
-            
-            // Blur Overlay
             Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: widget.blurSigma, sigmaY: widget.blurSigma),
-                child: Container(
-                  color: Colors.white.withValues(alpha: widget.opacity),
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(
+                    sigmaX: widget.blurSigma,
+                    sigmaY: widget.blurSigma,
+                  ),
+                  child: Container(
+                    color: surface.withValues(alpha: widget.opacity),
+                  ),
                 ),
               ),
             ),
-            
-            // Content
             Positioned.fill(child: widget.child),
           ],
         );

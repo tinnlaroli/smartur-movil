@@ -112,9 +112,8 @@ class _PreferencesScreenState extends State<PreferencesScreen>
     final l10n = AppLocalizations.of(context)!;
     final steps = _getSteps(l10n);
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SmarturBackground(
-        opacity: 0.82,
+      backgroundColor: scheme.surface,
+      body: SmarturBackgroundTop(
         child: SafeArea(
           child: Column(
             children: [

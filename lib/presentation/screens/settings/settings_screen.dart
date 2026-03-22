@@ -5,6 +5,8 @@ import '../../../core/settings/app_settings_scope.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
+import '../../widgets/smartur_background.dart';
+import '../../widgets/terms_and_conditions_modal.dart';
 import '../auth/welcome_screen.dart';
 import '../main/edit_profile_avatar_screen.dart';
 
@@ -50,17 +52,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: scheme.surface,
       appBar: AppBar(
         title: Text(l10n.settingsTitle,
             style: SmarturStyle.calSansTitle.copyWith(fontSize: 20)),
         elevation: 0,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon:
               Icon(Icons.arrow_back, color: scheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: ListView(
+      body: SmarturBackgroundTop(
+        child: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
           // ── Apariencia ──────────────────────────────────────────────
@@ -192,8 +198,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: const TextStyle(fontFamily: 'Outfit')),
             trailing: Icon(Icons.chevron_right,
                 color: scheme.onSurfaceVariant),
-            onTap: () => SmarturNotifications.showInfo(
-                context, l10n.termsAndConditions),
+            onTap: () => showTermsAndConditionsModal(context),
           ),
 
           const SizedBox(height: 24),
@@ -222,6 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 32),
         ],
+      ),
       ),
     );
   }
