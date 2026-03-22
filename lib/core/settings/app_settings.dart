@@ -5,30 +5,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppSettings {
   final ThemeMode themeMode;
   final Locale locale;
-  final bool colorblindMode;
 
   const AppSettings({
     required this.themeMode,
     required this.locale,
-    required this.colorblindMode,
   });
 
   AppSettings copyWith({
     ThemeMode? themeMode,
     Locale? locale,
-    bool? colorblindMode,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
       locale: locale ?? this.locale,
-      colorblindMode: colorblindMode ?? this.colorblindMode,
     );
   }
 }
 
 class AppSettingsNotifier extends ValueNotifier<AppSettings> {
   static const String _darkModeKey = 'dark_mode';
-  static const String _colorblindModeKey = 'colorblind_mode';
   static const String _languageKey = 'language';
 
   final SharedPreferences _prefs;
@@ -39,7 +34,6 @@ class AppSettingsNotifier extends ValueNotifier<AppSettings> {
     final prefs = await SharedPreferences.getInstance();
 
     final dark = prefs.getBool(_darkModeKey) ?? false;
-    final colorblind = prefs.getBool(_colorblindModeKey) ?? false;
     final languageName = prefs.getString(_languageKey) ?? 'Español';
 
     final locale = _localeFromLegacyLanguageName(languageName);
@@ -49,7 +43,6 @@ class AppSettingsNotifier extends ValueNotifier<AppSettings> {
       AppSettings(
         themeMode: dark ? ThemeMode.dark : ThemeMode.light,
         locale: locale,
-        colorblindMode: colorblind,
       ),
     );
   }
@@ -62,13 +55,6 @@ class AppSettingsNotifier extends ValueNotifier<AppSettings> {
   }
 
   Future<void> toggleDarkMode() => setDarkMode(!isDarkMode);
-
-  Future<void> setColorblindMode(bool enabled) async {
-    value = value.copyWith(colorblindMode: enabled);
-    await _prefs.setBool(_colorblindModeKey, enabled);
-  }
-
-  Future<void> toggleColorblind() => setColorblindMode(!value.colorblindMode);
 
   Future<void> setLocale(Locale locale) async {
     value = value.copyWith(locale: locale);
@@ -103,4 +89,3 @@ class AppSettingsNotifier extends ValueNotifier<AppSettings> {
     }
   }
 }
-

@@ -21,6 +21,8 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
 
+  final GlobalKey<HomeScreenState> _homeScreenKey = GlobalKey<HomeScreenState>();
+
   /// 0 = libro “cerrado” (vista lateral), 1 = abierto de frente.
   late final AnimationController _diaryBookAnim;
 
@@ -47,6 +49,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     } else {
       _diaryBookAnim.reverse();
     }
+    // Inicio: nombre y avatar pueden haber cambiado en la pestaña Perfil / Ajustes.
+    if (index == 0) {
+      _homeScreenKey.currentState?.refreshUserIdentity();
+    }
   }
 
   @override
@@ -58,7 +64,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         index: _currentIndex,
         children: [
           HomeScreen(
-            key: const ValueKey<String>('main_tab_home'),
+            key: _homeScreenKey,
             userName: widget.userName,
             isNewLogin: widget.isNewLogin,
           ),

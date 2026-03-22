@@ -94,7 +94,7 @@ lib/
 │   ├── constants/            # api_constants, env_config, avatar_icon_map
 │   ├── theme/                # style_guide (colores, tipografía, tokens)
 │   ├── utils/                # notifications, profile_photo_validation
-│   └── settings/             # AppSettings: tema, idioma, modo daltónico (color_blindness)
+│   └── settings/             # AppSettings: tema e idioma
 ├── data/
 │   ├── models/               # onboarding, traveler_profile, place, etc.
 │   └── services/             # auth_service, profile_service, explore_service, user_content_service
@@ -129,7 +129,7 @@ Las pantallas del área **Perfil** (pestaña principal y edición de foto/icono)
 
 1. `WidgetsFlutterBinding.ensureInitialized()`.
 2. Lectura de `onboarding_seen` en `SharedPreferences`.
-3. Carga de `AppSettingsNotifier` (tema, locale, accesibilidad de color).
+3. Carga de `AppSettingsNotifier` (tema y locale).
 4. `_SplashGate`: comprueba token y expiración vía `AuthService.hasSession()`.
 5. Destino:
    - Sin onboarding visto: `OnboardingScreen`.
@@ -165,7 +165,7 @@ Las pantallas del área **Perfil** (pestaña principal y edición de foto/icono)
 
 ### 7. Ajustes globales (`settings/`, `AppSettings`)
 
-- Tema claro/oscuro, idioma y simulación daltónica (`color_blindness`) propagados con `AppSettingsScope` y `ValueListenableBuilder` en `main.dart`.
+- Tema claro/oscuro e idioma propagados con `AppSettingsScope` y `ValueListenableBuilder` en `main.dart`.
 
 ---
 
@@ -183,7 +183,6 @@ Las pantallas del área **Perfil** (pestaña principal y edición de foto/icono)
 | `lottie`, `flutter_svg` | Animaciones y gráficos vectoriales. |
 | `toastification` | Notificaciones tipo toast envueltas en `ToastificationWrapper`. |
 | `intl`, `flutter_localizations` | Fechas, formatos e i18n oficial de Flutter. |
-| `color_blindness` | Ajuste de paleta para accesibilidad. |
 
 Desarrollo: `flutter_lints`, `flutter_launcher_icons`, `flutter_test`.
 

@@ -1,10 +1,29 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
+import '../../../core/utils/notifications.dart';
+import '../../../data/models/place_model.dart';
+import '../../../data/services/explore_service.dart';
 import '../../../data/services/user_content_service.dart';
 import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/smartur_user_avatar.dart';
+
+/// Devuelve kind API (`svc` / `poi`) e id numérico desde [Place.id] tipo `svc_12`.
+({String kind, int id})? _parsePlaceRef(String placeId) {
+  if (placeId.startsWith('svc_')) {
+    final n = int.tryParse(placeId.substring(4));
+    if (n != null) return (kind: 'svc', id: n);
+  }
+  if (placeId.startsWith('poi_')) {
+    final n = int.tryParse(placeId.substring(4));
+    if (n != null) return (kind: 'poi', id: n);
+  }
+  return null;
+}
 
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
@@ -48,70 +67,23 @@ class _CommunityScreenState extends State<CommunityScreen> {
     }
   }
 
-  Future<void> _showCreateDialog() async {
-    final l10n = AppLocalizations.of(context)!;
-    final captionCtrl = TextEditingController();
-    final imageCtrl = TextEditingController();
-    final scheme = Theme.of(context).colorScheme;
-    final ok = await showDialog<bool>(
+  Future<void> _showCreateSheet() async {
+    await showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        actionsAlignment: MainAxisAlignment.center,
-        actionsOverflowAlignment: OverflowBarAlignment.center,
-        title: Text(l10n.uploadPhotoAction, style: SmarturStyle.calSansTitle),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: captionCtrl,
-                decoration: InputDecoration(
-                  labelText: l10n.stepDetails,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: imageCtrl,
-                decoration: InputDecoration(
-                  labelText: 'URL imagen (opcional)',
-                  hintText: 'https://...',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ],
-          ),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+        child: _CreatePostSheet(
+          onPublished: () {
+            Navigator.pop(ctx);
+            _load();
+          },
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.cancel, style: TextStyle(color: scheme.onSurfaceVariant)),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: SmarturStyle.purple),
-            child: const Text('Publicar'),
-          ),
-        ],
       ),
     );
-    if (ok != true || !mounted) return;
-    try {
-      await UserContentService().createCommunityPost(
-        caption: captionCtrl.text.trim(),
-        imageUrl: imageCtrl.text.trim().isEmpty ? null : imageCtrl.text.trim(),
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.profileReady)));
-        await _load();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    }
   }
 
   @override
@@ -156,9 +128,251 @@ class _CommunityScreenState extends State<CommunityScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: SmarturStyle.purple,
         foregroundColor: Colors.white,
-        onPressed: _showCreateDialog,
+        onPressed: _showCreateSheet,
         tooltip: l10n.communityCreatePost,
         child: const Icon(Icons.post_add),
+      ),
+    );
+  }
+}
+
+class _CreatePostSheet extends StatefulWidget {
+  final VoidCallback onPublished;
+
+  const _CreatePostSheet({required this.onPublished});
+
+  @override
+  State<_CreatePostSheet> createState() => _CreatePostSheetState();
+}
+
+class _CreatePostSheetState extends State<_CreatePostSheet> {
+  final _caption = TextEditingController();
+  final _picker = ImagePicker();
+
+  List<Place> _places = [];
+  Place? _selected;
+  bool _loadingPlaces = true;
+  String? _placesError;
+  Uint8List? _imageBytes;
+  String? _imageName;
+  String? _imageMime;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlaces();
+  }
+
+  @override
+  void dispose() {
+    _caption.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadPlaces() async {
+    try {
+      final cities = await ExploreService().fetchCities();
+      final all = <Place>[];
+      for (final c in cities) {
+        all.addAll(c.places);
+      }
+      if (!mounted) return;
+      setState(() {
+        _places = all;
+        _loadingPlaces = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loadingPlaces = false;
+        _placesError = AppLocalizations.of(context)!.communityLoadPlacesError;
+      });
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final x = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 2048,
+      imageQuality: 88,
+    );
+    if (x == null) return;
+    final bytes = await x.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _imageBytes = bytes;
+      _imageName = x.name;
+      _imageMime = x.mimeType;
+    });
+  }
+
+  Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context)!;
+    if (_selected == null) {
+      SmarturNotifications.showWarning(context, l10n.communityNeedPlace);
+      return;
+    }
+    final ref = _parsePlaceRef(_selected!.id);
+    if (ref == null) {
+      SmarturNotifications.showWarning(context, l10n.communityNeedPlace);
+      return;
+    }
+    final text = _caption.text.trim();
+    if (text.isEmpty && (_imageBytes == null || _imageBytes!.isEmpty)) {
+      SmarturNotifications.showWarning(context, l10n.communityNeedTextOrImage);
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      await UserContentService().createCommunityPost(
+        placeKind: ref.kind,
+        placeId: ref.id,
+        caption: text,
+        imageBytes: _imageBytes,
+        imageFilename: _imageName,
+        imageMimeType: _imageMime,
+      );
+      if (!mounted) return;
+      SmarturNotifications.showSuccess(context, l10n.communityPostPublished);
+      widget.onPublished();
+    } on UserContentException catch (e) {
+      if (mounted) {
+        SmarturNotifications.showError(context, e.message);
+      }
+    } catch (e) {
+      if (mounted) {
+        SmarturNotifications.showError(context, e.toString());
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: scheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(l10n.communityCreatePost, style: SmarturStyle.calSansTitle.copyWith(fontSize: 22)),
+            const SizedBox(height: 16),
+            if (_loadingPlaces)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator(color: SmarturStyle.purple)),
+              )
+            else if (_placesError != null)
+              Text(_placesError!, style: TextStyle(color: scheme.error, fontFamily: 'Outfit'))
+            else
+              InputDecorator(
+                decoration: InputDecoration(
+                  labelText: l10n.communitySelectPlace,
+                  prefixIcon: const Icon(Icons.place_outlined, color: SmarturStyle.purple),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<Place>(
+                    isExpanded: true,
+                    hint: Text(
+                      l10n.communitySelectPlaceHint,
+                      style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurfaceVariant),
+                    ),
+                    value: _selected,
+                    items: _places
+                        .map(
+                          (p) => DropdownMenuItem(
+                            value: p,
+                            child: Text(
+                              '${p.name} · ${p.city}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontFamily: 'Outfit', fontSize: 14),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _selected = v),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _caption,
+              maxLines: 4,
+              decoration: InputDecoration(
+                labelText: l10n.communityPostCaptionHint,
+                alignLabelWithHint: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (_imageBytes != null)
+              Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(
+                      _imageBytes!,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => setState(() {
+                      _imageBytes = null;
+                      _imageName = null;
+                      _imageMime = null;
+                    }),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                    tooltip: l10n.communityRemoveImage,
+                  ),
+                ],
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: _pickImage,
+                icon: const Icon(Icons.image_outlined),
+                label: Text(l10n.communityAttachImage, style: const TextStyle(fontFamily: 'Outfit')),
+              ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: _submitting ? null : _submit,
+              style: FilledButton.styleFrom(
+                backgroundColor: SmarturStyle.purple,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: _submitting
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(l10n.communityPublish, style: const TextStyle(fontFamily: 'Outfit')),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -174,6 +388,7 @@ class _PostCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final caption = data['caption']?.toString() ?? '';
     final imageUrl = data['image_url']?.toString() ?? '';
+    final placeName = data['place_name']?.toString() ?? '';
     final author = data['author'] as Map<String, dynamic>? ?? {};
     final name = author['name']?.toString() ?? 'Usuario';
     final photoUrl = author['photo_url'] as String?;
@@ -201,6 +416,31 @@ class _PostCard extends StatelessWidget {
                 style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600),
               ),
             ),
+            if (placeName.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Chip(
+                    avatar: const Icon(Icons.place, size: 18, color: SmarturStyle.purple),
+                    label: Text(
+                      placeName,
+                      style: const TextStyle(fontFamily: 'Outfit', fontSize: 13),
+                    ),
+                    backgroundColor: SmarturStyle.purple.withValues(alpha: 0.12),
+                    side: BorderSide.none,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                ),
+              ),
+            if (caption.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  caption,
+                  style: const TextStyle(fontFamily: 'Outfit', fontSize: 14),
+                ),
+              ),
             if (imageUrl.isNotEmpty)
               AspectRatio(
                 aspectRatio: 4 / 3,
@@ -214,14 +454,6 @@ class _PostCard extends StatelessWidget {
                       child: Icon(Icons.photo, size: 64, color: scheme.onSurfaceVariant),
                     ),
                   ),
-                ),
-              ),
-            if (caption.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Text(
-                  caption,
-                  style: const TextStyle(fontFamily: 'Outfit', fontSize: 14),
                 ),
               ),
           ],

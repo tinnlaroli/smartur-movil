@@ -144,12 +144,6 @@ abstract class AppLocalizations {
   /// **'Idioma'**
   String get language;
 
-  /// No description provided for @colorblindMode.
-  ///
-  /// In es, this message translates to:
-  /// **'Modo Daltónico'**
-  String get colorblindMode;
-
   /// No description provided for @changePassword.
   ///
   /// In es, this message translates to:
@@ -443,6 +437,66 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Crear publicación'**
   String get communityCreatePost;
+
+  /// No description provided for @communityPostCaptionHint.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué quieres compartir?'**
+  String get communityPostCaptionHint;
+
+  /// No description provided for @communitySelectPlace.
+  ///
+  /// In es, this message translates to:
+  /// **'Lugar etiquetado'**
+  String get communitySelectPlace;
+
+  /// No description provided for @communitySelectPlaceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el sitio sobre el que publicas'**
+  String get communitySelectPlaceHint;
+
+  /// No description provided for @communityAttachImage.
+  ///
+  /// In es, this message translates to:
+  /// **'Adjuntar imagen'**
+  String get communityAttachImage;
+
+  /// No description provided for @communityRemoveImage.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar imagen'**
+  String get communityRemoveImage;
+
+  /// No description provided for @communityPublish.
+  ///
+  /// In es, this message translates to:
+  /// **'Publicar'**
+  String get communityPublish;
+
+  /// No description provided for @communityNeedPlace.
+  ///
+  /// In es, this message translates to:
+  /// **'Selecciona un lugar'**
+  String get communityNeedPlace;
+
+  /// No description provided for @communityNeedTextOrImage.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un mensaje o adjunta una imagen'**
+  String get communityNeedTextOrImage;
+
+  /// No description provided for @communityLoadPlacesError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar los lugares'**
+  String get communityLoadPlacesError;
+
+  /// No description provided for @communityPostPublished.
+  ///
+  /// In es, this message translates to:
+  /// **'Publicación creada'**
+  String get communityPostPublished;
 
   /// No description provided for @diaryTitle.
   ///
@@ -1305,19 +1359,19 @@ abstract class AppLocalizations {
   /// No description provided for @birthYear.
   ///
   /// In es, this message translates to:
-  /// **'Año de nacimiento'**
+  /// **'Fecha de nacimiento'**
   String get birthYear;
 
   /// No description provided for @enterBirthYear.
   ///
   /// In es, this message translates to:
-  /// **'Ingresa tu año de nacimiento'**
+  /// **'Selecciona tu fecha de nacimiento'**
   String get enterBirthYear;
 
   /// No description provided for @invalidYear.
   ///
   /// In es, this message translates to:
-  /// **'Año no válido'**
+  /// **'Fecha no válida'**
   String get invalidYear;
 
   /// No description provided for @gender.

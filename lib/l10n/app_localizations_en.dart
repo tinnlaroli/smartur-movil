@@ -30,9 +30,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get language => 'Language';
 
   @override
-  String get colorblindMode => 'Colorblind Mode';
-
-  @override
   String get changePassword => 'Change Password';
 
   @override
@@ -182,6 +179,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityCreatePost => 'Create post';
+
+  @override
+  String get communityPostCaptionHint => 'What would you like to share?';
+
+  @override
+  String get communitySelectPlace => 'Tagged place';
+
+  @override
+  String get communitySelectPlaceHint =>
+      'Choose the place you are posting about';
+
+  @override
+  String get communityAttachImage => 'Attach image';
+
+  @override
+  String get communityRemoveImage => 'Remove image';
+
+  @override
+  String get communityPublish => 'Publish';
+
+  @override
+  String get communityNeedPlace => 'Select a place';
+
+  @override
+  String get communityNeedTextOrImage => 'Write a message or attach an image';
+
+  @override
+  String get communityLoadPlacesError => 'Could not load places';
+
+  @override
+  String get communityPostPublished => 'Post published';
 
   @override
   String get diaryTitle => 'My Diary';
@@ -643,13 +671,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stepDetailsSubtitle => 'Final preferences';
 
   @override
-  String get birthYear => 'Birth year';
+  String get birthYear => 'Date of birth';
 
   @override
-  String get enterBirthYear => 'Enter your birth year';
+  String get enterBirthYear => 'Select your date of birth';
 
   @override
-  String get invalidYear => 'Invalid year';
+  String get invalidYear => 'Invalid date';
 
   @override
   String get gender => 'Gender';

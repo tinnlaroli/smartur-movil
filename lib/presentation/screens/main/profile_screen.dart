@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
-import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/profile_service.dart';
 import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/smartur_user_avatar.dart';
 import 'edit_profile_avatar_screen.dart';
 import '../settings/settings_screen.dart';
-import '../auth/welcome_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -186,15 +184,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SkeletonText(width: 140, height: 18),
             const SizedBox(height: 12),
             const SkeletonContainer(height: 100, borderRadius: 16),
-            const SizedBox(height: 28),
-            const SkeletonText(width: 160, height: 18),
-            const SizedBox(height: 12),
-            const SkeletonContainer(height: 120, borderRadius: 16),
-            const SizedBox(height: 28),
-            const SkeletonText(width: 120, height: 18),
-            const SizedBox(height: 12),
-            const SkeletonContainer(height: 88, borderRadius: 16),
-            const SizedBox(height: 32),
+            const SizedBox(height: 40),
           ]),
         ),
       ),
@@ -228,16 +218,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _buildSection(l10n.myInterests),
                             const SizedBox(height: 12),
                             _buildInterestChips(),
-                            const SizedBox(height: 28),
+                          ] else ...[
+                            _buildSection(l10n.myInterests),
+                            const SizedBox(height: 12),
+                            _buildEmptyInterestsHint(context, l10n),
                           ],
-                          _buildSection(l10n.quickSettings),
-                          const SizedBox(height: 12),
-                          _buildQuickSettingsCard(),
-                          const SizedBox(height: 28),
-                          _buildSection(l10n.accountSection),
-                          const SizedBox(height: 12),
-                          _buildAccountCard(),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 40),
                         ]),
                       ),
                     ),
@@ -408,6 +394,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ── Intereses chips ─────────────────────────────────────────────────────
 
+  Widget _buildEmptyInterestsHint(BuildContext context, AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Text(
+        l10n.noPreferencesSaved,
+        style: TextStyle(
+          fontFamily: 'Outfit',
+          fontSize: 14,
+          height: 1.35,
+          color: scheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+
   Widget _buildInterestChips() {
     final colors = [
       SmarturStyle.purple,
@@ -440,184 +448,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       }).toList(),
-    );
-  }
-
-  // ── Configuración rápida ────────────────────────────────────────────────
-
-  Widget _buildQuickSettingsCard() {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        children: [
-          _buildCardTile(
-            icon: Icons.notifications_outlined,
-            iconColor: SmarturStyle.blue,
-            title: l10n.notifications,
-            subtitle: l10n.notificationsSubtitle,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-          ),
-          Divider(height: 0, color: scheme.outlineVariant),
-          _buildCardTile(
-            icon: Icons.tune_outlined,
-            iconColor: SmarturStyle.purple,
-            title: l10n.appPreferences,
-            subtitle: l10n.appPreferencesSubtitle,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Cuenta ──────────────────────────────────────────────────────────────
-
-  Widget _buildAccountCard() {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        children: [
-          _buildCardTile(
-            icon: Icons.person_outline,
-            iconColor: scheme.onSurface,
-            title: l10n.editProfile,
-            subtitle: l10n.editProfileSubtitle,
-            onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const EditProfileAvatarScreen()),
-              );
-              _loadProfile();
-            },
-          ),
-          Divider(height: 0, color: scheme.outlineVariant),
-          _buildCardTile(
-            icon: Icons.lock_outline,
-            iconColor: scheme.onSurface,
-            title: l10n.changePassword,
-            subtitle: l10n.changePasswordSubtitle,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-          ),
-          Divider(height: 0, color: scheme.outlineVariant),
-          _buildCardTile(
-            icon: Icons.logout,
-            iconColor: SmarturStyle.pink,
-            title: l10n.logout,
-            titleColor: SmarturStyle.pink,
-            onTap: () => _confirmLogout(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCardTile({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    String? subtitle,
-    Color? titleColor,
-    required VoidCallback onTap,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return ListTile(
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: iconColor.withAlpha(20),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, color: iconColor, size: 20),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontFamily: 'Outfit',
-          fontWeight: FontWeight.w600,
-          color: titleColor ?? scheme.onSurface,
-        ),
-      ),
-      subtitle: subtitle != null
-          ? Text(subtitle,
-              style: TextStyle(
-                  fontFamily: 'Outfit',
-                  fontSize: 12,
-                  color: scheme.onSurfaceVariant))
-          : null,
-      trailing: Icon(Icons.chevron_right,
-          color: scheme.onSurfaceVariant, size: 20),
-      onTap: onTap,
-    );
-  }
-
-  // ── Cerrar sesión ───────────────────────────────────────────────────────
-
-  void _confirmLogout() {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24)),
-        actionsAlignment: MainAxisAlignment.center,
-        actionsOverflowAlignment: OverflowBarAlignment.center,
-        title: Text(l10n.confirmLogoutTitle,
-            style: SmarturStyle.calSansTitle),
-        content: Text(
-          l10n.confirmLogoutMessage,
-          style: TextStyle(
-              fontFamily: 'Outfit', color: scheme.onSurfaceVariant),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.cancel,
-                style: TextStyle(color: scheme.onSurfaceVariant)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: SmarturStyle.pink),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await _authService.clearSession();
-              if (mounted) {
-                SmarturNotifications.showSuccess(
-                    context, l10n.sessionClosed);
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => WelcomeScreen()),
-                  (_) => false,
-                );
-              }
-            },
-            child: Text(l10n.logout,
-                style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
     );
   }
 }

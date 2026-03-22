@@ -6,6 +6,7 @@ import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
 import '../auth/welcome_screen.dart';
+import '../main/edit_profile_avatar_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,7 +18,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final AuthService _authService = AuthService();
   bool _darkMode = false;
-  bool _colorblindMode = false;
   String _language = 'Español';
 
   @override
@@ -27,7 +27,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final locale = settings.value.locale.languageCode;
     setState(() {
       _darkMode = settings.isDarkMode;
-      _colorblindMode = settings.value.colorblindMode;
       _language = _languageLabelFromCode(locale);
     });
   }
@@ -98,25 +97,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             onTap: () => _showLanguageDialog(),
           ),
-          SwitchListTile(
-            title: Text(l10n.colorblindMode,
+
+          ListTile(
+            leading:
+                const Icon(Icons.notifications_outlined, color: SmarturStyle.blue),
+            title: Text(l10n.notifications,
                 style: const TextStyle(fontFamily: 'Outfit')),
-            secondary: const Icon(Icons.visibility_outlined,
-                color: SmarturStyle.purple),
-            value: _colorblindMode,
-            activeTrackColor: SmarturStyle.purple.withAlpha(100),
-            thumbColor: WidgetStateProperty.resolveWith(
-                (s) => s.contains(WidgetState.selected) ? SmarturStyle.purple : null),
-            onChanged: (val) {
-              setState(() => _colorblindMode = val);
-              AppSettingsScope.of(context).setColorblindMode(val);
-            },
+            subtitle: Text(
+              l10n.notificationsSubtitle,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 12,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            trailing: Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+            onTap: () => SmarturNotifications.showInfo(
+                  context,
+                  l10n.notificationsSubtitle,
+                ),
           ),
 
           const Divider(height: 32),
 
           // ── Cuenta ──────────────────────────────────────────────────
           _buildSectionHeader(l10n.accountSection),
+          ListTile(
+            leading: const Icon(Icons.face_outlined, color: SmarturStyle.purple),
+            title: Text(l10n.editProfile,
+                style: const TextStyle(fontFamily: 'Outfit')),
+            subtitle: Text(
+              l10n.editProfileSubtitle,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 12,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            trailing: Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+            onTap: () async {
+              await Navigator.push<void>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const EditProfileAvatarScreen(),
+                ),
+              );
+            },
+          ),
           ListTile(
             leading:
                 const Icon(Icons.lock_outline, color: SmarturStyle.blue),

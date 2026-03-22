@@ -28,10 +28,10 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.userName, this.isNewLogin = false});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> {
   static const double _kHomeHeaderExpandedHeight = 140;
 
   final AuthService _authService = AuthService();
@@ -106,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _greetingName = w;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _loadGreetingName();
+      await _applyGreetingName();
       await _showWelcome();
       await _checkPreferences();
       await _offerBiometricSetup();
@@ -144,16 +144,33 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _loadGreetingName() async {
-    final w = widget.userName?.trim();
-    if (w != null && w.isNotEmpty) {
-      if (mounted) setState(() => _greetingName = w);
-      return;
-    }
+  /// Nombre en almacenamiento gana sobre [userName] del widget (evita saludo obsoleto tras editar perfil).
+  Future<void> _applyGreetingName() async {
     final stored = await _authService.getUserName();
+    final w = widget.userName?.trim();
     if (!mounted) return;
     setState(() {
-      _greetingName = (stored != null && stored.isNotEmpty) ? stored : _greetingName;
+      if (stored != null && stored.isNotEmpty) {
+        _greetingName = stored;
+      } else if (w != null && w.isNotEmpty) {
+        _greetingName = w;
+      }
+    });
+  }
+
+  /// Tras cambiar nombre/foto/icono en perfil o ajustes: sincroniza cabecera desde almacenamiento (+ API opcional en avatar).
+  Future<void> refreshUserIdentity() async {
+    await _applyGreetingName();
+    await _refreshHeaderAvatarFromStorage();
+  }
+
+  Future<void> _refreshHeaderAvatarFromStorage() async {
+    final photo = await _authService.getUserPhotoUrl();
+    final icon = await _authService.getUserAvatarIconKey();
+    if (!mounted) return;
+    setState(() {
+      _headerPhotoUrl = photo;
+      _headerAvatarIconKey = icon;
     });
   }
 
@@ -612,12 +629,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: const TextStyle(fontFamily: 'Outfit')),
                 trailing:
                     Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(ctx);
-                  Navigator.push(
+                  await Navigator.push<void>(
                     context,
                     MaterialPageRoute(builder: (_) => const SettingsScreen()),
                   );
+                  if (mounted) await refreshUserIdentity();
                 },
               ),
               const SizedBox(height: 8),

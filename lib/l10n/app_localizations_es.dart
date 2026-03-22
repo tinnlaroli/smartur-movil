@@ -30,9 +30,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get language => 'Idioma';
 
   @override
-  String get colorblindMode => 'Modo Daltónico';
-
-  @override
   String get changePassword => 'Cambiar Contraseña';
 
   @override
@@ -184,6 +181,37 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get communityCreatePost => 'Crear publicación';
+
+  @override
+  String get communityPostCaptionHint => '¿Qué quieres compartir?';
+
+  @override
+  String get communitySelectPlace => 'Lugar etiquetado';
+
+  @override
+  String get communitySelectPlaceHint => 'Elige el sitio sobre el que publicas';
+
+  @override
+  String get communityAttachImage => 'Adjuntar imagen';
+
+  @override
+  String get communityRemoveImage => 'Quitar imagen';
+
+  @override
+  String get communityPublish => 'Publicar';
+
+  @override
+  String get communityNeedPlace => 'Selecciona un lugar';
+
+  @override
+  String get communityNeedTextOrImage =>
+      'Escribe un mensaje o adjunta una imagen';
+
+  @override
+  String get communityLoadPlacesError => 'No se pudieron cargar los lugares';
+
+  @override
+  String get communityPostPublished => 'Publicación creada';
 
   @override
   String get diaryTitle => 'Mi Diario';
@@ -647,13 +675,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get stepDetailsSubtitle => 'Últimas preferencias';
 
   @override
-  String get birthYear => 'Año de nacimiento';
+  String get birthYear => 'Fecha de nacimiento';
 
   @override
-  String get enterBirthYear => 'Ingresa tu año de nacimiento';
+  String get enterBirthYear => 'Selecciona tu fecha de nacimiento';
 
   @override
-  String get invalidYear => 'Año no válido';
+  String get invalidYear => 'Fecha no válida';
 
   @override
   String get gender => 'Género';

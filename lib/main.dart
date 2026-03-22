@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 import 'package:smartur/l10n/app_localizations.dart';
-import 'package:color_blindness/color_blindness.dart';
 import 'core/theme/style_guide.dart';
 import 'core/settings/app_settings.dart';
 import 'core/settings/app_settings_scope.dart';
@@ -38,8 +37,8 @@ class SmarturApp extends StatelessWidget {
               title: 'SMARTUR',
               debugShowCheckedModeBanner: false,
               themeMode: appSettings.themeMode,
-              theme: _buildLightTheme(appSettings.colorblindMode),
-              darkTheme: _buildDarkTheme(appSettings.colorblindMode),
+              theme: _buildLightTheme(),
+              darkTheme: _buildDarkTheme(),
               locale: appSettings.locale,
               supportedLocales: AppLocalizations.supportedLocales,
               localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -142,21 +141,18 @@ ThemeData _baseTheme(ColorScheme scheme) {
   );
 }
 
-ThemeData _buildLightTheme(bool colorblindMode) {
-  var scheme = ColorScheme.fromSeed(
+ThemeData _buildLightTheme() {
+  final scheme = ColorScheme.fromSeed(
     seedColor: SmarturStyle.purple,
     primary: SmarturStyle.purple,
     secondary: SmarturStyle.pink,
     brightness: Brightness.light,
   );
-  if (colorblindMode) {
-    scheme = _applyColorBlindnessToScheme(scheme, ColorBlindnessType.deuteranopia);
-  }
   return _baseTheme(scheme);
 }
 
-ThemeData _buildDarkTheme(bool colorblindMode) {
-  var scheme = ColorScheme.fromSeed(
+ThemeData _buildDarkTheme() {
+  final scheme = ColorScheme.fromSeed(
     seedColor: SmarturStyle.purple,
     primary: SmarturStyle.purple,
     secondary: SmarturStyle.pink,
@@ -167,43 +163,7 @@ ThemeData _buildDarkTheme(bool colorblindMode) {
     surfaceContainer: const Color(0xFF1E1E1E),
     surfaceContainerHighest: const Color(0xFF242424),
   );
-  if (colorblindMode) {
-    scheme = _applyColorBlindnessToScheme(scheme, ColorBlindnessType.deuteranopia);
-  }
   return _baseTheme(scheme);
-}
-
-ColorScheme _applyColorBlindnessToScheme(
-  ColorScheme scheme,
-  ColorBlindnessType type,
-) {
-  Color sim(Color c) => colorBlindness(c, type);
-  return scheme.copyWith(
-    primary: sim(scheme.primary),
-    onPrimary: sim(scheme.onPrimary),
-    primaryContainer: sim(scheme.primaryContainer),
-    onPrimaryContainer: sim(scheme.onPrimaryContainer),
-    secondary: sim(scheme.secondary),
-    onSecondary: sim(scheme.onSecondary),
-    secondaryContainer: sim(scheme.secondaryContainer),
-    onSecondaryContainer: sim(scheme.onSecondaryContainer),
-    tertiary: sim(scheme.tertiary),
-    onTertiary: sim(scheme.onTertiary),
-    tertiaryContainer: sim(scheme.tertiaryContainer),
-    onTertiaryContainer: sim(scheme.onTertiaryContainer),
-    surface: sim(scheme.surface),
-    onSurface: sim(scheme.onSurface),
-    surfaceContainerHighest: sim(scheme.surfaceContainerHighest),
-    surfaceContainerLow: sim(scheme.surfaceContainerLow),
-    surfaceContainer: sim(scheme.surfaceContainer),
-    onSurfaceVariant: sim(scheme.onSurfaceVariant),
-    outline: sim(scheme.outline),
-    outlineVariant: sim(scheme.outlineVariant),
-    error: sim(scheme.error),
-    onError: sim(scheme.onError),
-    errorContainer: sim(scheme.errorContainer),
-    onErrorContainer: sim(scheme.onErrorContainer),
-  );
 }
 
 class _SplashGate extends StatefulWidget {

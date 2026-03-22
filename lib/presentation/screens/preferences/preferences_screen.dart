@@ -48,6 +48,14 @@ class _PreferencesScreenState extends State<PreferencesScreen>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     )..animateTo(1 / _totalSteps);
+    _loadExistingPreferences();
+  }
+
+  /// Rellena [_data] desde GET /profiles/me (fecha en usuario, resto en traveler_profile).
+  Future<void> _loadExistingPreferences() async {
+    final map = await ProfileService.fetchMyProfileForPreferences();
+    if (!mounted || map.isEmpty) return;
+    setState(() => _data.addAll(map));
   }
 
   @override
