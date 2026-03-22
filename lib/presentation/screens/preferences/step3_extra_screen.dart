@@ -183,10 +183,14 @@ class _PreferencesStep3State extends State<PreferencesStep3> {
                   disabledBackgroundColor: SmarturStyle.purple.withValues(alpha: 0.6),
                 ),
                 child: widget.isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    ? Text(
+                        '…',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Outfit',
+                        ),
                       )
                     : Text(l10n.save),
               ),

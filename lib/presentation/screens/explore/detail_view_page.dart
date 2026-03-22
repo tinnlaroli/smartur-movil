@@ -140,7 +140,7 @@ class _DetailViewPageState extends State<DetailViewPage> {
             SafeArea(
               child: Stack(
                 children: [
-                  // Top row — back + bookmark
+                  // Top row — atrás + favoritos (diario)
                   Positioned(
                     top: 8,
                     left: 8,
@@ -156,19 +156,18 @@ class _DetailViewPageState extends State<DetailViewPage> {
                     child: _GlassCircle(
                       onTap: _kind != null && _pid != null ? _toggleFavorite : () {},
                       child: _favBusy
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white54,
-                              ),
+                          ? const Icon(
+                              Icons.hourglass_top_rounded,
+                              color: Colors.white70,
+                              size: 22,
                             )
                           : Icon(
                               _isFavorite
-                                  ? Icons.bookmark_rounded
-                                  : Icons.bookmark_border_rounded,
-                              color: Colors.white,
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: _isFavorite
+                                  ? SmarturStyle.pink
+                                  : Colors.white,
                               size: 22,
                             ),
                     ),

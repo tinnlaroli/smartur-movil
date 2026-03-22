@@ -301,6 +301,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsOverflowAlignment: OverflowBarAlignment.center,
         title:
             Text(l10n.editNameTitle, style: SmarturStyle.calSansTitle),
         content: TextField(
@@ -364,6 +366,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsOverflowAlignment: OverflowBarAlignment.center,
         title: Text(l10n.deleteAccountTitle,
             style: SmarturStyle.calSansTitle),
         content: Text(
@@ -592,11 +596,15 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                   borderRadius: BorderRadius.circular(14)),
             ),
             child: _loading
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2.5))
+                ? Text(
+                    '…',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Outfit',
+                    ),
+                  )
                 : Text(l10n.sendCode,
                     style: const TextStyle(
                         fontFamily: 'Outfit',
@@ -698,11 +706,15 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                     borderRadius: BorderRadius.circular(14)),
               ),
               child: _loading
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2.5))
+                  ? Text(
+                      '…',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Outfit',
+                      ),
+                    )
                   : Text(l10n.updatePassword,
                       style: const TextStyle(
                           fontFamily: 'Outfit',

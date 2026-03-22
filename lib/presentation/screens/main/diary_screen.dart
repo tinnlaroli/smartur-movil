@@ -3,16 +3,22 @@ import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
 import '../../../data/services/user_content_service.dart';
+import '../../utils/diary_place_detail.dart';
 import '../../widgets/smartur_skeleton.dart';
 
 class DiaryScreen extends StatefulWidget {
-  const DiaryScreen({super.key});
+  /// En [MainScreen] va a `false` cuando otra pestaña está activa; al volver a
+  /// Diario se dispara otra carga (IndexedStack mantiene el estado y a veces la
+  /// primera petición corre sin token o queda desactualizada).
+  final bool diaryTabActive;
+
+  const DiaryScreen({super.key, this.diaryTabActive = true});
 
   @override
   State<DiaryScreen> createState() => _DiaryScreenState();
 }
 
-class _DiaryScreenState extends State<DiaryScreen> with SingleTickerProviderStateMixin {
+class _DiaryScreenState extends State<DiaryScreen> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _favorites = [];
@@ -22,6 +28,14 @@ class _DiaryScreenState extends State<DiaryScreen> with SingleTickerProviderStat
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didUpdateWidget(DiaryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.diaryTabActive && widget.diaryTabActive) {
+      _load();
+    }
   }
 
   Future<void> _load() async {
@@ -77,22 +91,30 @@ class _DiaryScreenState extends State<DiaryScreen> with SingleTickerProviderStat
           onRefresh: _load,
           child: SmarturShimmer(
             enabled: _loading,
-            child: _loading
-                ? const SizedBox.shrink()
-                : _error != null
-                    ? ListView(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Text(
-                              _error!,
-                              style: TextStyle(
-                                fontFamily: 'Outfit',
-                                color: scheme.error,
-                              ),
-                            ),
+            child: _error != null && !_loading
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          _error!,
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            color: scheme.error,
                           ),
-                        ],
+                        ),
+                      ),
+                    ],
+                  )
+                : _loading
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        children: List.generate(
+                          8,
+                          (_) => const SkeletonListRow(),
+                        ),
                       )
                     : TabBarView(
                         children: [
@@ -146,9 +168,14 @@ class _FavoritesTab extends StatelessWidget {
         final url = it['image_url']?.toString() ?? '';
         return ClipRRect(
           borderRadius: BorderRadius.circular(18),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () => openDiaryItemDetail(context, it),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
               if (url.isNotEmpty)
                 Image.network(
                   url,
@@ -199,7 +226,9 @@ class _FavoritesTab extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -275,33 +304,43 @@ class _HistoryTab extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 20),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Material(
                   color: scheme.surfaceContainerLowest,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: scheme.outlineVariant),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: SmarturStyle.calSansTitle.copyWith(fontSize: 16),
-                    ),
-                    if (dateStr.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        dateStr,
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 12,
-                          color: scheme.onSurfaceVariant,
-                        ),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => openDiaryItemDetail(context, it),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: scheme.outlineVariant),
                       ),
-                    ],
-                  ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: SmarturStyle.calSansTitle.copyWith(fontSize: 16),
+                          ),
+                          if (dateStr.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              dateStr,
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 12,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

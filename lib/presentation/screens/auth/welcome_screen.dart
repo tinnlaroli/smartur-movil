@@ -354,7 +354,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                   }
                                 },
                           child: isLoadingEmail
-                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              ? Text(
+                                  '…',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.95),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'CalSans',
+                                  ),
+                                )
                               : Text(isWaitingOTP ? l10n.verify : (isLogin ? l10n.signInButton : l10n.createAccount)),
                         ),
                       ],
@@ -404,10 +412,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           child: isLoadingGoogle
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: SmarturStyle.purple),
+                              ? Text(
+                                  '…',
+                                  style: TextStyle(
+                                    color: SmarturStyle.purple.withValues(alpha: 0.85),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Outfit',
+                                  ),
                                 )
                               : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -757,7 +769,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                       opacity: _fadeAnimation,
                       child: Text(
                         l10n.tagline,
-                        style: SmarturStyle.calSansTitle,
+                        style: TextStyle(
+                          fontFamily: 'CalSans',
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -788,8 +805,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                       l10n.loginWithBiometrics,
                       style: TextStyle(
                         fontFamily: 'Outfit',
-                        color: scheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
@@ -808,7 +825,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                     scale: _buttonScale,
                     child: ElevatedButton(
                       onPressed: () => _showAuthModal(context, isLogin: true),
-                      child: Text(l10n.start),
+                      child: Text(l10n.start, 
+                      style: TextStyle(
+                        color: Colors.white, 
+                        fontWeight: FontWeight.bold, 
+                        fontFamily: 'CalSans',
+                        fontSize: 18,
+                      ),
+                      ),
                     ),
                   ),
                 ),

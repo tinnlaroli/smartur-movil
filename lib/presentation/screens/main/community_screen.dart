@@ -3,6 +3,7 @@ import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
 import '../../../data/services/user_content_service.dart';
+import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/smartur_user_avatar.dart';
 
 class CommunityScreen extends StatefulWidget {
@@ -56,6 +57,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsOverflowAlignment: OverflowBarAlignment.center,
         title: Text(l10n.uploadPhotoAction, style: SmarturStyle.calSansTitle),
         content: SingleChildScrollView(
           child: Column(
@@ -119,31 +122,37 @@ class _CommunityScreenState extends State<CommunityScreen> {
         title: Text(l10n.communityTitle,
             style: SmarturStyle.calSansTitle.copyWith(fontSize: 20)),
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _load,
-          ),
-        ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: SmarturStyle.purple))
-          : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(_error!, textAlign: TextAlign.center),
-                  ),
-                )
-              : RefreshIndicator(
-                  color: SmarturStyle.purple,
-                  onRefresh: _load,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 80),
-                    itemCount: _posts.length,
-                    itemBuilder: (context, index) => _PostCard(data: _posts[index]),
-                  ),
-                ),
+      body: _error != null && !_loading
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(_error!, textAlign: TextAlign.center),
+              ),
+            )
+          : RefreshIndicator(
+              color: SmarturStyle.purple,
+              onRefresh: _load,
+              child: SmarturShimmer(
+                enabled: _loading,
+                child: _loading
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.only(bottom: 80),
+                        children: const [
+                          SkeletonCommunityPostCard(),
+                          SkeletonCommunityPostCard(),
+                          SkeletonCommunityPostCard(),
+                        ],
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 80),
+                        itemCount: _posts.length,
+                        itemBuilder: (context, index) =>
+                            _PostCard(data: _posts[index]),
+                      ),
+              ),
+            ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: SmarturStyle.purple,
         foregroundColor: Colors.white,

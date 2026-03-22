@@ -134,3 +134,130 @@ class SkeletonText extends StatelessWidget {
     );
   }
 }
+
+/// Chip horizontal (home ciudades antes de cargar datos).
+class SkeletonChipPill extends StatelessWidget {
+  final double width;
+
+  const SkeletonChipPill({super.key, this.width = 96});
+
+  @override
+  Widget build(BuildContext context) {
+    return SkeletonContainer(
+      width: width,
+      height: 34,
+      borderRadius: 999,
+    );
+  }
+}
+
+/// Botón tipo “filtro de categorías” (home, esquina derecha).
+class SkeletonFilterButton extends StatelessWidget {
+  const SkeletonFilterButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SkeletonContainer(
+      width: 118,
+      height: 36,
+      borderRadius: 12,
+    );
+  }
+}
+
+/// Tarjeta tipo lugar en grid 2 columnas (home).
+class SkeletonPlaceTile extends StatelessWidget {
+  const SkeletonPlaceTile({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Expanded(
+          child: SkeletonContainer(
+            height: double.infinity,
+            borderRadius: 20,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const SkeletonText(width: double.infinity, height: 14),
+        const SizedBox(height: 6),
+        const SkeletonText(width: 72, height: 10),
+      ],
+    );
+  }
+}
+
+/// Tarjeta tipo fila (diario / listas).
+class SkeletonListRow extends StatelessWidget {
+  const SkeletonListRow({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          const SkeletonCircle(size: 48),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonText(width: MediaQuery.sizeOf(context).width * 0.5, height: 14),
+                const SizedBox(height: 8),
+                const SkeletonText(width: double.infinity, height: 10),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Post comunidad (avatar + bloques).
+class SkeletonCommunityPostCard extends StatelessWidget {
+  const SkeletonCommunityPostCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const SkeletonCircle(size: 44),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SkeletonText(width: MediaQuery.sizeOf(context).width * 0.35, height: 14),
+                        const SizedBox(height: 6),
+                        const SkeletonText(width: 120, height: 10),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              const SkeletonContainer(height: 160, borderRadius: 16),
+              const SizedBox(height: 12),
+              const SkeletonText(width: double.infinity, height: 12),
+              const SizedBox(height: 6),
+              SkeletonText(width: MediaQuery.sizeOf(context).width * 0.6, height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

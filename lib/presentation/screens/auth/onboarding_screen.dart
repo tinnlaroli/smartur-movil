@@ -7,6 +7,7 @@ import '../../../data/models/onboarding_model.dart';
 import '../../../core/theme/style_guide.dart';
 import 'welcome_screen.dart';
 import '../../widgets/smartur_background.dart';
+import '../../widgets/smartur_skeleton.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -48,7 +49,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         height: height,
         fit: BoxFit.contain,
         colorFilter: colorFilter,
-        placeholderBuilder: (context) => SizedBox(height: height, child: const Center(child: CircularProgressIndicator())),
+        placeholderBuilder: (context) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: SkeletonContainer(
+                height: height,
+                width: double.infinity,
+                borderRadius: 16,
+              ),
+            ),
       );
     } else {
       return colorFilter != null ? ColorFiltered(

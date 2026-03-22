@@ -7,6 +7,7 @@ import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../core/utils/profile_photo_validation.dart';
 import '../../../data/services/auth_service.dart';
+import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/smartur_user_avatar.dart';
 
 /// Cambiar icono de perfil o subir foto (API).
@@ -125,9 +126,47 @@ class _EditProfileAvatarScreenState extends State<EditProfileAvatarScreen> {
         title: Text(l10n.editProfile, style: SmarturStyle.calSansTitle.copyWith(fontSize: 20)),
         elevation: 0,
       ),
-      body: _busy
-          ? const Center(child: CircularProgressIndicator(color: SmarturStyle.purple))
-          : ListView(
+      body: SmarturShimmer(
+        enabled: _busy,
+        child: _busy
+            ? ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  const Center(child: SkeletonCircle(size: 96)),
+                  const SizedBox(height: 24),
+                  const SkeletonText(width: double.infinity, height: 14),
+                  const SizedBox(height: 8),
+                  const SkeletonText(width: double.infinity, height: 12),
+                  const SizedBox(height: 8),
+                  const SkeletonText(width: 260, height: 12),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: const [
+                      Expanded(
+                        child: SkeletonContainer(height: 48, borderRadius: 16),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: SkeletonContainer(height: 48, borderRadius: 16),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  const SkeletonText(width: 140, height: 18),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: const [
+                      SkeletonContainer(width: 64, height: 64, borderRadius: 16),
+                      SkeletonContainer(width: 64, height: 64, borderRadius: 16),
+                      SkeletonContainer(width: 64, height: 64, borderRadius: 16),
+                      SkeletonContainer(width: 64, height: 64, borderRadius: 16),
+                    ],
+                  ),
+                ],
+              )
+            : ListView(
               padding: const EdgeInsets.all(20),
               children: [
                 Center(
@@ -231,6 +270,7 @@ class _EditProfileAvatarScreenState extends State<EditProfileAvatarScreen> {
                 ),
               ],
             ),
+      ),
     );
   }
 }

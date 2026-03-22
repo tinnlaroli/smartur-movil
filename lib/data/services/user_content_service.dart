@@ -16,6 +16,62 @@ class UserContentException implements Exception {
 class UserContentService {
   final AuthService _auth = AuthService();
 
+  /// Une `place` anidado y alias típicos del backend para la UI del diario.
+  static Map<String, dynamic> normalizeDiaryPlaceRow(Map<String, dynamic> raw) {
+    final out = Map<String, dynamic>.from(raw);
+    final place = raw['place'];
+    if (place is Map) {
+      final p = Map<String, dynamic>.from(place);
+      for (final e in p.entries) {
+        final v = e.value;
+        if (v == null) continue;
+        if (!out.containsKey(e.key) || out[e.key] == null ||
+            (out[e.key] is String && (out[e.key] as String).isEmpty)) {
+          out[e.key] = v;
+        }
+      }
+    }
+    out['place_kind'] ??= raw['placeKind']?.toString();
+    out['place_id'] ??= raw['placeId'];
+    if (out['name'] == null || out['name'].toString().trim().isEmpty) {
+      out['name'] = out['title'] ?? out['nombre'] ?? '';
+    }
+    final img = out['image_url']?.toString();
+    if (img == null || img.isEmpty) {
+      out['image_url'] = out['imageUrl'] ??
+          out['photo_url'] ??
+          out['cover_image'] ??
+          out['thumbnail_url'] ??
+          '';
+    }
+    return out;
+  }
+
+  static List<Map<String, dynamic>> _parseObjectList(Map<String, dynamic> data, List<String> keys) {
+    for (final k in keys) {
+      final v = data[k];
+      if (v is List) {
+        return v.map((e) {
+          if (e is! Map) return <String, dynamic>{};
+          return normalizeDiaryPlaceRow(Map<String, dynamic>.from(e));
+        }).toList();
+      }
+      if (v is Map) {
+        final inner = Map<String, dynamic>.from(v);
+        for (final ik in const ['favorites', 'items', 'rows', 'data']) {
+          final iv = inner[ik];
+          if (iv is List) {
+            return iv.map((e) {
+              if (e is! Map) return <String, dynamic>{};
+              return normalizeDiaryPlaceRow(Map<String, dynamic>.from(e));
+            }).toList();
+          }
+        }
+      }
+    }
+    return [];
+  }
+
   Future<Map<String, String>> _headers() async {
     final token = await _auth.getToken();
     if (token == null) throw UserContentException('Sin sesión');
@@ -32,9 +88,25 @@ class UserContentService {
     if (response.statusCode != 200) {
       throw UserContentException('No se pudieron cargar favoritos');
     }
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final list = data['favorites'] as List<dynamic>? ?? [];
-    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    final decoded = jsonDecode(response.body);
+    if (decoded is List) {
+      return decoded.map((e) {
+        if (e is! Map) return <String, dynamic>{};
+        return normalizeDiaryPlaceRow(Map<String, dynamic>.from(e));
+      }).toList();
+    }
+    if (decoded is! Map<String, dynamic>) {
+      return [];
+    }
+    final data = Map<String, dynamic>.from(decoded);
+    var list = _parseObjectList(data, const ['favorites', 'data', 'items', 'results']);
+    if (list.isEmpty) {
+      final d = data['data'];
+      if (d is Map<String, dynamic>) {
+        list = _parseObjectList(d, const ['favorites', 'items', 'rows']);
+      }
+    }
+    return list;
   }
 
   Future<void> addFavorite(String placeKind, int placeId) async {
@@ -70,9 +142,25 @@ class UserContentService {
     if (response.statusCode != 200) {
       throw UserContentException('No se pudo cargar el historial');
     }
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final list = data['visits'] as List<dynamic>? ?? [];
-    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    final decoded = jsonDecode(response.body);
+    if (decoded is List) {
+      return decoded.map((e) {
+        if (e is! Map) return <String, dynamic>{};
+        return normalizeDiaryPlaceRow(Map<String, dynamic>.from(e));
+      }).toList();
+    }
+    if (decoded is! Map<String, dynamic>) {
+      return [];
+    }
+    final data = Map<String, dynamic>.from(decoded);
+    var list = _parseObjectList(data, const ['visits', 'data', 'items', 'results']);
+    if (list.isEmpty) {
+      final d = data['data'];
+      if (d is Map<String, dynamic>) {
+        list = _parseObjectList(d, const ['visits', 'items', 'rows']);
+      }
+    }
+    return list;
   }
 
   Future<void> recordVisit(String placeKind, int placeId) async {
@@ -90,12 +178,17 @@ class UserContentService {
     }
   }
 
+  static bool _samePlaceRef(Map<String, dynamic> e, String placeKind, int placeId) {
+    final k = e['place_kind']?.toString();
+    final raw = e['place_id'];
+    final id = raw is int ? raw : int.tryParse(raw?.toString() ?? '');
+    return k == placeKind && id == placeId;
+  }
+
   Future<bool> isFavorite(String placeKind, int placeId) async {
     try {
       final list = await fetchFavorites();
-      return list.any(
-        (e) => e['place_kind'] == placeKind && e['place_id'] == placeId,
-      );
+      return list.any((e) => _samePlaceRef(e, placeKind, placeId));
     } catch (_) {
       return false;
     }

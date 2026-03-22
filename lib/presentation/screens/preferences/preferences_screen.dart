@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 import '../../widgets/smartur_background.dart';
+import '../../widgets/smartur_skeleton.dart';
 
 import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
@@ -226,7 +227,9 @@ class _PreferencesScreenState extends State<PreferencesScreen>
 
               // ── Contenido del paso activo ──────────────────────────────
               Expanded(
-                child: SingleChildScrollView(
+                child: SmarturShimmer(
+                  enabled: _isLoading,
+                  child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(
                     SmarturStyle.spacingLg,
                     0,
@@ -252,6 +255,7 @@ class _PreferencesScreenState extends State<PreferencesScreen>
                       child: _buildCurrentStep(),
                     ),
                   ),
+                ),
                 ),
               ),
             ],

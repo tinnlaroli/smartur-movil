@@ -111,11 +111,9 @@ class _HomeScreenState extends State<HomeScreen> {
       await _checkPreferences();
       await _offerBiometricSetup();
       await _loadCitiesFromApi();
+      if (mounted) setState(() => _isLoadingContent = false);
       await _loadWeatherForSelectedCity();
       await _loadHeaderAvatar();
-
-      await Future.delayed(const Duration(milliseconds: 1500));
-      if (mounted) setState(() => _isLoadingContent = false);
     });
   }
 
@@ -239,6 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
           textAlign: TextAlign.center,
         ),
         actionsAlignment: MainAxisAlignment.center,
+        actionsOverflowAlignment: OverflowBarAlignment.center,
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         actions: [
           Column(
@@ -490,6 +489,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     builder: (dCtx) => AlertDialog(
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24)),
+                      actionsAlignment: MainAxisAlignment.center,
+                      actionsOverflowAlignment: OverflowBarAlignment.center,
                       title: Text(l10n.yourPreferences,
                           style: const TextStyle(
                               fontFamily: 'CalSans', color: SmarturStyle.purple)),
@@ -821,6 +822,41 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── City selector ──
 
+  /// Misma composición que la fila cargada: chips + botón filtro (shimmer global).
+  Widget _buildCityFilterSkeleton(BoxConstraints constraints) {
+    final listWidth =
+        constraints.maxWidth - 20 - _categoryFilterReservedWidth - 1;
+    return Stack(
+      children: [
+        Positioned(
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: listWidth > 0 ? listWidth : 0,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(left: 20),
+            children: const [
+              SkeletonChipPill(width: 112),
+              SizedBox(width: 10),
+              SkeletonChipPill(width: 88),
+              SizedBox(width: 10),
+              SkeletonChipPill(width: 92),
+              SizedBox(width: 10),
+              SkeletonChipPill(width: 76),
+            ],
+          ),
+        ),
+        const Positioned(
+          right: 20,
+          top: 0,
+          bottom: 0,
+          child: Center(child: SkeletonFilterButton()),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCityFilter() {
     return SizedBox(
       height: 52,
@@ -830,16 +866,17 @@ class _HomeScreenState extends State<HomeScreen> {
           final l10n = AppLocalizations.of(context)!;
 
           if (_cities.isEmpty) {
+            if (!_exploreLoaded) {
+              return _buildCityFilterSkeleton(constraints);
+            }
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  !_exploreLoaded
-                      ? l10n.loading
-                      : (_exploreError != null
-                          ? l10n.exploreCouldNotLoad
-                          : l10n.exploreNoCities),
+                  _exploreError != null
+                      ? l10n.exploreCouldNotLoad
+                      : l10n.exploreNoCities,
                   style: TextStyle(
                     fontFamily: 'Outfit',
                     fontSize: 12,
@@ -1185,6 +1222,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   SliverPadding _buildPlaceGrid() {
     final l10n = AppLocalizations.of(context)!;
+
+    if (!_exploreLoaded) {
+      return SliverPadding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
+            childAspectRatio: 0.72,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => const SkeletonPlaceTile(),
+            childCount: 6,
+          ),
+        ),
+      );
+    }
+
     final places = _filteredPlaces;
 
     if (places.isEmpty) {

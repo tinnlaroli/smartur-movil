@@ -21,53 +21,31 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
 
-  late final List<Widget> _screens;
-  late final AnimationController _diaryBookCtrl;
-  late final Animation<double> _diaryFlip;
+  /// 0 = libro “cerrado” (vista lateral), 1 = abierto de frente.
+  late final AnimationController _diaryBookAnim;
 
   @override
   void initState() {
     super.initState();
-    _screens = [
-      HomeScreen(
-        key: const ValueKey<String>('main_tab_home'),
-        userName: widget.userName,
-        isNewLogin: widget.isNewLogin,
-      ),
-      const DiaryScreen(),
-      const CommunityScreen(),
-      const ProfileScreen(),
-    ];
-
-    _diaryBookCtrl = AnimationController(
+    _diaryBookAnim = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _diaryFlip = CurvedAnimation(
-      parent: _diaryBookCtrl,
-      curve: Curves.easeOutBack,
-      reverseCurve: Curves.easeInCubic,
+      duration: const Duration(milliseconds: 420),
+      value: 0,
     );
   }
 
   @override
   void dispose() {
-    _diaryBookCtrl.dispose();
+    _diaryBookAnim.dispose();
     super.dispose();
   }
 
   void _onTabTapped(int index) {
-    final wasDiary = _currentIndex == 1;
-    final isDiary = index == 1;
-
-    setState(() {
-      _currentIndex = index;
-    });
-
-    if (isDiary && !wasDiary) {
-      _diaryBookCtrl.forward();
-    } else if (!isDiary && wasDiary) {
-      _diaryBookCtrl.reverse();
+    setState(() => _currentIndex = index);
+    if (index == 1) {
+      _diaryBookAnim.forward();
+    } else {
+      _diaryBookAnim.reverse();
     }
   }
 
@@ -76,21 +54,21 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        transitionBuilder: (Widget child, Animation<double> animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.98, end: 1.0).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              )),
-              child: child,
-            ),
-          );
-        },
-        child: _screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          HomeScreen(
+            key: const ValueKey<String>('main_tab_home'),
+            userName: widget.userName,
+            isNewLogin: widget.isNewLogin,
+          ),
+          DiaryScreen(
+            key: const ValueKey<String>('main_tab_diary'),
+            diaryTabActive: _currentIndex == 1,
+          ),
+          const CommunityScreen(key: ValueKey<String>('main_tab_community')),
+          const ProfileScreen(key: ValueKey<String>('main_tab_profile')),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -162,39 +140,51 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
     switch (index) {
       case 0:
-        return AnimatedRotation(
-          duration: const Duration(milliseconds: 260),
-          curve: Curves.easeOut,
-          turns: isSelected ? 1.0 : 0.0,
-          child: Icon(iconData, color: color, size: 26),
-        );
-      case 1:
-        return _buildDiaryBookIcon(color);
-      default:
-        return Icon(iconData, color: color, size: 26);
-    }
-  }
-
-  Widget _buildDiaryBookIcon(Color color) {
-    return AnimatedBuilder(
-      animation: _diaryFlip,
-      builder: (context, child) {
-        final t = _diaryFlip.value;
-        final scale = 1.0 + 0.12 * t;
-        final icon = t > 0.5 ? Icons.menu_book_rounded : Icons.book_outlined;
-
-        return Transform.scale(
-          scale: scale,
-          child: Transform(
-            alignment: Alignment.centerLeft,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001)
-              ..rotateY(-0.5 * t),
-            child: Icon(icon, color: color, size: 26),
+        // Inicio: brújula — giro corto al seleccionar / al salir
+        return AnimatedScale(
+          scale: isSelected ? 1.06 : 1.0,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          child: AnimatedRotation(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            turns: isSelected ? 1.0 : 0.0,
+            child: Icon(iconData, color: color, size: 26),
           ),
         );
-      },
-    );
+      case 1:
+        // Diario: libro abre / cierra en Y (perspectiva)
+        return AnimatedScale(
+          scale: isSelected ? 1.06 : 1.0,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          child: AnimatedBuilder(
+            animation: _diaryBookAnim,
+            builder: (context, child) {
+              final t = Curves.easeOutBack.transform(_diaryBookAnim.value);
+              // Abierto de frente al estar en Diario; al entrar/salir anima cierre/apertura.
+              // Inactivo y quieto: ángulo 0 (mismo aspecto que el resto de ítems).
+              final angle = isSelected
+                  ? -0.55 * (1.0 - t)
+                  : -0.55 * t;
+              return Transform(
+                alignment: Alignment.centerLeft,
+                transform: Matrix4.identity()
+                  ..setEntry(3, 2, 0.001)
+                  ..rotateY(angle),
+                child: Icon(iconData, color: color, size: 26),
+              );
+            },
+          ),
+        );
+      default:
+        return AnimatedScale(
+          scale: isSelected ? 1.06 : 1.0,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          child: Icon(iconData, color: color, size: 26),
+        );
+    }
   }
 
   Widget _buildCentralCta(BuildContext context) {
