@@ -29,7 +29,7 @@ class ImageExportService {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('SMARTUR', style: TextStyle(fontFamily: 'CalSans', fontSize: 28, color: SmarturStyle.purple)),
+              Image.asset('assets/imgs/logo_costado.png', height: 40),
               Text(DateTime.now().toString().split(' ')[0], style: const TextStyle(color: Colors.grey)),
             ],
           ),
@@ -47,12 +47,12 @@ class ImageExportService {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
               ),
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: SmarturStyle.purple.withOpacity(0.1),
+                    backgroundColor: SmarturStyle.purple.withValues(alpha: 0.1),
                     child: Text(score.toStringAsFixed(1), style: const TextStyle(color: SmarturStyle.purple, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(width: 16),

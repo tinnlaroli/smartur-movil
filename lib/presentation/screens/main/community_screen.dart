@@ -9,6 +9,7 @@ import '../../../core/utils/notifications.dart';
 import '../../../data/models/place_model.dart';
 import '../../../data/services/explore_service.dart';
 import '../../../data/services/user_content_service.dart';
+import '../../../data/services/auth_service.dart';
 import '../../widgets/smartur_background.dart';
 import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/public_profile_sheet.dart';
@@ -38,11 +39,45 @@ class _CommunityScreenState extends State<CommunityScreen> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _posts = [];
+  int? _currentUserId;
 
   @override
   void initState() {
     super.initState();
+    _loadUser();
     _load();
+  }
+
+  Future<void> _loadUser() async {
+    final id = await AuthService().getUserId();
+    if (mounted) setState(() => _currentUserId = id);
+  }
+
+  Future<void> _deletePost(int postId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar publicación', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        content: const Text('¿Estás seguro de que deseas eliminar esta publicación? Esta acción no se puede deshacer.', style: TextStyle(fontFamily: 'Outfit')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar', style: TextStyle(color: Colors.grey))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      SmarturNotifications.showInfo(context, 'Eliminando...');
+      await UserContentService().deleteCommunityPost(postId);
+      if (mounted) {
+        SmarturNotifications.showSuccess(context, 'Publicación eliminada');
+        _load();
+      }
+    } catch (e) {
+      if (mounted) SmarturNotifications.showError(context, e.toString());
+    }
   }
 
   Future<void> _load() async {
@@ -126,8 +161,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     : ListView.builder(
                         padding: const EdgeInsets.only(bottom: 80),
                         itemCount: _posts.length,
-                        itemBuilder: (context, index) =>
-                            _PostCard(data: _posts[index]),
+                        itemBuilder: (context, index) {
+                          final post = _posts[index];
+                          return _PostCard(
+                            data: post,
+                            currentUserId: _currentUserId,
+                            onDelete: () => _deletePost(post['id'] as int),
+                          );
+                        },
                       ),
               ),
             ),
@@ -387,8 +428,10 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
 
 class _PostCard extends StatelessWidget {
   final Map<String, dynamic> data;
+  final int? currentUserId;
+  final VoidCallback onDelete;
 
-  const _PostCard({required this.data});
+  const _PostCard({required this.data, this.currentUserId, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -400,6 +443,8 @@ class _PostCard extends StatelessWidget {
     final name = author['name']?.toString() ?? 'Usuario';
     final photoUrl = author['photo_url'] as String?;
     final iconKey = author['avatar_icon_key'] as String?;
+    final postUserId = data['user_id'] is int ? data['user_id'] as int : int.tryParse(data['user_id']?.toString() ?? '');
+    final isOwner = currentUserId != null && currentUserId == postUserId;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -433,6 +478,26 @@ class _PostCard extends StatelessWidget {
                 name,
                 style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600),
               ),
+              trailing: isOwner
+                  ? PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
+                      onSelected: (val) {
+                        if (val == 'delete') onDelete();
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                              SizedBox(width: 8),
+                              Text('Eliminar', style: TextStyle(color: Colors.red, fontFamily: 'Outfit')),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : null,
             ),
             if (placeName.isNotEmpty)
               Padding(

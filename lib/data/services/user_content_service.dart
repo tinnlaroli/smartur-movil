@@ -249,6 +249,24 @@ class UserContentService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  Future<void> deleteCommunityPost(int postId) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.communityPosts}/$postId');
+    try {
+      final response = await http.delete(uri, headers: await _headers()).timeout(const Duration(seconds: 15));
+      if (response.statusCode != 200) {
+        var fallback = 'No se pudo eliminar la publicación';
+        if (response.statusCode == 404) fallback = 'Publicación no encontrada o sin permisos';
+        final msg = _apiErrorMessageFromBody(response.body, fallback: fallback);
+        throw UserContentException(msg);
+      }
+    } on TimeoutException {
+      throw UserContentException('Tiempo de espera agotado al eliminar.');
+    } catch (e) {
+      if (e is UserContentException) rethrow;
+      throw UserContentException(_networkFailureMessage(e));
+    }
+  }
+
   /// Publicación multipart: lugar obligatorio; texto y/o imagen.
   ///
   /// Misma forma que curl: `multipart/form-data` con campos `place_kind`, `place_id`,

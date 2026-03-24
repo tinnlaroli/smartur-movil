@@ -316,7 +316,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     border: Border.all(color: scheme.outlineVariant),
                   ),
                   child: const Icon(
-                    Icons.edit_rounded,
+                    Icons.camera_alt_rounded,
                     size: 14,
                     color: SmarturStyle.purple,
                   ),

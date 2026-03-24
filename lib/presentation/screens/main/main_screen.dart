@@ -73,6 +73,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             key: const ValueKey<String>('main_tab_diary'),
             diaryTabActive: _currentIndex == 1,
           ),
+          const RecommendationScreen(key: ValueKey<String>('main_tab_ia')),
           const CommunityScreen(key: ValueKey<String>('main_tab_community')),
           const ProfileScreen(key: ValueKey<String>('main_tab_profile')),
         ],
@@ -82,7 +83,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           color: scheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withValues(alpha: 0.04), // Más suave para verse premium
+
               blurRadius: 10,
               offset: const Offset(0, -4),
             ),
@@ -90,16 +92,16 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _buildNavItem(Icons.explore_outlined, Icons.explore, l10n.navHome, 0),
                 _buildNavItem(Icons.book_outlined, Icons.book, l10n.navDiary, 1),
-                _buildCentralCta(context),
-                _buildNavItem(Icons.people_outline, Icons.people, l10n.navCommunity, 2),
-                _buildNavItem(Icons.person_outline, Icons.person, l10n.navUser, 3),
+                _buildNavItem(Icons.auto_awesome_outlined, Icons.auto_awesome, 'IA', 2),
+                _buildNavItem(Icons.people_outline, Icons.people, l10n.navCommunity, 3),
+                _buildNavItem(Icons.person_outline, Icons.person, l10n.navUser, 4),
               ],
             ),
           ),
@@ -116,22 +118,43 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     return GestureDetector(
       onTap: () => _onTabTapped(index),
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildAnimatedIcon(index, isSelected, color, outlineIcon, solidIcon),
-          const SizedBox(height: 4),
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 300),
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-              color: color,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 16.0 : 12.0, 
+          vertical: 10.0
+        ),
+        decoration: BoxDecoration(
+          color: isSelected ? SmarturStyle.purple.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildAnimatedIcon(index, isSelected, color, outlineIcon, solidIcon),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              clipBehavior: Clip.antiAlias,
+              child: isSelected
+                  ? Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: SmarturStyle.purple,
+                        ),
+                        maxLines: 1,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
-            child: Text(label),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -194,77 +217,5 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     }
   }
 
-  Widget _buildCentralCta(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const RecommendationScreen(),
-          ),
-        );
-      },
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 72,
-        child: TweenAnimationBuilder<double>(
-          key: ValueKey<int>(_currentIndex),
-          tween: Tween(begin: 0, end: 1),
-          duration: const Duration(milliseconds: 260),
-          curve: Curves.easeOut,
-          builder: (context, value, child) {
-            // Pulso sutil: scale 1.0 → 1.08 → 1.0 según value
-            final double pulse =
-                1.0 + 0.08 * (1 - (2 * (value - 0.5)).abs().clamp(0.0, 1.0));
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Transform.translate(
-                  offset: const Offset(0, -18),
-                  child: Transform.scale(
-                    scale: pulse,
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          colors: [SmarturStyle.purple, SmarturStyle.pink],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: SmarturStyle.purple.withValues(alpha: 0.35),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.auto_awesome_outlined,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  l10n.navRecommend,
-                  style: const TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: SmarturStyle.purple,
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
+    // CTA original fue unificado en la navbar. Se elimina el código viejo.
 }
