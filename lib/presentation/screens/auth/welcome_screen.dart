@@ -41,17 +41,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       duration: const Duration(milliseconds: 1600),
     );
 
-    // Fade general para textos/huella/botón (claramente visible)
     _fadeAnimation = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.25, 1.0, curve: Curves.easeOutQuad),
+      curve: const Interval(0.45, 1.0, curve: Curves.easeOutQuad),
     );
 
     // Escala 0.8 → 1.05 para contenido (texto/huella) con rebote suave.
     _logoScale = Tween<double>(begin: 0.8, end: 1.05).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.35, 0.9, curve: Curves.easeOutBack),
+        curve: const Interval(0.55, 1.0, curve: Curves.easeOutBack),
       ),
     );
 
@@ -79,19 +78,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.3, 1.0, curve: Curves.easeOutCubic),
+      curve: const Interval(0.5, 1.0, curve: Curves.easeOutCubic),
     ));
 
     _buttonFade = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.55, 1.0, curve: Curves.easeOutQuad),
+      curve: const Interval(0.75, 1.0, curve: Curves.easeOutQuad),
     );
 
     // Botón "Comenzar": pop claro y deslizamiento largo hacia arriba
     _buttonScale = Tween<double>(begin: 0.75, end: 1.05).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.6, 1.0, curve: Curves.elasticOut),
+        curve: const Interval(0.8, 1.0, curve: Curves.elasticOut),
       ),
     );
 
@@ -101,7 +100,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     ).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.55, 1.0, curve: Curves.easeOutCubic),
+        curve: const Interval(0.75, 1.0, curve: Curves.easeOutCubic),
       ),
     );
 

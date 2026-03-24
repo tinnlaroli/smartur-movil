@@ -248,20 +248,26 @@ Definidos en `lib/core/constants/api_constants.dart`:
 
 ### 3. Contenedor principal (`main_screen.dart`)
 
-- Cuatro pestañas: **Inicio** (`HomeScreen`), **Diario** (`DiaryScreen`), **Comunidad** (`CommunityScreen`), **Perfil** (`ProfileScreen`).
-- La ruta de **recomendaciones IA** se enlaza desde la UI de inicio hacia `RecommendationScreen` (no es pestaña del `BottomNavigationBar`).
+- Cinco pestañas unificadas: **Inicio**, **Diario**, **IA (Recomendaciones)**, **Comunidad** y **Perfil**.
+- **Animaciones Premium**:
+  - **IA**: Destello elástico con efecto de rotación tipo "varita mágica".
+  - **Diario**: Transición de glifo suave (libro cerrado a abierto).
+  - **Comunidad**: Acercamiento social (reducción de padding).
+  - **Perfil**: Flip 3D (giro sobre eje vertical).
+  - **Inicio**: Giro de brújula 360°.
+- **Haptic Feedback**: Soporte táctil (`lightImpact`) en cada interacción de la barra.
 
-### 4. Exploración (`explore/`)
+### 4. IA y Recomendaciones (`explore/`)
 
-- **Mapa interactivo** (`map_screen.dart`): visualización de destinos con `flutter_map` y `latlong2`.
-- **Detalle de lugar** (`detail_view_page.dart`): información detallada del destino turístico.
-- **Recomendaciones** (`recommendation_screen.dart`): sugerencias generadas por IA.
-- Datos servidos por `explore_service.dart` desde endpoints de `ApiConstants` (`exploreHome`, `locations`, `touristServices`, `pointsOfInterest`).
+- **Recomendaciones IA** (`recommendation_screen.dart`): Ahora integrada como pestaña central del menú principal para acceso rápido a sugerencias inteligentes.
+- Datos servidos por `explore_service.dart`.
 
 ### 5. Diario y comunidad (`user_content_service.dart`)
 
-- Favoritos y visitas bajo rutas `meFavorites` / `meVisits`.
-- Publicaciones de comunidad bajo `communityPosts`.
+- **Favoritos y visitas**: Bajo rutas `meFavorites` / `meVisits`.
+- **Comunidad**: 
+  - Gestión de publicaciones bajo `communityPosts`.
+  - **Borrado Lógico**: Soporte para eliminar posts propios (`DELETE` endpoint) con ocultación inmediata en la UI y persistencia en base de datos vía `is_active`.
 
 ### 6. Preferencias del viajero (`preferences/`)
 
