@@ -4,11 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 @immutable
 class AppSettings {
   final ThemeMode themeMode;
-  final Locale locale;
+  final Locale? locale;
 
   const AppSettings({
     required this.themeMode,
-    required this.locale,
+    this.locale,
   });
 
   AppSettings copyWith({
@@ -33,15 +33,16 @@ class AppSettingsNotifier extends ValueNotifier<AppSettings> {
   static Future<AppSettingsNotifier> load() async {
     final prefs = await SharedPreferences.getInstance();
 
-    final dark = prefs.getBool(_darkModeKey) ?? false;
-    final languageName = prefs.getString(_languageKey) ?? 'Español';
+    final dark = prefs.getBool(_darkModeKey);
+    final themeMode = dark == null ? ThemeMode.system : (dark ? ThemeMode.dark : ThemeMode.light);
 
-    final locale = _localeFromLegacyLanguageName(languageName);
+    final languageName = prefs.getString(_languageKey);
+    final locale = languageName == null ? null : _localeFromLegacyLanguageName(languageName);
 
     return AppSettingsNotifier._(
       prefs,
       AppSettings(
-        themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+        themeMode: themeMode,
         locale: locale,
       ),
     );
@@ -49,16 +50,26 @@ class AppSettingsNotifier extends ValueNotifier<AppSettings> {
 
   bool get isDarkMode => value.themeMode == ThemeMode.dark;
 
-  Future<void> setDarkMode(bool enabled) async {
-    value = value.copyWith(themeMode: enabled ? ThemeMode.dark : ThemeMode.light);
-    await _prefs.setBool(_darkModeKey, enabled);
+  Future<void> setThemeMode(ThemeMode mode) async {
+    value = AppSettings(themeMode: mode, locale: value.locale);
+    if (mode == ThemeMode.system) {
+      await _prefs.remove(_darkModeKey);
+    } else {
+      await _prefs.setBool(_darkModeKey, mode == ThemeMode.dark);
+    }
   }
+
+  Future<void> setDarkMode(bool enabled) => setThemeMode(enabled ? ThemeMode.dark : ThemeMode.light);
 
   Future<void> toggleDarkMode() => setDarkMode(!isDarkMode);
 
-  Future<void> setLocale(Locale locale) async {
-    value = value.copyWith(locale: locale);
-    await _prefs.setString(_languageKey, _legacyLanguageNameFromLocale(locale));
+  Future<void> setLocale(Locale? locale) async {
+    value = AppSettings(themeMode: value.themeMode, locale: locale);
+    if (locale == null) {
+      await _prefs.remove(_languageKey);
+    } else {
+      await _prefs.setString(_languageKey, _legacyLanguageNameFromLocale(locale));
+    }
   }
 
   static Locale _localeFromLegacyLanguageName(String languageName) {

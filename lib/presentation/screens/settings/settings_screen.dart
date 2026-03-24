@@ -19,31 +19,35 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final AuthService _authService = AuthService();
-  bool _darkMode = false;
-  String _language = 'Español';
+  ThemeMode _themeMode = ThemeMode.system;
+  String _language = 'Sistema';
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final settings = AppSettingsScope.of(context);
-    final locale = settings.value.locale.languageCode;
+    final code = settings.value.locale?.languageCode;
     setState(() {
-      _darkMode = settings.isDarkMode;
-      _language = _languageLabelFromCode(locale);
+      _themeMode = settings.value.themeMode;
+      _language = _languageLabelFromCode(code);
     });
   }
 
-  String _languageLabelFromCode(String code) {
+  String _languageLabelFromCode(String? code) {
+    if (code == null) return AppLocalizations.of(context)!.systemLanguage;
     switch (code) {
-      case 'en':
-        return 'English';
-      case 'fr':
-        return 'Français';
-      case 'pt':
-        return 'Português';
-      case 'es':
-      default:
-        return 'Español';
+      case 'en': return 'English';
+      case 'fr': return 'Français';
+      case 'pt': return 'Português';
+      case 'es': default: return 'Español';
+    }
+  }
+
+  String _themeLabelFromMode(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light: return 'Claro';
+      case ThemeMode.dark: return 'Oscuro';
+      case ThemeMode.system: return AppLocalizations.of(context)!.systemTheme;
     }
   }
 
@@ -71,19 +75,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           // ── Apariencia ──────────────────────────────────────────────
           _buildSectionHeader(l10n.appearanceSection),
-          SwitchListTile(
-            title: Text(l10n.darkMode,
-                style: const TextStyle(fontFamily: 'Outfit')),
-            secondary: const Icon(Icons.dark_mode_outlined,
-                color: SmarturStyle.purple),
-            value: _darkMode,
-            activeTrackColor: SmarturStyle.purple.withAlpha(100),
-            thumbColor: WidgetStateProperty.resolveWith(
-                (s) => s.contains(WidgetState.selected) ? SmarturStyle.purple : null),
-            onChanged: (val) {
-              setState(() => _darkMode = val);
-              AppSettingsScope.of(context).setDarkMode(val);
-            },
+          ListTile(
+            leading: const Icon(Icons.palette_outlined, color: SmarturStyle.purple),
+            title: Text(l10n.darkMode, style: const TextStyle(fontFamily: 'Outfit')),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(_themeLabelFromMode(_themeMode),
+                    style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurfaceVariant)),
+                Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+              ],
+            ),
+            onTap: () => _showThemeDialog(),
           ),
           ListTile(
             leading: const Icon(Icons.language_outlined,
@@ -255,7 +258,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showLanguageDialog() {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final languages = ['Español', 'English', 'Français', 'Português'];
+    final List<String> languages = [l10n.systemLanguage, 'Español', 'English', 'Français', 'Português'];
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -276,28 +279,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 16),
             Text(l10n.selectLanguage,
-                style:
-                    SmarturStyle.calSansTitle.copyWith(fontSize: 18)),
+                style: SmarturStyle.calSansTitle.copyWith(fontSize: 18)),
             const SizedBox(height: 8),
             ...languages.map((lang) => ListTile(
-                  title: Text(lang,
-                      style: const TextStyle(fontFamily: 'Outfit')),
+                  title: Text(lang, style: const TextStyle(fontFamily: 'Outfit')),
                   trailing: _language == lang
-                      ? const Icon(Icons.check_circle,
-                          color: SmarturStyle.purple)
+                      ? const Icon(Icons.check_circle, color: SmarturStyle.purple)
                       : null,
                   onTap: () {
-                    setState(() => _language = lang);
                     final code = switch (lang) {
                       'English' => 'en',
                       'Français' => 'fr',
                       'Português' => 'pt',
-                      _ => 'es',
+                      'Español' => 'es',
+                      _ => null,
                     };
-                    AppSettingsScope.of(context).setLocale(Locale(code));
+                    AppSettingsScope.of(context).setLocale(code != null ? Locale(code) : null);
                     Navigator.pop(ctx);
-                    SmarturNotifications.showSuccess(
-                        context, '${l10n.language}: $lang');
+                  },
+                )),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showThemeDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final List<String> themes = [l10n.systemTheme, 'Claro', 'Oscuro'];
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: scheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(l10n.darkMode,
+                style: SmarturStyle.calSansTitle.copyWith(fontSize: 18)),
+            const SizedBox(height: 8),
+            ...themes.map((t) => ListTile(
+                  title: Text(t, style: const TextStyle(fontFamily: 'Outfit')),
+                  trailing: _themeLabelFromMode(_themeMode) == t
+                      ? const Icon(Icons.check_circle, color: SmarturStyle.purple)
+                      : null,
+                  onTap: () {
+                    final mode = switch (t) {
+                      'Claro' => ThemeMode.light,
+                      'Oscuro' => ThemeMode.dark,
+                      _ => ThemeMode.system,
+                    };
+                    AppSettingsScope.of(context).setThemeMode(mode);
+                    Navigator.pop(ctx);
                   },
                 )),
             const SizedBox(height: 16),

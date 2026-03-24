@@ -210,6 +210,18 @@ abstract class AppLocalizations {
   /// **'Seleccionar Idioma'**
   String get selectLanguage;
 
+  /// No description provided for @systemLanguage.
+  ///
+  /// In es, this message translates to:
+  /// **'Idioma del sistema'**
+  String get systemLanguage;
+
+  /// No description provided for @systemTheme.
+  ///
+  /// In es, this message translates to:
+  /// **'Tema del sistema'**
+  String get systemTheme;
+
   /// No description provided for @cancel.
   ///
   /// In es, this message translates to:

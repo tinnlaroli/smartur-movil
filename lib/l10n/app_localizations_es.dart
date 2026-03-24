@@ -65,6 +65,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get selectLanguage => 'Seleccionar Idioma';
 
   @override
+  String get systemLanguage => 'Idioma del sistema';
+
+  @override
+  String get systemTheme => 'Tema del sistema';
+
+  @override
   String get cancel => 'Cancelar';
 
   @override
