@@ -1,0 +1,16 @@
+Analyzing recommendation_screen.dart...                         
+
+warning - Unused import: '../../widgets/smartur_skeleton.dart' - lib\presentation\screens\explore\recommendation_screen.dart:11:8 - unused_import
+   info - Statements in an if should be enclosed in a block - lib\presentation\screens\explore\recommendation_screen.dart:55:27 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\presentation\screens\explore\recommendation_screen.dart:56:32 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\presentation\screens\explore\recommendation_screen.dart:57:32 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\presentation\screens\explore\recommendation_screen.dart:58:32 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\presentation\screens\explore\recommendation_screen.dart:59:32 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\presentation\screens\explore\recommendation_screen.dart:60:18 - curly_braces_in_flow_control_structures
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\presentation\screens\explore\recommendation_screen.dart:215:19 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\presentation\screens\explore\recommendation_screen.dart:228:19 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\presentation\screens\explore\recommendation_screen.dart:246:14 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\presentation\screens\explore\recommendation_screen.dart:316:11 - deprecated_member_use
+  error - Invalid constant value - lib\presentation\screens\explore\recommendation_screen.dart:330:20 - invalid_constant
+  error - The method 'SmarturSkeleton' isn't defined for the type '_RecommendationScreenState' - lib\presentation\screens\explore\recommendation_screen.dart:330:20 - undefined_method
+

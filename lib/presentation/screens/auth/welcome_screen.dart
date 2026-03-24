@@ -840,7 +840,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                           fontFamily: 'CalSans',
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: scheme.onSurface,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -872,7 +872,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                       l10n.loginWithBiometrics,
                       style: TextStyle(
                         fontFamily: 'Outfit',
-                        color: Colors.black,
+                        color: scheme.onSurface,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

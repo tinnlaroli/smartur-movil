@@ -11,6 +11,7 @@ import '../../../data/services/explore_service.dart';
 import '../../../data/services/user_content_service.dart';
 import '../../widgets/smartur_background.dart';
 import '../../widgets/smartur_skeleton.dart';
+import '../../widgets/public_profile_sheet.dart';
 import '../../widgets/smartur_user_avatar.dart';
 
 /// Devuelve kind API (`svc` / `poi`) e id numérico desde [Place.id] tipo `svc_12`.
@@ -409,6 +410,17 @@ class _PostCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  builder: (ctx) => PublicProfileSheet(author: author),
+                );
+              },
               leading: SmarturUserAvatar(
                 radius: 22,
                 photoUrl: photoUrl,

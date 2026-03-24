@@ -38,6 +38,19 @@ class _SmarturShimmerState extends State<SmarturShimmer>
   Widget build(BuildContext context) {
     if (!widget.enabled) return widget.child;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final shimmerColors = isDark
+        ? const [
+            Color(0xFF303030),
+            Color(0xFF424242),
+            Color(0xFF303030),
+          ]
+        : const [
+            Color(0xFFEBEBF4),
+            Color(0xFFF4F4F4),
+            Color(0xFFEBEBF4),
+          ];
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -47,11 +60,7 @@ class _SmarturShimmerState extends State<SmarturShimmer>
             return LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: const [
-                Color(0xFFEBEBF4),
-                Color(0xFFF4F4F4),
-                Color(0xFFEBEBF4),
-              ],
+              colors: shimmerColors,
               stops: const [0.1, 0.5, 0.9],
               transform: _SlidingGradientTransform(offset: _controller.value),
             ).createShader(bounds);
@@ -90,11 +99,13 @@ class SkeletonContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(borderRadius),
       ),
     );
@@ -108,11 +119,13 @@ class SkeletonCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       width: size,
       height: size,
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         shape: BoxShape.circle,
       ),
     );
