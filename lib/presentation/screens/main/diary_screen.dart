@@ -91,13 +91,11 @@ class _DiaryScreenState extends State<DiaryScreen> {
           ),
         ),
         body: SmarturBackgroundTop(
-          child: RefreshIndicator(
-          color: SmarturStyle.purple,
-          onRefresh: _load,
-          child: SmarturShimmer(
-            enabled: _loading,
-            child: _error != null && !_loading
-                ? ListView(
+          child: _error != null && !_loading
+              ? RefreshIndicator(
+                  color: SmarturStyle.purple,
+                  onRefresh: _load,
+                  child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     children: [
                       Padding(
@@ -111,24 +109,26 @@ class _DiaryScreenState extends State<DiaryScreen> {
                         ),
                       ),
                     ],
-                  )
-                : _loading
-                    ? ListView(
+                  ),
+                )
+              : _loading
+                  ? SmarturShimmer(
+                      enabled: true,
+                      child: ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         children: List.generate(
                           8,
                           (_) => const SkeletonListRow(),
                         ),
-                      )
-                    : TabBarView(
-                        children: [
-                          _FavoritesTab(items: _favorites),
-                          _HistoryTab(items: _visits),
-                        ],
                       ),
-          ),
-        ),
+                    )
+                  : TabBarView(
+                      children: [
+                        _FavoritesTab(items: _favorites, onRefresh: _load),
+                        _HistoryTab(items: _visits, onRefresh: _load),
+                      ],
+                    ),
         ),
       ),
     );
@@ -137,31 +137,41 @@ class _DiaryScreenState extends State<DiaryScreen> {
 
 class _FavoritesTab extends StatelessWidget {
   final List<Map<String, dynamic>> items;
+  final Future<void> Function() onRefresh;
 
-  const _FavoritesTab({required this.items});
+  const _FavoritesTab({required this.items, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     if (items.isEmpty) {
-      return ListView(
-        children: [
-          const SizedBox(height: 48),
-          Icon(Icons.favorite_border, size: 48, color: scheme.outlineVariant),
-          const SizedBox(height: 16),
-          Center(
-            child: Text(
-              AppLocalizations.of(context)!.noCategoryPlaces,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurfaceVariant),
+      return RefreshIndicator(
+        color: SmarturStyle.purple,
+        onRefresh: onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            const SizedBox(height: 48),
+            Icon(Icons.favorite_border, size: 48, color: scheme.onSurface),
+            const SizedBox(height: 16),
+            Center(
+              child: Text(
+                AppLocalizations.of(context)!.noCategoryPlaces,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurface),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     }
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: items.length,
+    return RefreshIndicator(
+      color: SmarturStyle.purple,
+      onRefresh: onRefresh,
+      child: GridView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: items.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 12,
@@ -178,7 +188,7 @@ class _FavoritesTab extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(18),
-              onTap: () => openDiaryItemDetail(context, it),
+              onTap: () => openDiaryItemDetailWithSwipe(context, items, index),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -238,121 +248,133 @@ class _FavoritesTab extends StatelessWidget {
           ),
         );
       },
+      ),
     );
   }
 }
 
 class _HistoryTab extends StatelessWidget {
   final List<Map<String, dynamic>> items;
+  final Future<void> Function() onRefresh;
 
-  const _HistoryTab({required this.items});
+  const _HistoryTab({required this.items, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     if (items.isEmpty) {
-      return ListView(
-        children: [
-          const SizedBox(height: 48),
-          Icon(Icons.history, size: 48, color: scheme.outlineVariant),
-          const SizedBox(height: 16),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                l10n.noCategoryPlaces,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurfaceVariant),
+      return RefreshIndicator(
+        color: SmarturStyle.purple,
+        onRefresh: onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            const SizedBox(height: 48),
+            Icon(Icons.history, size: 48, color: scheme.onSurface),
+            const SizedBox(height: 16),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  l10n.noCategoryPlaces,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurfaceVariant),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final it = items[index];
-        final name = it['name']?.toString() ?? '';
-        final visited = it['visited_at'];
-        String dateStr = '';
-        if (visited is String) {
-          final dt = DateTime.tryParse(visited);
-          if (dt != null) {
-            dateStr = '${dt.day}/${dt.month}/${dt.year}';
+    return RefreshIndicator(
+      color: SmarturStyle.purple,
+      onRefresh: onRefresh,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final it = items[index];
+          final name = it['name']?.toString() ?? '';
+          final visited = it['visited_at'];
+          String dateStr = '';
+          if (visited is String) {
+            final dt = DateTime.tryParse(visited);
+            if (dt != null) {
+              dateStr = '${dt.day}/${dt.month}/${dt.year}';
+            }
           }
-        }
-        final isLast = index == items.length - 1;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Column(
-              children: [
-                Container(
-                  width: 18,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    color: SmarturStyle.purple,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: const Icon(Icons.check, size: 12, color: Colors.white),
-                ),
-                if (!isLast)
+          final isLast = index == items.length - 1;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(
+                children: [
                   Container(
-                    width: 2,
-                    height: 70,
-                    color: scheme.outlineVariant,
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: SmarturStyle.purple,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Icon(Icons.check, size: 12, color: Colors.white),
                   ),
-              ],
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 20),
-                child: Material(
-                  color: scheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(16),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
+                  if (!isLast)
+                    Container(
+                      width: 2,
+                      height: 70,
+                      color: scheme.outlineVariant,
+                    ),
+                ],
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: Material(
+                    color: scheme.surfaceContainerLowest,
                     borderRadius: BorderRadius.circular(16),
-                    onTap: () => openDiaryItemDetail(context, it),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: scheme.outlineVariant),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            style: SmarturStyle.calSansTitle.copyWith(fontSize: 16),
-                          ),
-                          if (dateStr.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => openDiaryItemDetailWithSwipe(context, items, index),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: scheme.outlineVariant),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              dateStr,
-                              style: TextStyle(
-                                fontFamily: 'Outfit',
-                                fontSize: 12,
-                                color: scheme.onSurfaceVariant,
-                              ),
+                              name,
+                              style: SmarturStyle.calSansTitle.copyWith(fontSize: 16),
                             ),
+                            if (dateStr.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                dateStr,
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 12,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 }

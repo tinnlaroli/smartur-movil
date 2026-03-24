@@ -1,7 +1,7 @@
 import 'dart:convert';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 import 'package:http/http.dart' as http;
@@ -696,7 +696,7 @@ class HomeScreenState extends State<HomeScreen> {
               _buildHeaderAppBar(),
               SliverToBoxAdapter(child: _buildExploreIntro()),
               SliverToBoxAdapter(child: _buildCityFilter()),
-              ..._buildPlaceBentoSlivers(),
+              ..._buildPlaceShowcaseSlivers(),
               const SliverToBoxAdapter(child: SizedBox(height: 32)),
             ],
           ),
@@ -1237,33 +1237,33 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Place grid (bento / quilted) ──
+  // ── Place grid (showcase: hero + 2-col) ──
 
-  static final _bentoGridDelegate = SliverQuiltedGridDelegate(
-    crossAxisCount: 4,
-    mainAxisSpacing: 12,
-    crossAxisSpacing: 12,
-    repeatPattern: QuiltedGridRepeatPattern.inverted,
-    pattern: [
-      QuiltedGridTile(2, 2),
-      QuiltedGridTile(1, 1),
-      QuiltedGridTile(1, 1),
-      QuiltedGridTile(1, 2),
-    ],
-  );
-
-  List<Widget> _buildPlaceBentoSlivers() {
+  List<Widget> _buildPlaceShowcaseSlivers() {
     final l10n = AppLocalizations.of(context)!;
 
     if (!_exploreLoaded) {
       return [
+        // Hero skeleton
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          sliver: SliverToBoxAdapter(
+            child: SkeletonContainer(height: 220, borderRadius: 18),
+          ),
+        ),
+        // Grid skeleton
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           sliver: SliverGrid(
-            gridDelegate: _bentoGridDelegate,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 14,
+              crossAxisSpacing: 14,
+              childAspectRatio: 0.82,
+            ),
             delegate: SliverChildBuilderDelegate(
-              (context, index) => const SkeletonBentoTile(),
-              childCount: 8,
+              (context, index) => const SkeletonContainer(height: 200, borderRadius: 18),
+              childCount: 4,
             ),
           ),
         ),
@@ -1291,28 +1291,58 @@ class HomeScreenState extends State<HomeScreen> {
       ];
     }
 
-    return [
+    final List<Widget> slivers = [];
+
+    // Hero card (first place)
+    slivers.add(
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-        sliver: SliverGrid(
-          gridDelegate: _bentoGridDelegate,
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final place = places[index];
-              return _PlaceCard(
-                place: place,
-                bentoSlot: index % 4,
-                onTap: () => _openPlaceDetail(place),
-              );
-            },
-            childCount: places.length,
+        sliver: SliverToBoxAdapter(
+          child: SizedBox(
+            height: 220,
+            child: _PlaceCard(
+              place: places.first,
+              isHero: true,
+              onTap: () => _openPlaceDetail(places, 0),
+            ),
           ),
         ),
       ),
-    ];
+    );
+
+    // Remaining cards in 2-column grid
+    if (places.length > 1) {
+      slivers.add(
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 14,
+              crossAxisSpacing: 14,
+              childAspectRatio: 0.82,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final place = places[index + 1];
+                return _PlaceCard(
+                  place: place,
+                  isHero: false,
+                  onTap: () => _openPlaceDetail(places, index + 1),
+                );
+              },
+              childCount: places.length - 1,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return slivers;
   }
 
-  void _openPlaceDetail(Place place) {
+  void _openPlaceDetail(List<Place> allPlaces, int initialIndex) {
+    final place = allPlaces[initialIndex];
     if (place.imageUrl.isNotEmpty) {
       precacheImage(NetworkImage(place.imageUrl), context);
     }
@@ -1321,16 +1351,8 @@ class HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 400),
         reverseTransitionDuration: const Duration(milliseconds: 350),
-        pageBuilder: (context, animation, secondaryAnimation) => DetailViewPage(
-          title: place.name,
-          heroTag: 'place_${place.id}',
-          heroImageUrl: place.imageUrl,
-          subtitle: place.description,
-          locationLine: '${place.locationLine} · ${place.city}',
-          rating: place.rating,
-          galleryUrls: place.galleryUrls,
-          placeId: place.id,
-        ),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            _HomePlaceSwipeView(places: allPlaces, initialIndex: initialIndex),
         transitionsBuilder: (context, anim, secondaryAnim, child) {
           return FadeTransition(opacity: anim, child: child);
         },
@@ -1343,205 +1365,283 @@ class HomeScreenState extends State<HomeScreen> {
 // Private widgets
 // ═══════════════════════════════════════════════════════════════════
 
-int _cacheWidthForBentoSlot(BuildContext context, int slot) {
-  final w = MediaQuery.sizeOf(context).width - 40 - 12;
+int _cacheWidthForCard(BuildContext context, bool isHero) {
+  final screenW = MediaQuery.sizeOf(context).width - 40;
   final dpr = MediaQuery.devicePixelRatioOf(context);
-  final logical = switch (slot % 4) {
-    0 || 3 => w * 0.52,
-    _ => w * 0.24,
-  };
+  final logical = isHero ? screenW : (screenW - 14) / 2;
   return (logical * dpr).round().clamp(360, 1280);
 }
 
 class _PlaceCard extends StatelessWidget {
   final Place place;
-  final int bentoSlot;
+  final bool isHero;
   final VoidCallback onTap;
 
   const _PlaceCard({
     required this.place,
-    required this.bentoSlot,
+    required this.isHero,
     required this.onTap,
   });
-
-  bool get _isHeroTile => bentoSlot % 4 == 0;
-  bool get _isCompactTile => bentoSlot % 4 == 1 || bentoSlot % 4 == 2;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final titleSize = _isHeroTile ? 18.0 : (_isCompactTile ? 14.0 : 16.0);
-    final descSize = _isHeroTile ? 11.0 : (_isCompactTile ? 9.0 : 10.0);
-    final descLines = _isCompactTile ? 1 : 2;
-    final pillIcon = _isCompactTile ? 10.0 : 12.0;
-    final pillFont = _isCompactTile ? 8.0 : 9.0;
-    final elevation = _isHeroTile ? 6.0 : 4.0;
 
     return GestureDetector(
       onTap: onTap,
       child: Hero(
         tag: 'place_${place.id}',
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          clipBehavior: Clip.antiAlias,
-          elevation: elevation,
-          shadowColor: Colors.black.withValues(alpha: 0.18),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Image — placeholder when empty (BD sin image_url)
-              place.imageUrl.isEmpty
-                  ? Container(
-                      color: scheme.outlineVariant,
-                      child: const Icon(Icons.image_not_supported_outlined,
-                          color: Colors.white54, size: 32),
-                    )
-                  : Image.network(
-                      place.imageUrl,
-                      fit: BoxFit.cover,
-                      filterQuality: FilterQuality.medium,
-                      cacheWidth: _cacheWidthForBentoSlot(context, bentoSlot),
-                      frameBuilder: (_, child, frame, loaded) {
-                        if (loaded) return child;
-                        return AnimatedOpacity(
-                          opacity: frame != null ? 1.0 : 0.0,
-                          duration: const Duration(milliseconds: 400),
-                          curve: Curves.easeOut,
-                          child: child,
-                        );
-                      },
-                      errorBuilder: (context, error, stack) => Container(
-                        color: scheme.outlineVariant,
-                        child: const Icon(Icons.image_not_supported_outlined,
-                            color: Colors.white54, size: 32),
-                      ),
-                    ),
-
-              // Gradient overlay — stronger at the bottom
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    stops: [0.0, 0.35, 1.0],
-                    colors: [
-                      Color(0x08000000),
-                      Color(0x18000000),
-                      Color(0xCC000000),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Category pill top-left
-              Positioned(
-                top: _isCompactTile ? 8 : 10,
-                left: _isCompactTile ? 8 : 10,
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: _isCompactTile ? 6 : 8,
-                    vertical: _isCompactTile ? 3 : 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: place.category.color.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(place.category.icon, size: pillIcon, color: Colors.white),
-                      const SizedBox(width: 4),
-                      Text(
-                        place.category.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: pillFont,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Rating top-right
-              Positioned(
-                top: _isCompactTile ? 8 : 10,
-                right: _isCompactTile ? 8 : 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.40),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.star_rounded,
-                        size: _isCompactTile ? 11 : 13,
-                        color: SmarturStyle.orange,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        place.rating.toStringAsFixed(1),
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontWeight: FontWeight.w800,
-                          fontSize: _isCompactTile ? 10 : 11,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Bottom text
-              Positioned(
-                left: _isCompactTile ? 10 : 12,
-                right: _isCompactTile ? 10 : 12,
-                bottom: _isCompactTile ? 10 : 12,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      place.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'CalSans',
-                        fontSize: titleSize,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        height: 1.1,
-                      ),
-                    ),
-                    SizedBox(height: _isCompactTile ? 2 : 4),
-                    Text(
-                      place.shortDescription,
-                      maxLines: descLines,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: descSize,
-                        color: Colors.white.withValues(alpha: 0.78),
-                        height: 1.25,
-                      ),
-                    ),
-                  ],
-                ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: isHero ? 14 : 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(18),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // ── Image ──
+                place.imageUrl.isEmpty
+                    ? Container(
+                        color: scheme.outlineVariant,
+                        child: const Icon(Icons.image_not_supported_outlined,
+                            color: Colors.white54, size: 36),
+                      )
+                    : Image.network(
+                        place.imageUrl,
+                        fit: BoxFit.cover,
+                        filterQuality: FilterQuality.medium,
+                        cacheWidth: _cacheWidthForCard(context, isHero),
+                        frameBuilder: (_, child, frame, loaded) {
+                          if (loaded) return child;
+                          return AnimatedOpacity(
+                            opacity: frame != null ? 1.0 : 0.0,
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeOut,
+                            child: child,
+                          );
+                        },
+                        errorBuilder: (context, error, stack) => Container(
+                          color: scheme.outlineVariant,
+                          child: const Icon(Icons.image_not_supported_outlined,
+                              color: Colors.white54, size: 36),
+                        ),
+                      ),
+
+                // ── Gradient overlay ──
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: isHero
+                          ? const [0.0, 0.3, 0.7, 1.0]
+                          : const [0.0, 0.35, 1.0],
+                      colors: isHero
+                          ? const [
+                              Color(0x00000000),
+                              Color(0x10000000),
+                              Color(0x80000000),
+                              Color(0xDD000000),
+                            ]
+                          : const [
+                              Color(0x05000000),
+                              Color(0x20000000),
+                              Color(0xCC000000),
+                            ],
+                    ),
+                  ),
+                ),
+
+                // ── Category pill (glassmorphism) ──
+                Positioned(
+                  top: isHero ? 12 : 10,
+                  left: isHero ? 12 : 10,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isHero ? 10 : 8,
+                          vertical: isHero ? 5 : 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: place.category.color.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(place.category.icon,
+                                size: isHero ? 13 : 11, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              place.category.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: isHero ? 10 : 9,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Bottom content ──
+                Positioned(
+                  left: isHero ? 14 : 12,
+                  right: isHero ? 14 : 12,
+                  bottom: isHero ? 14 : 12,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Title
+                      Text(
+                        place.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'CalSans',
+                          fontSize: isHero ? 20.0 : 15.0,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          height: 1.15,
+                        ),
+                      ),
+                      SizedBox(height: isHero ? 6 : 4),
+                      // Description (hero only shows 2 lines)
+                      if (isHero)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            place.shortDescription,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.8),
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      // Rating + Location row
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.star_rounded,
+                            size: isHero ? 15 : 13,
+                            color: SmarturStyle.orange,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            place.rating.toStringAsFixed(1),
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontWeight: FontWeight.w800,
+                              fontSize: isHero ? 12 : 11,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: isHero ? 13 : 11,
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: Text(
+                              place.city,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: isHero ? 11 : 10,
+                                color: Colors.white.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _HomePlaceSwipeView extends StatefulWidget {
+  final List<Place> places;
+  final int initialIndex;
+
+  const _HomePlaceSwipeView({required this.places, required this.initialIndex});
+
+  @override
+  State<_HomePlaceSwipeView> createState() => _HomePlaceSwipeViewState();
+}
+
+class _HomePlaceSwipeViewState extends State<_HomePlaceSwipeView> {
+  late final PageController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PageView.builder(
+      controller: _controller,
+      itemCount: widget.places.length,
+      itemBuilder: (context, index) {
+        final place = widget.places[index];
+        return DetailViewPage(
+          key: ValueKey('home_place_swipe_${place.id}'),
+          title: place.name,
+          heroTag: 'home_swipe_${place.id}_$index',
+          heroImageUrl: place.imageUrl,
+          subtitle: place.description,
+          locationLine: '${place.locationLine} · ${place.city}',
+          rating: place.rating,
+          galleryUrls: place.galleryUrls,
+          placeId: place.id,
+        );
+      },
     );
   }
 }
