@@ -32,6 +32,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
   late Animation<double> _buttonFade;
   late Animation<double> _buttonScale;
   late Animation<Offset> _buttonSlide;
+  bool _isBiometricActive = false;
 
   @override
   void initState() {
@@ -104,18 +105,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       ),
     );
 
-    // Si venimos del splash con loader, retrasamos el inicio para que
-    // las animaciones aparezcan justo después de que el overlay desaparezca.
-    if (widget.fromSplash) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await Future.delayed(const Duration(milliseconds: 4600));
-        if (mounted && !_controller.isAnimating && _controller.value == 0.0) {
-          _controller.forward();
-        }
-      });
-    } else {
-      // Navegación "normal" (logout, onboarding, etc.): animar de inmediato.
-      _controller.forward();
+    // Comprobar si la biometría está activa para mostrar el botón
+    _checkInitialBiometricStatus();
+  }
+
+  Future<void> _checkInitialBiometricStatus() async {
+    final isActive = await _authService.isBiometricEnabled();
+    if (mounted) {
+      setState(() => _isBiometricActive = isActive);
     }
   }
 
@@ -845,37 +842,39 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                       ),
                     ),
                   ),
-                  const SizedBox(height: 48),
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: ScaleTransition(
-                      scale: _logoScale,
-                      child: GestureDetector(
-                        onTap: () => _checkBiometrics(context),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: SmarturStyle.purple.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: SmarturStyle.purple, width: 2),
+                  if (_isBiometricActive) ...[
+                    const SizedBox(height: 48),
+                    FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: ScaleTransition(
+                        scale: _logoScale,
+                        child: GestureDetector(
+                          onTap: () => _checkBiometrics(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: SmarturStyle.purple.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: SmarturStyle.purple, width: 2),
+                            ),
+                            child: const Icon(Icons.fingerprint, size: 40, color: SmarturStyle.purple),
                           ),
-                          child: const Icon(Icons.fingerprint, size: 40, color: SmarturStyle.purple),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Text(
-                      l10n.loginWithBiometrics,
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        color: scheme.onSurface,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 8),
+                    FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Text(
+                        l10n.loginWithBiometrics,
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          color: scheme.onSurface,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ), 

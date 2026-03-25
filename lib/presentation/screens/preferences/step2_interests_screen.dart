@@ -135,6 +135,16 @@ class _PreferencesStep2State extends State<PreferencesStep2> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text(
+          "Elige lo que más prefieras",
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 13,
+            color: scheme.onSurfaceVariant,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        const SizedBox(height: SmarturStyle.spacingSm),
         _sectionLabel(l10n.yourInterests, Icons.favorite_outline),
         const SizedBox(height: SmarturStyle.spacingSm),
         Wrap(

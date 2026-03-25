@@ -1,7 +1,7 @@
 class EnvConfig {
   /// Base URL del backend SMARTUR (por ejemplo: https://api-smartur.fly.dev/api/v2)
   static const String apiBaseUrl =
-      String.fromEnvironment('API_BASE_URL_DEV', defaultValue: 'https://api-smartur.fly.dev/api/v2');
+      String.fromEnvironment('API_BASE_URL', defaultValue: 'https://api-smartur.fly.dev/api/v2');
 
   /// URL del Motor de IA
   static const String aiEngineUrl =

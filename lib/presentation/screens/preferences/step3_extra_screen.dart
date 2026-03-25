@@ -87,8 +87,18 @@ class _PreferencesStep3State extends State<PreferencesStep3> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text(
+          "Elige lo que más prefieras",
+          style: TextStyle(
+            fontFamily: 'Outfit',
+            fontSize: 13,
+            color: scheme.onSurfaceVariant,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        const SizedBox(height: SmarturStyle.spacingSm),
         _SwitchTile(
-          icon: Icons.accessibility_new,
+          icon: Icons.accessible_forward,
           iconColor: SmarturStyle.blue,
           title: l10n.needAccessibility,
           subtitle: l10n.accessibilitySubtitle,

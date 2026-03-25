@@ -152,13 +152,22 @@ class _PreferencesStep1State extends State<PreferencesStep1> {
     final l10n = AppLocalizations.of(context)!;
     final genders = _genderOptions(l10n);
     final locale = Localizations.localeOf(context);
-    final dateFmt = DateFormat.yMMMMd(locale.toString());
 
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Text(
+            "Elige lo que más prefieras",
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 13,
+              color: scheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: SmarturStyle.spacingSm),
           Semantics(
             button: true,
             label: l10n.birthYear,
@@ -176,8 +185,8 @@ class _PreferencesStep1State extends State<PreferencesStep1> {
                 ),
                 child: Text(
                   _selectedBirthDate != null
-                      ? dateFmt.format(_selectedBirthDate!)
-                      : l10n.enterBirthYear,
+                      ? DateFormat('dd / MM / yyyy', locale.toString()).format(_selectedBirthDate!)
+                      : "Día / Mes / Año",
                   style: TextStyle(
                     fontFamily: 'Outfit',
                     color: _selectedBirthDate != null ? scheme.onSurface : scheme.onSurfaceVariant,
