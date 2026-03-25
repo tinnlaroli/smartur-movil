@@ -1691,6 +1691,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Alta prioridad'**
   String get sustainableHigh;
+
+  /// No description provided for @choosePreference.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige lo que más prefieras'**
+  String get choosePreference;
+
+  /// No description provided for @dateFormatPlaceholder.
+  ///
+  /// In es, this message translates to:
+  /// **'Día / Mes / Año'**
+  String get dateFormatPlaceholder;
 }
 
 class _AppLocalizationsDelegate

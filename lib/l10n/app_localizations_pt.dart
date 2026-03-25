@@ -850,4 +850,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get sustainableHigh => 'Prioridade alta';
+
+  @override
+  String get choosePreference => 'Escolha o que você mais prefere';
+
+  @override
+  String get dateFormatPlaceholder => 'Dia / Mês / Ano';
 }

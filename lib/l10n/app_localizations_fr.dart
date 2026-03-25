@@ -856,4 +856,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get sustainableHigh => 'Priorité élevée';
+
+  @override
+  String get choosePreference => 'Choisissez ce que vous préférez le plus';
+
+  @override
+  String get dateFormatPlaceholder => 'Jour / Mois / Année';
 }
