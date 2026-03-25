@@ -88,11 +88,11 @@ class _PreferencesStep3State extends State<PreferencesStep3> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          "Elige lo que más prefieras",
+          l10n.choosePreference,
           style: TextStyle(
             fontFamily: 'Outfit',
             fontSize: 13,
-            color: scheme.onSurfaceVariant,
+            color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
             fontStyle: FontStyle.italic,
           ),
         ),
@@ -235,7 +235,7 @@ class _SwitchTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: value ? iconColor.withValues(alpha: 0.06) : SmarturStyle.bgSecondary,
+        color: value ? iconColor.withValues(alpha: 0.1) : scheme.surfaceContainerHighest.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: value ? iconColor.withValues(alpha: 0.4) : scheme.outlineVariant),
       ),

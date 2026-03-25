@@ -283,5 +283,7 @@
   "sustainableNoPref": "Sans préférence",
   "sustainableLow": "Priorité basse",
   "sustainableMedium": "Priorité moyenne",
-  "sustainableHigh": "Priorité élevée"
+  "sustainableHigh": "Priorité élevée",
+  "choosePreference": "Choisissez ce que vous préférez le plus",
+  "dateFormatPlaceholder": "Jour / Mois / Année"
 }

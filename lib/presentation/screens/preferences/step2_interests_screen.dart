@@ -136,11 +136,11 @@ class _PreferencesStep2State extends State<PreferencesStep2> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          "Elige lo que más prefieras",
+          l10n.choosePreference,
           style: TextStyle(
             fontFamily: 'Outfit',
             fontSize: 13,
-            color: scheme.onSurfaceVariant,
+            color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
             fontStyle: FontStyle.italic,
           ),
         ),

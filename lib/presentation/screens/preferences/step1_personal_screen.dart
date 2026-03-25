@@ -159,11 +159,11 @@ class _PreferencesStep1State extends State<PreferencesStep1> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            "Elige lo que más prefieras",
+            l10n.choosePreference,
             style: TextStyle(
               fontFamily: 'Outfit',
               fontSize: 13,
-              color: scheme.onSurfaceVariant,
+              color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -186,7 +186,7 @@ class _PreferencesStep1State extends State<PreferencesStep1> {
                 child: Text(
                   _selectedBirthDate != null
                       ? DateFormat('dd / MM / yyyy', locale.toString()).format(_selectedBirthDate!)
-                      : "Día / Mes / Año",
+                      : l10n.dateFormatPlaceholder,
                   style: TextStyle(
                     fontFamily: 'Outfit',
                     color: _selectedBirthDate != null ? scheme.onSurface : scheme.onSurfaceVariant,

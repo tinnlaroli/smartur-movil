@@ -54,20 +54,20 @@ class AuthService {
 
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     if (nowMs > expiryMs) {
-      await fullLogout();
+      await fullLogout(); // El logout por expiración real sí borra todo
       return false;
     }
     return true;
   }
 
-  /// Cierra la sesión en el dispositivo: **siempre** borra token y datos de usuario.
-  /// Mantiene preferencias como biométricos y «recordarme» (el usuario puede volver
-  /// a entrar con contraseña y seguir usando huella si la tenía activada).
-  ///
-  /// Importante: antes no se borraba el token si la biometría estaba activa, y al
-  /// reiniciar la app [hasSession] seguía siendo `true` → se abría el home en lugar del welcome.
+  /// Cierra la sesión en el dispositivo. Si la biometría está activa,
+  /// mantenemos el token para permitir el re-ingreso rápido (huella).
+  /// Si no hay biometría, borramos el token por seguridad.
   Future<void> clearSession() async {
-    await _storage.delete(key: _tokenKey);
+    final bool biometricOn = await isBiometricEnabled();
+    if (!biometricOn) {
+      await _storage.delete(key: _tokenKey);
+    }
     await _storage.delete(key: _sessionExpiryKey);
     await _storage.delete(key: _userIdKey);
     await _storage.delete(key: _userNameKey);

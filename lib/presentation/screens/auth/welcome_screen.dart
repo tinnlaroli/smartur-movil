@@ -44,14 +44,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
 
     _fadeAnimation = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.45, 1.0, curve: Curves.easeOutQuad),
+      curve: const Interval(0.2, 0.8, curve: Curves.easeIn),
     );
 
     // Escala 0.8 → 1.05 para contenido (texto/huella) con rebote suave.
     _logoScale = Tween<double>(begin: 0.8, end: 1.05).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.55, 1.0, curve: Curves.easeOutBack),
+        curve: const Interval(0.3, 0.9, curve: Curves.easeOutBack),
       ),
     );
 
@@ -79,19 +79,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.5, 1.0, curve: Curves.easeOutCubic),
+      curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
     ));
 
     _buttonFade = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.75, 1.0, curve: Curves.easeOutQuad),
+      curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
     );
 
     // Botón "Comenzar": pop claro y deslizamiento largo hacia arriba
     _buttonScale = Tween<double>(begin: 0.75, end: 1.05).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.8, 1.0, curve: Curves.elasticOut),
+        curve: const Interval(0.5, 1.0, curve: Curves.elasticOut),
       ),
     );
 
@@ -101,12 +101,24 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     ).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.75, 1.0, curve: Curves.easeOutCubic),
+        curve: const Interval(0.5, 1.0, curve: Curves.easeOutCubic),
       ),
     );
 
     // Comprobar si la biometría está activa para mostrar el botón
     _checkInitialBiometricStatus();
+
+    // Iniciar animaciones (con retraso si viene del splash)
+    if (widget.fromSplash) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await Future.delayed(const Duration(milliseconds: 4600));
+        if (mounted && !_controller.isAnimating && _controller.value == 0.0) {
+          _controller.forward();
+        }
+      });
+    } else {
+      _controller.forward();
+    }
   }
 
   Future<void> _checkInitialBiometricStatus() async {
@@ -772,9 +784,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
           ),
         );
       } else if (context.mounted) {
+        // Si no hay token guardado (token == null), informamos
         await _authService.clearSession();
-        if (!context.mounted) return;
-        SmarturNotifications.showInfo(context, l10n.sessionExpired);
+        if (context.mounted) {
+          SmarturNotifications.showInfo(context, l10n.sessionExpired);
+        }
       }
     } catch (e) {
       if (context.mounted) {
@@ -818,32 +832,37 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                 ),
               ),
             ),
-            // Textos y huella: flotan justo por encima del botón "Comenzar"
+            // Tagline: posición FIJA alta
             Positioned(
               left: SmarturStyle.spacingLg,
               right: SmarturStyle.spacingLg,
-              bottom: 150, // más cerca del botón Comenzar
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SlideTransition(
-                    position: _textSlide,
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Text(
-                        l10n.tagline,
-                        style: TextStyle(
-                          fontFamily: 'CalSans',
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: scheme.onSurface,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+              bottom: 280, 
+              child: SlideTransition(
+                position: _textSlide,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Text(
+                    l10n.tagline,
+                    style: TextStyle(
+                      fontFamily: 'CalSans',
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: scheme.onSurface,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  if (_isBiometricActive) ...[
-                    const SizedBox(height: 48),
+                ),
+              ),
+            ),
+            // Huella: solo si está activa, posicionada arriba del botón Comenzar
+            if (_isBiometricActive)
+              Positioned(
+                left: SmarturStyle.spacingLg,
+                right: SmarturStyle.spacingLg,
+                bottom: 155,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: ScaleTransition(
@@ -875,9 +894,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                       ),
                     ),
                   ],
-                ],
-              ),
-            ), 
+                ),
+              ), 
             Positioned(
               bottom: 50,
               left: SmarturStyle.spacingLg,
