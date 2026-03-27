@@ -33,10 +33,22 @@ jobs:
         run: flutter pub get
 
       - name: Build APK (Release)
-        run: flutter build apk --release
+        run: |
+          flutter build apk --release \
+            --dart-define=API_BASE_URL=${{ secrets.API_BASE_URL }} \
+            --dart-define=AI_ENGINE_URL=${{ secrets.AI_ENGINE_URL }} \
+            --dart-define=API_BASE_URL_DEV=${{ secrets.API_BASE_URL_DEV }} \
+            --dart-define=GOOGLE_SERVER_CLIENT_ID=${{ secrets.GOOGLE_SERVER_CLIENT_ID }} \
+            --dart-define=OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}
 
       - name: Build App Bundle (AAB - for Play Store)
-        run: flutter build appbundle --release
+        run: |
+          flutter build appbundle --release \
+            --dart-define=API_BASE_URL=${{ secrets.API_BASE_URL }} \
+            --dart-define=AI_ENGINE_URL=${{ secrets.AI_ENGINE_URL }} \
+            --dart-define=API_BASE_URL_DEV=${{ secrets.API_BASE_URL_DEV }} \
+            --dart-define=GOOGLE_SERVER_CLIENT_ID=${{ secrets.GOOGLE_SERVER_CLIENT_ID }} \
+            --dart-define=OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
