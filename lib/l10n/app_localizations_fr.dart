@@ -678,6 +678,9 @@ class AppLocalizationsFr extends AppLocalizations {
       'Mettez à jour votre mot de passe d\'accès';
 
   @override
+  String get forgotPassword => '¿Olvidaste tu contraseña?';
+
+  @override
   String get sessionClosed => 'Session fermée';
 
   @override

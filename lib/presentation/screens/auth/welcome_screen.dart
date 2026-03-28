@@ -147,6 +147,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     bool rememberMe = false;
     bool acceptedTerms = false;
     bool obscurePassword = true;
+    bool isForgotPassword = false;
+    int forgotStep = 0; // 0: Email, 1: Code & New Password
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
     final TextEditingController emailController = TextEditingController();
@@ -205,12 +207,18 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        isLogin ? l10n.welcomeBack : l10n.startNow,
+                        isForgotPassword
+                            ? l10n.changePasswordTitle
+                            : (isLogin ? l10n.welcomeBack : l10n.startNow),
                         style: SmarturStyle.calSansTitle,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        isLogin ? l10n.loginSubtitle : l10n.registerSubtitle,
+                        isForgotPassword
+                            ? (forgotStep == 0
+                                ? l10n.changePasswordStep0Hint
+                                : l10n.changePasswordStep1Hint)
+                            : (isLogin ? l10n.loginSubtitle : l10n.registerSubtitle),
                         style: TextStyle(
                           fontFamily: 'Outfit',
                           color: scheme.onSurfaceVariant,
@@ -219,8 +227,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       const SizedBox(height: 32),
                       if (!isExpanded) ...[
                         ElevatedButton(
-                          onPressed: () =>
-                              setModalState(() => isExpanded = true),
+                          onPressed: () => setModalState(() => isExpanded = true),
                           child: Text(
                             isLogin
                                 ? l10n.continueWithEmail
@@ -279,6 +286,79 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                               ),
                             ],
                           )
+                        else if (isForgotPassword)
+                          Column(
+                            children: [
+                              if (forgotStep == 0)
+                                TextFormField(
+                                  controller: emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  decoration: InputDecoration(
+                                    labelText: l10n.emailAddress,
+                                    hintText: l10n.enterEmail,
+                                    prefixIcon: const Icon(Icons.email_outlined),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return l10n.enterEmail;
+                                    }
+                                    if (!value.contains('@')) {
+                                      return l10n.enterValidEmail;
+                                    }
+                                    return null;
+                                  },
+                                )
+                              else ...[
+                                TextFormField(
+                                  controller: otpController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    labelText: l10n.verificationCode,
+                                    hintText: "000000",
+                                    prefixIcon: const Icon(Icons.pin_outlined),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                TextFormField(
+                                  controller: passwordController,
+                                  obscureText: obscurePassword,
+                                  decoration: InputDecoration(
+                                    labelText: l10n.newPassword,
+                                    prefixIcon: const Icon(Icons.lock_outline),
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        obscurePassword
+                                            ? Icons.visibility_outlined
+                                            : Icons.visibility_off_outlined,
+                                      ),
+                                      onPressed: () => setModalState(
+                                        () => obscurePassword = !obscurePassword,
+                                      ),
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 8),
+                              TextButton(
+                                onPressed: () => setModalState(() {
+                                  isForgotPassword = false;
+                                  forgotStep = 0;
+                                  otpController.clear();
+                                  passwordController.clear();
+                                }),
+                                child: Text(l10n.back),
+                              ),
+                            ],
+                          )
                         else ...[
                           _buildAuthFields(
                             isLogin,
@@ -315,15 +395,33 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 ),
                               ],
                             ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () => setModalState(() {
+                                  isForgotPassword = true;
+                                  forgotStep = 0;
+                                   otpController.clear();
+                                   passwordController.clear();
+                                }),
+                                child: Text(
+                                  l10n.forgotPassword,
+                                  style: const TextStyle(
+                                    color: SmarturStyle.purple,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
-                          if (!isLogin && !isWaitingOTP) ...[
+                          if (!isLogin) ...[
                             const SizedBox(height: 16),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Checkbox(
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   visualDensity: VisualDensity.compact,
                                   value: acceptedTerms,
                                   activeColor: SmarturStyle.purple,
@@ -344,27 +442,20 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                         ),
                                         children: [
                                           TextSpan(
-                                            text:
-                                                l10n.registerAcceptTermsPrefix,
+                                            text: l10n.registerAcceptTermsPrefix,
                                           ),
                                           WidgetSpan(
-                                            alignment:
-                                                PlaceholderAlignment.baseline,
+                                            alignment: PlaceholderAlignment.baseline,
                                             baseline: TextBaseline.alphabetic,
                                             child: GestureDetector(
-                                              onTap: () =>
-                                                  showTermsAndConditionsModal(
-                                                    context,
-                                                  ),
+                                              onTap: () => showTermsAndConditionsModal(context),
                                               child: Text(
                                                 l10n.termsAndConditions,
                                                 style: const TextStyle(
                                                   color: SmarturStyle.purple,
                                                   fontWeight: FontWeight.w600,
-                                                  decoration:
-                                                      TextDecoration.underline,
-                                                  decorationColor:
-                                                      SmarturStyle.purple,
+                                                  decoration: TextDecoration.underline,
+                                                  decorationColor: SmarturStyle.purple,
                                                   fontFamily: 'Outfit',
                                                   fontSize: 13,
                                                   height: 1.4,
@@ -387,109 +478,98 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                               ? null
                               : () async {
                                   if (formKey.currentState!.validate()) {
-                                    if (!isLogin && !acceptedTerms) {
+                                    if (!isLogin && !acceptedTerms && !isForgotPassword) {
                                       if (context.mounted) {
-                                        SmarturNotifications.showWarning(
-                                          context,
-                                          l10n.termsMustAccept,
-                                        );
+                                        SmarturNotifications.showWarning(context, l10n.termsMustAccept);
                                       }
                                       return;
                                     }
                                     setModalState(() => isLoadingEmail = true);
                                     try {
-                                      if (isLogin) {
+                                      if (isForgotPassword) {
+                                        if (forgotStep == 0) {
+                                          await _authService.forgotPassword(emailController.text.trim());
+                                          setModalState(() => forgotStep = 1);
+                                          if (context.mounted) {
+                                            SmarturNotifications.showSuccess(context, l10n.codeSentToEmail(emailController.text));
+                                          }
+                                        } else {
+                                          await _authService.resetPassword(
+                                            emailController.text.trim(),
+                                            otpController.text.trim(),
+                                            passwordController.text,
+                                          );
+                                          setModalState(() {
+                                            isForgotPassword = false;
+                                            forgotStep = 0;
+                                            isLogin = true;
+                                            otpController.clear();
+                                            passwordController.clear();
+                                          });
+                                          if (context.mounted) {
+                                            SmarturNotifications.showSuccess(context, l10n.accountCreated);
+                                          }
+                                        }
+                                      } else if (isLogin) {
                                         if (!isWaitingOTP) {
-                                          final response = await _authService
-                                              .loginStep1(
-                                                emailController.text.trim(),
-                                                passwordController.text.trim(),
-                                              );
-                                          if (response != null &&
-                                              response['requiresVerification'] ==
-                                                  true) {
-                                            setModalState(
-                                              () => isWaitingOTP = true,
-                                            );
+                                          final response = await _authService.loginStep1(
+                                            emailController.text.trim(),
+                                            passwordController.text.trim(),
+                                          );
+                                          if (response != null && response['requiresVerification'] == true) {
+                                            setModalState(() => isWaitingOTP = true);
                                           } else {
                                             if (context.mounted) {
-                                              SmarturNotifications.showError(
-                                                context,
-                                                l10n.invalidCredentials,
-                                              );
+                                              SmarturNotifications.showError(context, l10n.invalidCredentials);
                                             }
                                           }
                                         } else {
-                                          final token = await _authService
-                                              .verifyOTP(
-                                                emailController.text.trim(),
-                                                otpController.text.trim(),
-                                                rememberMe: rememberMe,
-                                              );
-                                          if (token != null &&
-                                              context.mounted) {
-                                            final savedName = await _authService
-                                                .getUserName();
+                                          final token = await _authService.verifyOTP(
+                                            emailController.text.trim(),
+                                            otpController.text.trim(),
+                                            rememberMe: rememberMe,
+                                          );
+                                          if (token != null && context.mounted) {
+                                            final savedName = await _authService.getUserName();
                                             if (!context.mounted) return;
                                             Navigator.pop(context);
                                             Navigator.pushReplacement(
                                               context,
                                               MaterialPageRoute(
-                                                builder: (_) => MainScreen(
-                                                  userName: savedName,
-                                                  isNewLogin: true,
-                                                ),
+                                                builder: (_) => MainScreen(userName: savedName, isNewLogin: true),
                                               ),
                                             );
                                           } else {
                                             if (context.mounted) {
-                                              SmarturNotifications.showError(
-                                                context,
-                                                l10n.invalidCode,
-                                              );
+                                              SmarturNotifications.showError(context, l10n.invalidCode);
                                             }
                                           }
                                         }
                                       } else {
-                                        bool success = await _authService
-                                            .register(
-                                              nameController.text.trim(),
-                                              emailController.text.trim(),
-                                              passwordController.text.trim(),
-                                            );
+                                        bool success = await _authService.register(
+                                          nameController.text.trim(),
+                                          emailController.text.trim(),
+                                          passwordController.text.trim(),
+                                        );
                                         if (success && context.mounted) {
                                           setModalState(() => isLogin = true);
-                                          SmarturNotifications.showSuccess(
-                                            context,
-                                            l10n.accountCreated,
-                                          );
+                                          SmarturNotifications.showSuccess(context, l10n.accountCreated);
                                         }
                                       }
                                     } on AuthRateLimitException {
                                       if (context.mounted) {
-                                        SmarturNotifications.showError(
-                                          context,
-                                          l10n.tooManyAttempts,
-                                        );
+                                        SmarturNotifications.showError(context, l10n.tooManyAttempts);
                                       }
                                     } on AuthException catch (e) {
                                       if (context.mounted) {
-                                        SmarturNotifications.showError(
-                                          context,
-                                          e.message,
-                                        );
+                                        SmarturNotifications.showError(context, e.message);
                                       }
                                     } catch (e) {
                                       if (context.mounted) {
-                                        SmarturNotifications.showError(
-                                          context,
-                                          l10n.connectionError,
-                                        );
+                                        SmarturNotifications.showError(context, l10n.connectionError);
                                       }
                                     } finally {
-                                      setModalState(
-                                        () => isLoadingEmail = false,
-                                      );
+                                      setModalState(() => isLoadingEmail = false);
                                     }
                                   }
                                 },
@@ -504,15 +584,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                   ),
                                 )
                               : Text(
-                                  isWaitingOTP
-                                      ? l10n.verify
-                                      : (isLogin
-                                            ? l10n.signInButton
-                                            : l10n.createAccount),
+                                  isForgotPassword
+                                      ? (forgotStep == 0 ? l10n.sendCode : l10n.updatePassword)
+                                      : (isWaitingOTP ? l10n.verify : (isLogin ? l10n.signInButton : l10n.createAccount)),
                                 ),
                         ),
                       ],
-                      if (!isWaitingOTP) ...[
+                      if (!isWaitingOTP && !isForgotPassword) ...[
                         const SizedBox(height: 12),
                         OutlinedButton(
                           onPressed: (isLoadingEmail || isLoadingGoogle)

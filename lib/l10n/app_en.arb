@@ -221,6 +221,7 @@
   "removeProfilePhoto": "Remove photo",
   "avatarIconsSectionHint": "Or choose an icon instead of a photo",
   "changePasswordSubtitle": "Update your access password",
+  "forgotPassword": "Forgot password?",
   "sessionClosed": "Session closed",
 
   "stepXOfY": "Step {current} of {total}",

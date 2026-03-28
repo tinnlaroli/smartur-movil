@@ -1344,6 +1344,12 @@ abstract class AppLocalizations {
   /// **'Actualiza tu contraseña de acceso'**
   String get changePasswordSubtitle;
 
+  /// No description provided for @forgotPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Olvidaste tu contraseña?'**
+  String get forgotPassword;
+
   /// No description provided for @sessionClosed.
   ///
   /// In es, this message translates to:

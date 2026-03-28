@@ -665,6 +665,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changePasswordSubtitle => 'Update your access password';
 
   @override
+  String get forgotPassword => 'Forgot password?';
+
+  @override
   String get sessionClosed => 'Session closed';
 
   @override
