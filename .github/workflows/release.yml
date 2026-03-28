@@ -32,6 +32,10 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/smartur-release.jks
+
       - name: Build APK (Release)
         run: |
           flutter build apk --release \
@@ -40,6 +44,11 @@ jobs:
             --dart-define=API_BASE_URL_DEV=${{ secrets.API_BASE_URL_DEV }} \
             --dart-define=GOOGLE_SERVER_CLIENT_ID=${{ secrets.GOOGLE_SERVER_CLIENT_ID }} \
             --dart-define=OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PATH: smartur-release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
 
       - name: Build App Bundle (AAB - for Play Store)
         run: |
@@ -49,6 +58,11 @@ jobs:
             --dart-define=API_BASE_URL_DEV=${{ secrets.API_BASE_URL_DEV }} \
             --dart-define=GOOGLE_SERVER_CLIENT_ID=${{ secrets.GOOGLE_SERVER_CLIENT_ID }} \
             --dart-define=OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PATH: smartur-release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
