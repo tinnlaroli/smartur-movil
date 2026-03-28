@@ -20,14 +20,15 @@ class WelcomeScreen extends StatefulWidget {
   State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProviderStateMixin {
+class _WelcomeScreenState extends State<WelcomeScreen>
+    with SingleTickerProviderStateMixin {
   final LocalAuthentication _auth = LocalAuthentication();
   final AuthService _authService = AuthService();
-  
+
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _logoScale; // para huella/botón
-  late Animation<double> _logoZoom;  // continuidad del zoom del loader
+  late Animation<double> _logoZoom; // continuidad del zoom del loader
   late Animation<Offset> _textSlide;
   late Animation<double> _buttonFade;
   late Animation<double> _buttonScale;
@@ -56,31 +57,36 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     );
 
     // Logo: pequeño rebote  (1.02 → 0.96 → 1.0) para dar vida al final del zoom.
-    _logoZoom = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.12, end: 0.36)
-            .chain(CurveTween(curve: Curves.easeOutQuad)),
-        weight: 40,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.36, end: 1.0)
-            .chain(CurveTween(curve: Curves.elasticOut)),
-        weight: 60,
-      ),
-    ]).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-      ),
-    );
+    _logoZoom =
+        TweenSequence<double>([
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 1.12,
+              end: 0.36,
+            ).chain(CurveTween(curve: Curves.easeOutQuad)),
+            weight: 40,
+          ),
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 0.36,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.elasticOut)),
+            weight: 60,
+          ),
+        ]).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+          ),
+        );
 
-    _textSlide = Tween<Offset>(
-      begin: const Offset(0, 0.35),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
-    ));
+    _textSlide = Tween<Offset>(begin: const Offset(0, 0.35), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _buttonFade = CurvedAnimation(
       parent: _controller,
@@ -95,15 +101,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       ),
     );
 
-    _buttonSlide = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.5, 1.0, curve: Curves.easeOutCubic),
-      ),
-    );
+    _buttonSlide = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.5, 1.0, curve: Curves.easeOutCubic),
+          ),
+        );
 
     // Comprobar si la biometría está activa para mostrar el botón
     _checkInitialBiometricStatus();
@@ -169,7 +173,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
               height: height,
               decoration: BoxDecoration(
                 color: scheme.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(32),
+                ),
               ),
               padding: EdgeInsets.only(
                 left: SmarturStyle.spacingLg,
@@ -190,7 +196,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: scheme.onSurfaceVariant.withValues(alpha: 0.35),
+                            color: scheme.onSurfaceVariant.withValues(
+                              alpha: 0.35,
+                            ),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -202,9 +210,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        isLogin
-                            ? l10n.loginSubtitle
-                            : l10n.registerSubtitle,
+                        isLogin ? l10n.loginSubtitle : l10n.registerSubtitle,
                         style: TextStyle(
                           fontFamily: 'Outfit',
                           color: scheme.onSurfaceVariant,
@@ -213,8 +219,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                       const SizedBox(height: 32),
                       if (!isExpanded) ...[
                         ElevatedButton(
-                          onPressed: () => setModalState(() => isExpanded = true),
-                          child: Text(isLogin ? l10n.continueWithEmail : l10n.registerWithEmail),
+                          onPressed: () =>
+                              setModalState(() => isExpanded = true),
+                          child: Text(
+                            isLogin
+                                ? l10n.continueWithEmail
+                                : l10n.registerWithEmail,
+                          ),
                         ),
                       ] else ...[
                         if (isWaitingOTP)
@@ -222,11 +233,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                             children: [
                               Text(
                                 l10n.codeSentToLabel,
-                                style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurfaceVariant, fontSize: 13),
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  color: scheme.onSurfaceVariant,
+                                  fontSize: 13,
+                                ),
                               ),
                               Text(
                                 emailController.text,
-                                style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: scheme.onSurface),
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontWeight: FontWeight.bold,
+                                  color: scheme.onSurface,
+                                ),
                               ),
                               const SizedBox(height: 20),
                               TextFormField(
@@ -241,7 +260,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                 decoration: InputDecoration(
                                   hintText: "000000",
                                   helperText: l10n.enterSixDigitCode,
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
                               TextButton(
@@ -249,7 +270,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                   isWaitingOTP = false;
                                   otpController.clear();
                                 }),
-                                child: Text(l10n.changeEmail, style: const TextStyle(color: SmarturStyle.purple)),
+                                child: Text(
+                                  l10n.changeEmail,
+                                  style: const TextStyle(
+                                    color: SmarturStyle.purple,
+                                  ),
+                                ),
                               ),
                             ],
                           )
@@ -261,7 +287,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                             passwordController,
                             setModalState,
                             obscurePassword: obscurePassword,
-                            onTogglePassword: () => setModalState(() => obscurePassword = !obscurePassword),
+                            onTogglePassword: () => setModalState(
+                              () => obscurePassword = !obscurePassword,
+                            ),
                           ),
                           if (isLogin) ...[
                             const SizedBox(height: 8),
@@ -294,7 +322,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Checkbox(
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                   visualDensity: VisualDensity.compact,
                                   value: acceptedTerms,
                                   activeColor: SmarturStyle.purple,
@@ -314,19 +343,28 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                           height: 1.4,
                                         ),
                                         children: [
-                                          TextSpan(text: l10n.registerAcceptTermsPrefix),
+                                          TextSpan(
+                                            text:
+                                                l10n.registerAcceptTermsPrefix,
+                                          ),
                                           WidgetSpan(
-                                            alignment: PlaceholderAlignment.baseline,
+                                            alignment:
+                                                PlaceholderAlignment.baseline,
                                             baseline: TextBaseline.alphabetic,
                                             child: GestureDetector(
-                                              onTap: () => showTermsAndConditionsModal(context),
+                                              onTap: () =>
+                                                  showTermsAndConditionsModal(
+                                                    context,
+                                                  ),
                                               child: Text(
                                                 l10n.termsAndConditions,
                                                 style: const TextStyle(
                                                   color: SmarturStyle.purple,
                                                   fontWeight: FontWeight.w600,
-                                                  decoration: TextDecoration.underline,
-                                                  decorationColor: SmarturStyle.purple,
+                                                  decoration:
+                                                      TextDecoration.underline,
+                                                  decorationColor:
+                                                      SmarturStyle.purple,
                                                   fontFamily: 'Outfit',
                                                   fontSize: 13,
                                                   height: 1.4,
@@ -362,25 +400,36 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                     try {
                                       if (isLogin) {
                                         if (!isWaitingOTP) {
-                                          final response = await _authService.loginStep1(
-                                            emailController.text.trim(),
-                                            passwordController.text.trim(),
-                                          );
-                                          if (response != null && response['requiresVerification'] == true) {
-                                            setModalState(() => isWaitingOTP = true);
+                                          final response = await _authService
+                                              .loginStep1(
+                                                emailController.text.trim(),
+                                                passwordController.text.trim(),
+                                              );
+                                          if (response != null &&
+                                              response['requiresVerification'] ==
+                                                  true) {
+                                            setModalState(
+                                              () => isWaitingOTP = true,
+                                            );
                                           } else {
                                             if (context.mounted) {
-                                              SmarturNotifications.showError(context, l10n.invalidCredentials);
+                                              SmarturNotifications.showError(
+                                                context,
+                                                l10n.invalidCredentials,
+                                              );
                                             }
                                           }
                                         } else {
-                                          final token = await _authService.verifyOTP(
-                                            emailController.text.trim(),
-                                            otpController.text.trim(),
-                                            rememberMe: rememberMe,
-                                          );
-                                          if (token != null && context.mounted) {
-                                            final savedName = await _authService.getUserName();
+                                          final token = await _authService
+                                              .verifyOTP(
+                                                emailController.text.trim(),
+                                                otpController.text.trim(),
+                                                rememberMe: rememberMe,
+                                              );
+                                          if (token != null &&
+                                              context.mounted) {
+                                            final savedName = await _authService
+                                                .getUserName();
                                             if (!context.mounted) return;
                                             Navigator.pop(context);
                                             Navigator.pushReplacement(
@@ -394,35 +443,53 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                             );
                                           } else {
                                             if (context.mounted) {
-                                              SmarturNotifications.showError(context, l10n.invalidCode);
+                                              SmarturNotifications.showError(
+                                                context,
+                                                l10n.invalidCode,
+                                              );
                                             }
                                           }
                                         }
                                       } else {
-                                        bool success = await _authService.register(
-                                          nameController.text.trim(),
-                                          emailController.text.trim(),
-                                          passwordController.text.trim(),
-                                        );
+                                        bool success = await _authService
+                                            .register(
+                                              nameController.text.trim(),
+                                              emailController.text.trim(),
+                                              passwordController.text.trim(),
+                                            );
                                         if (success && context.mounted) {
                                           setModalState(() => isLogin = true);
-                                          SmarturNotifications.showSuccess(context, l10n.accountCreated);
+                                          SmarturNotifications.showSuccess(
+                                            context,
+                                            l10n.accountCreated,
+                                          );
                                         }
                                       }
                                     } on AuthRateLimitException {
                                       if (context.mounted) {
-                                        SmarturNotifications.showError(context, l10n.tooManyAttempts);
+                                        SmarturNotifications.showError(
+                                          context,
+                                          l10n.tooManyAttempts,
+                                        );
                                       }
-                                    } on AuthException {
+                                    } on AuthException catch (e) {
                                       if (context.mounted) {
-                                        SmarturNotifications.showError(context, l10n.invalidCredentials);
+                                        SmarturNotifications.showError(
+                                          context,
+                                          e.message,
+                                        );
                                       }
                                     } catch (e) {
                                       if (context.mounted) {
-                                        SmarturNotifications.showError(context, l10n.connectionError);
+                                        SmarturNotifications.showError(
+                                          context,
+                                          l10n.connectionError,
+                                        );
                                       }
                                     } finally {
-                                      setModalState(() => isLoadingEmail = false);
+                                      setModalState(
+                                        () => isLoadingEmail = false,
+                                      );
                                     }
                                   }
                                 },
@@ -436,7 +503,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                     fontFamily: 'CalSans',
                                   ),
                                 )
-                              : Text(isWaitingOTP ? l10n.verify : (isLogin ? l10n.signInButton : l10n.createAccount)),
+                              : Text(
+                                  isWaitingOTP
+                                      ? l10n.verify
+                                      : (isLogin
+                                            ? l10n.signInButton
+                                            : l10n.createAccount),
+                                ),
                         ),
                       ],
                       if (!isWaitingOTP) ...[
@@ -447,11 +520,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               : () async {
                                   setModalState(() => isLoadingGoogle = true);
                                   try {
-                                    final response = await _authService.loginWithGoogle(
-                                      rememberMe: rememberMe,
-                                    );
+                                    final response = await _authService
+                                        .loginWithGoogle(
+                                          rememberMe: rememberMe,
+                                        );
                                     if (response != null && context.mounted) {
-                                      final savedName = await _authService.getUserName();
+                                      final savedName = await _authService
+                                          .getUserName();
                                       if (!context.mounted) return;
                                       Navigator.pop(context);
                                       Navigator.pushReplacement(
@@ -466,18 +541,29 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                     }
                                   } on AuthRateLimitException {
                                     if (context.mounted) {
-                                      SmarturNotifications.showError(context, l10n.tooManyAttempts);
+                                      SmarturNotifications.showError(
+                                        context,
+                                        l10n.tooManyAttempts,
+                                      );
                                     }
-                                  } on AuthException {
+                                  } on AuthException catch (e) {
                                     if (context.mounted) {
-                                      SmarturNotifications.showError(context, l10n.invalidCredentials);
+                                      SmarturNotifications.showError(
+                                        context,
+                                        e.message,
+                                      );
                                     }
                                   } catch (e) {
                                     if (context.mounted) {
-                                      SmarturNotifications.showError(context, l10n.connectionError);
+                                      SmarturNotifications.showError(
+                                        context,
+                                        l10n.connectionError,
+                                      );
                                     }
                                   } finally {
-                                    setModalState(() => isLoadingGoogle = false);
+                                    setModalState(
+                                      () => isLoadingGoogle = false,
+                                    );
                                   }
                                 },
                           style: OutlinedButton.styleFrom(
@@ -488,7 +574,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               ? Text(
                                   '…',
                                   style: TextStyle(
-                                    color: SmarturStyle.purple.withValues(alpha: 0.85),
+                                    color: SmarturStyle.purple.withValues(
+                                      alpha: 0.85,
+                                    ),
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
                                     fontFamily: 'Outfit',
@@ -518,16 +606,30 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                       TextButton(
                         onPressed: () => setModalState(() {
                           isLogin = !isLogin;
-                          isWaitingOTP = false; // Reset OTP state when switching
+                          isWaitingOTP =
+                              false; // Reset OTP state when switching
                           acceptedTerms = false;
                           otpController.clear();
                         }),
                         child: RichText(
                           text: TextSpan(
-                            style: TextStyle(fontFamily: 'Outfit', color: scheme.onSurface),
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              color: scheme.onSurface,
+                            ),
                             children: [
-                              TextSpan(text: isLogin ? l10n.noAccountPrompt : l10n.haveAccountPrompt),
-                              TextSpan(text: isLogin ? l10n.signUp : l10n.signInAction, style: const TextStyle(color: SmarturStyle.purple, fontWeight: FontWeight.bold)),
+                              TextSpan(
+                                text: isLogin
+                                    ? l10n.noAccountPrompt
+                                    : l10n.haveAccountPrompt,
+                              ),
+                              TextSpan(
+                                text: isLogin ? l10n.signUp : l10n.signInAction,
+                                style: const TextStyle(
+                                  color: SmarturStyle.purple,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -572,8 +674,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
             controller: nameCtrl,
             decoration: InputDecoration(
               labelText: l10n.fullName,
-              prefixIcon: const Icon(Icons.person_outline, color: SmarturStyle.purple),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              prefixIcon: const Icon(
+                Icons.person_outline,
+                color: SmarturStyle.purple,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             validator: (v) {
               if (v == null || v.isEmpty) return l10n.enterFullName;
@@ -588,13 +695,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
           keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
             labelText: l10n.emailAddress,
-            prefixIcon: const Icon(Icons.email_outlined, color: SmarturStyle.purple),
+            prefixIcon: const Icon(
+              Icons.email_outlined,
+              color: SmarturStyle.purple,
+            ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           validator: (v) {
             if (v == null || v.isEmpty) return l10n.enterEmail;
             if (isLogin) return null;
-            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) return l10n.enterValidEmail;
+            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v))
+              return l10n.enterValidEmail;
             return null;
           },
         ),
@@ -605,11 +716,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
           onChanged: (value) => setModalState(() {}),
           decoration: InputDecoration(
             labelText: l10n.password,
-            prefixIcon: const Icon(Icons.lock_outline, color: SmarturStyle.purple),
+            prefixIcon: const Icon(
+              Icons.lock_outline,
+              color: SmarturStyle.purple,
+            ),
             suffixIcon: onTogglePassword != null
                 ? IconButton(
                     icon: Icon(
-                      obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
                       color: scheme.onSurfaceVariant,
                     ),
                     onPressed: onTogglePassword,
@@ -624,7 +740,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
             if (!RegExp(r'[A-Z]').hasMatch(v)) return l10n.atLeastOneUppercase;
             if (!RegExp(r'[a-z]').hasMatch(v)) return l10n.atLeastOneLowercase;
             if (!RegExp(r'[0-9]').hasMatch(v)) return l10n.atLeastOneNumber;
-            if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(v)) return l10n.atLeastOneSpecial;
+            if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(v))
+              return l10n.atLeastOneSpecial;
             return null;
           },
         ),
@@ -667,7 +784,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
               children: [
                 Text(
                   l10n.passwordRequirements,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Outfit',
+                  ),
                 ),
                 const SizedBox(height: 8),
                 _buildRequirementRow(l10n.minEightChars, hasMinLength),
@@ -749,7 +870,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
         return;
       }
 
-      final bool canAuth = await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
+      final bool canAuth =
+          await _auth.canCheckBiometrics || await _auth.isDeviceSupported();
       if (!canAuth) {
         if (context.mounted) {
           SmarturNotifications.showWarning(context, l10n.deviceNotSupported);
@@ -757,7 +879,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
         return;
       }
 
-      final List<BiometricType> available = await _auth.getAvailableBiometrics();
+      final List<BiometricType> available = await _auth
+          .getAvailableBiometrics();
       if (available.isEmpty) {
         if (context.mounted) {
           SmarturNotifications.showInfo(context, l10n.noBiometricsEnrolled);
@@ -767,7 +890,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
 
       final bool didAuthenticate = await _auth.authenticate(
         localizedReason: l10n.biometricReason,
-        options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true,
+        ),
       );
 
       if (!didAuthenticate) return;
@@ -777,10 +903,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => const MainScreen(
-              userName: null,
-              isNewLogin: false,
-            ),
+            builder: (_) => const MainScreen(userName: null, isNewLogin: false),
           ),
         );
       } else if (context.mounted) {
@@ -836,7 +959,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
             Positioned(
               left: SmarturStyle.spacingLg,
               right: SmarturStyle.spacingLg,
-              bottom: 280, 
+              bottom: 280,
               child: SlideTransition(
                 position: _textSlide,
                 child: FadeTransition(
@@ -874,9 +997,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                             decoration: BoxDecoration(
                               color: SmarturStyle.purple.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
-                              border: Border.all(color: SmarturStyle.purple, width: 2),
+                              border: Border.all(
+                                color: SmarturStyle.purple,
+                                width: 2,
+                              ),
                             ),
-                            child: const Icon(Icons.fingerprint, size: 40, color: SmarturStyle.purple),
+                            child: const Icon(
+                              Icons.fingerprint,
+                              size: 40,
+                              color: SmarturStyle.purple,
+                            ),
                           ),
                         ),
                       ),
@@ -895,7 +1025,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                     ),
                   ],
                 ),
-              ), 
+              ),
             Positioned(
               bottom: 50,
               left: SmarturStyle.spacingLg,
@@ -908,13 +1038,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                     scale: _buttonScale,
                     child: ElevatedButton(
                       onPressed: () => _showAuthModal(context, isLogin: true),
-                      child: Text(l10n.start, 
-                      style: TextStyle(
-                        color: Colors.white, 
-                        fontWeight: FontWeight.bold, 
-                        fontFamily: 'CalSans',
-                        fontSize: 18,
-                      ),
+                      child: Text(
+                        l10n.start,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'CalSans',
+                          fontSize: 18,
+                        ),
                       ),
                     ),
                   ),
