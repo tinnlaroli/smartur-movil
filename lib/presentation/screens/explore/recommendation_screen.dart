@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
-import '../../../core/constants/env_config.dart';
+import '../../../core/constants/api_constants.dart';
+import '../../../data/services/api_client.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/profile_service.dart';
 import '../../../data/services/user_content_service.dart';
@@ -26,6 +27,9 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   bool _isLoadingContext = true;
   bool _isFetchingRecommendations = false;
   List<dynamic> _recommendations = [];
+
+  // ML session tracking — used to record per-item click feedback
+  int? _sessionId;
 
   // Form State
   String _presupuesto = 'medio';
@@ -94,6 +98,32 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     }
   }
 
+  /// Requests device GPS location with a short timeout.
+  /// Returns null silently if permission is denied or unavailable —
+  /// the backend will fall back to the Altas Montañas geographic center.
+  Future<Position?> _getDeviceLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return null;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return null;
+      }
+      if (permission == LocationPermission.deniedForever) return null;
+
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,   // city-level, saves battery
+          timeLimit: Duration(seconds: 5),
+        ),
+      );
+    } catch (_) {
+      return null; // Any error (timeout, hardware) → graceful fallback
+    }
+  }
+
   Future<void> _fetchRecommendations() async {
     final l10n = AppLocalizations.of(context);
     setState(() {
@@ -112,7 +142,14 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         return;
       }
 
-      final url = Uri.parse('${EnvConfig.aiEngineUrl}/recommend/$userId');
+      // Request GPS location in parallel with the rest of the setup.
+      // If denied or unavailable, lat/lon will be null and the backend
+      // falls back to the Altas Montañas geographic center (18.95, -97.05).
+      final position = await _getDeviceLocation();
+
+      // Route via Node.js API proxy so verifyToken middleware is applied.
+      // Direct calls to aiEngineUrl (port 8000) bypass authentication entirely.
+      final url = Uri.parse('${ApiConstants.baseUrl}/ml/recommend/$userId');
       final payload = {
         "alpha": 0.2,
         "top_n": 5,
@@ -125,32 +162,36 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
           "needs_hotel": _needsHotel,
           "pref_food": _prefFood,
           "requiere_accesibilidad": _reqAccesibilidad,
-          "pref_outdoor": _prefOutdoor
+          "pref_outdoor": _prefOutdoor,
+          // Geographic coordinates for distance-based ranking.
+          // null values are accepted by the backend (uses region center as fallback).
+          "lat": position?.latitude,
+          "lon": position?.longitude,
         }
       };
 
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
-      ).timeout(const Duration(seconds: 20));
+      // ApiClient injects Authorization: Bearer <token>, Content-Type: application/json,
+      // and applies a 20s timeout — no need for manual headers or .timeout().
+      final response = await ApiClient.post(url, body: jsonEncode(payload));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          // Ajusta esta clave a lo que devuelva exactamente tu API en FastAPI.
-          // Suponiendo que devuelve una lista en 'recommendations' o similar.
-        if (data is List) {
-          _recommendations = data;
-        } else if (data['recommendations'] != null) {
-          _recommendations = data['recommendations'];
-        } else {
-          _recommendations = [data]; // Fallback
-        }
+          if (data is List) {
+            _recommendations = data;
+          } else if (data['recommendations'] != null) {
+            _recommendations = data['recommendations'];
+          } else {
+            _recommendations = [data]; // Fallback
+          }
+          // Capture session_id returned by mlRoutes.js for per-item feedback
+          if (data is Map && data['session_id'] != null) {
+            _sessionId = data['session_id'] as int?;
+          }
+        });
         if (_recommendations.isNotEmpty) {
-           _showResultsModal(context, _recommendations);
+          _showResultsModal(context, _recommendations);
         }
-      });
       } else {
         throw Exception('Server returned ${response.statusCode}');
       }
@@ -319,6 +360,18 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     );
   }
 
+  /// Fire-and-forget: records a recommendation click/dismiss event to the ML feedback endpoint.
+  void _recordFeedback(String itemId, {required int rankPos, required bool clicked}) {
+    final sid = _sessionId;
+    if (sid == null) return;
+    UserContentService().recordRecommendationFeedback(
+      sessionId: sid,
+      itemId: itemId,
+      rankPos: rankPos,
+      clicked: clicked,
+    );
+  }
+
   void _showResultsModal(BuildContext context, List<dynamic> recommendations) {
     final scheme = Theme.of(context).colorScheme;
 
@@ -327,7 +380,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        height: MediaQuery.of(ctx).size.height * 0.75,
+        height: MediaQuery.of(ctx).size.height * 0.80,
         decoration: BoxDecoration(
           color: scheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -348,24 +401,94 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             ),
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: recommendations.length,
                 itemBuilder: (c, i) {
-                  final item = recommendations[i];
+                  final item = recommendations[i] as Map<String, dynamic>;
                   final name = item['title'] ?? item['name'] ?? 'Destino ${i + 1}';
-                  final score = item['score'] ?? 0.0;
+                  final score = (item['score'] as num?)?.toDouble() ?? 0.0;
+                  final itemId = (item['item_id'] ?? '').toString();
+                  final tags = (item['reason_tags'] as List?)
+                      ?.map((t) => t.toString())
+                      .toList() ?? [];
+
                   return Card(
                     elevation: 0,
                     color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    margin: const EdgeInsets.only(bottom: 12),
+                    margin: const EdgeInsets.only(bottom: 10),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: SmarturStyle.purple,
-                        child: Text(score.toStringAsFixed(1), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        // Record click and close modal
+                        _recordFeedback(itemId, rankPos: i, clicked: true);
+                        Navigator.pop(ctx);
+                        // TODO: navigate to detail once local POI detail route is available
+                        // context.push('/explore/poi/$itemId');
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Score avatar
+                            CircleAvatar(
+                              backgroundColor: SmarturStyle.purple,
+                              radius: 22,
+                              child: Text(
+                                score.toStringAsFixed(1),
+                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Title + tags
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, fontSize: 14),
+                                  ),
+                                  if (tags.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Wrap(
+                                      spacing: 4,
+                                      runSpacing: 2,
+                                      children: tags.map((tag) => Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: SmarturStyle.purple.withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Text(
+                                          tag,
+                                          style: TextStyle(fontSize: 10, color: SmarturStyle.purple, fontFamily: 'Outfit'),
+                                        ),
+                                      )).toList(),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            // Actions: dismiss + chevron
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.thumb_down_outlined, size: 18),
+                                  tooltip: 'No me interesa',
+                                  color: scheme.outline,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  onPressed: () => _recordFeedback(itemId, rankPos: i, clicked: false),
+                                ),
+                                const Icon(Icons.chevron_right, size: 18),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                      title: Text(name, style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
-                      trailing: const Icon(Icons.chevron_right),
                     ),
                   );
                 },
