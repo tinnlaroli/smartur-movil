@@ -113,12 +113,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                   solidIcon: Icons.menu_book, // Cambio sugerido: Abierto
                   onTap: () => _onTabTapped(1),
                 ),
-                _NavBarItem(
-                  index: 2,
+                _NavBarItemIA(
                   isSelected: _currentIndex == 2,
-                  label: 'IA',
-                  outlineIcon: Icons.auto_awesome_outlined,
-                  solidIcon: Icons.auto_awesome,
                   onTap: () => _onTabTapped(2),
                 ),
                 _NavBarItem(
@@ -292,5 +288,151 @@ class _NavBarItem extends StatelessWidget {
       default:
         return Icon(isSelected ? solidIcon : outlineIcon, color: color, size: 24);
     }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Special IA nav item with animated sparkle badge
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _NavBarItemIA extends StatefulWidget {
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _NavBarItemIA({required this.isSelected, required this.onTap});
+
+  @override
+  State<_NavBarItemIA> createState() => _NavBarItemIAState();
+}
+
+/// 5-color cycle using brand palette: pink → purple → blue → green → orange → pink
+final _sparkleColorTween = TweenSequence<Color?>([
+  TweenSequenceItem(tween: ColorTween(begin: SmarturStyle.pink,   end: SmarturStyle.purple), weight: 1),
+  TweenSequenceItem(tween: ColorTween(begin: SmarturStyle.purple, end: SmarturStyle.blue),   weight: 1),
+  TweenSequenceItem(tween: ColorTween(begin: SmarturStyle.blue,   end: SmarturStyle.green),  weight: 1),
+  TweenSequenceItem(tween: ColorTween(begin: SmarturStyle.green,  end: SmarturStyle.orange), weight: 1),
+  TweenSequenceItem(tween: ColorTween(begin: SmarturStyle.orange, end: SmarturStyle.pink),   weight: 1),
+]);
+
+class _NavBarItemIAState extends State<_NavBarItemIA>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _sparkleCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _sparkleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4000),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _sparkleCtrl.dispose();
+    super.dispose();
+  }
+
+
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.isSelected ? SmarturStyle.purple : Theme.of(context).colorScheme.onSurfaceVariant;
+    return GestureDetector(
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.symmetric(
+          horizontal: widget.isSelected ? 16.0 : 12.0,
+          vertical: 10.0,
+        ),
+        decoration: BoxDecoration(
+          color: widget.isSelected
+              ? SmarturStyle.purple.withValues(alpha: 0.12)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icon with sparkle badge
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                TweenAnimationBuilder<double>(
+                  key: ValueKey(widget.isSelected),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 900),
+                  curve: Curves.elasticOut,
+                  builder: (context, val, child) {
+                    final double scale = widget.isSelected ? 1.0 + (val * 0.45) : 1.0;
+                    final double opacity = (widget.isSelected ? 0.5 + (val * 0.5) : 1.0).clamp(0.0, 1.0);
+                    final double rotation = widget.isSelected ? math.sin(val * math.pi * 3) * 0.15 : 0.0;
+                    return Opacity(
+                      opacity: opacity,
+                      child: Transform.rotate(
+                        angle: rotation,
+                        child: Transform.scale(
+                          scale: scale,
+                          child: Icon(
+                            widget.isSelected ? Icons.auto_awesome : Icons.auto_awesome_outlined,
+                            color: color, size: 24,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                // Sparkle dot (top-right of icon) — cycles through 5 system colors
+                Positioned(
+                  top: -3,
+                  right: -3,
+                  child: AnimatedBuilder(
+                    animation: _sparkleCtrl,
+                    builder: (_, __) {
+                      final dotColor = _sparkleColorTween.evaluate(_sparkleCtrl) ?? SmarturStyle.purple;
+                      final pulse = (math.sin(_sparkleCtrl.value * math.pi * 4) * 0.5 + 0.5);
+                      return Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: dotColor,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: dotColor.withValues(alpha: 0.6 * pulse),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+            // Label when selected
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              clipBehavior: Clip.antiAlias,
+              child: widget.isSelected
+                  ? const Padding(
+                      padding: EdgeInsets.only(left: 8.0),
+                      child: Text('IA',
+                        style: TextStyle(
+                          fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.w700,
+                          color: SmarturStyle.purple,
+                        ),
+                        maxLines: 1),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

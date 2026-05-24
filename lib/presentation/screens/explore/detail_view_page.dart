@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lottie/lottie.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
@@ -46,7 +47,8 @@ class DetailViewPage extends StatefulWidget {
   return (null, null);
 }
 
-class _DetailViewPageState extends State<DetailViewPage> {
+class _DetailViewPageState extends State<DetailViewPage>
+    with SingleTickerProviderStateMixin {
   bool _favBusy = false;
   bool _isFavorite = false;
   String? _kind;
@@ -59,15 +61,44 @@ class _DetailViewPageState extends State<DetailViewPage> {
   int? _userRating;
   bool _ratingBusy = false;
 
+  // Double-tap heart burst animation
+  late final AnimationController _heartCtrl;
+  late final Animation<double> _heartScale;
+  late final Animation<double> _heartOpacity;
+
   @override
   void initState() {
     super.initState();
     _dwell.start();
+    _heartCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _heartScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.4), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+    ]).animate(CurvedAnimation(parent: _heartCtrl, curve: Curves.easeOut));
+    _heartOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+    ]).animate(_heartCtrl);
     WidgetsBinding.instance.addPostFrameCallback((_) => _setupPlace());
+  }
+
+  void _onDoubleTap() {
+    HapticFeedback.mediumImpact();
+    _heartCtrl.forward(from: 0.0);
+    // Like on double tap (don't unlike — Instagram behaviour)
+    if (!_isFavorite) {
+      _toggleFavorite();
+    }
   }
 
   @override
   void dispose() {
+    _heartCtrl.dispose();
     _dwell.stop();
     final ms = _dwell.elapsedMilliseconds;
     if (_kind != null && _pid != null && ms > 3000) {
@@ -128,18 +159,22 @@ class _DetailViewPageState extends State<DetailViewPage> {
 
   Future<void> _toggleFavorite() async {
     if (_kind == null || _pid == null || _favBusy) return;
-    setState(() => _favBusy = true);
+    final wasLiked = _isFavorite;
+    // Optimistic update — show instantly, no spinner
+    setState(() { _isFavorite = !_isFavorite; _favBusy = true; });
     final svc = UserContentService();
     try {
-      if (_isFavorite) {
+      if (wasLiked) {
         await svc.removeFavorite(_kind!, _pid!);
-        if (mounted) setState(() => _isFavorite = false);
       } else {
         await svc.addFavorite(_kind!, _pid!);
-        if (mounted) setState(() => _isFavorite = true);
       }
-    } catch (_) {}
-    if (mounted) setState(() => _favBusy = false);
+    } catch (_) {
+      // Rollback on failure
+      if (mounted) setState(() => _isFavorite = wasLiked);
+    } finally {
+      if (mounted) setState(() => _favBusy = false);
+    }
   }
 
   @override
@@ -174,6 +209,32 @@ class _DetailViewPageState extends State<DetailViewPage> {
               ),
             ),
 
+            // Double-tap heart burst overlay
+            AnimatedBuilder(
+              animation: _heartCtrl,
+              builder: (context, child) {
+                if (_heartCtrl.value == 0.0) return const SizedBox.shrink();
+                return Positioned.fill(
+                  child: IgnorePointer(
+                    child: Center(
+                      child: Opacity(
+                        opacity: _heartOpacity.value,
+                        child: Transform.scale(
+                          scale: _heartScale.value,
+                          child: const Icon(
+                            Icons.favorite_rounded,
+                            color: Colors.white,
+                            size: 100,
+                            shadows: [Shadow(color: Colors.black38, blurRadius: 20)],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+
             // Dark gradient overlay
             const Positioned.fill(
               child: DecoratedBox(
@@ -196,6 +257,14 @@ class _DetailViewPageState extends State<DetailViewPage> {
             SafeArea(
               child: Stack(
                 children: [
+                  // z-0: Double-tap capture — translucent so buttons/BottomContent still work
+                  Positioned.fill(
+                    child: GestureDetector(
+                      onDoubleTap: _onDoubleTap,
+                      behavior: HitTestBehavior.translucent,
+                    ),
+                  ),
+
                   // Top row — atrás + favoritos (diario)
                   Positioned(
                     top: 8,
@@ -211,21 +280,13 @@ class _DetailViewPageState extends State<DetailViewPage> {
                     right: 8,
                     child: _GlassCircle(
                       onTap: _kind != null && _pid != null ? _toggleFavorite : () {},
-                      child: _favBusy
-                          ? const Icon(
-                              Icons.hourglass_top_rounded,
-                              color: Colors.white70,
-                              size: 22,
-                            )
-                          : Icon(
-                              _isFavorite
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
-                              color: _isFavorite
-                                  ? SmarturStyle.pink
-                                  : Colors.white,
-                              size: 22,
-                            ),
+                      child: Icon(
+                        _isFavorite
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: _isFavorite ? SmarturStyle.pink : Colors.white,
+                        size: 22,
+                      ),
                     ),
                   ),
 

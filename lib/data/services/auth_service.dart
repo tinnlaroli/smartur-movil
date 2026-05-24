@@ -230,9 +230,11 @@ class AuthService {
   Future<void> setRememberMe(bool remember) async {
     await _storage.write(key: _rememberMeKey, value: remember.toString());
     final now = DateTime.now();
+    // rememberMe=true  → 7 días (sesión persistente larga)
+    // rememberMe=false → 24h (igual que el JWT del servidor; no quedarse logueado días)
     final expiry = remember
         ? now.add(const Duration(days: 7))
-        : now; // sin recordar: expira al cerrar app / próxima apertura
+        : now.add(const Duration(hours: 24));
     await _storage.write(
       key: _sessionExpiryKey,
       value: expiry.millisecondsSinceEpoch.toString(),
@@ -313,6 +315,9 @@ class AuthService {
 
   Future<Map<String, dynamic>?> loginWithGoogle({bool rememberMe = false}) async {
     try {
+      // Limpiar credential cacheado para evitar el error "reauth failed" (code 16)
+      try { await _googleSignIn.signOut(); } catch (_) {}
+
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
         scopeHint: ['email', 'profile'],
       );
@@ -525,6 +530,36 @@ class AuthService {
       if (m != null && m.toString().isNotEmpty) return m.toString();
     } catch (_) {}
     return 'Error al subir imagen';
+  }
+
+  // ── Session management ─────────────────────────────────────────────────
+
+  /// Returns up to 10 active (non-revoked, non-expired) sessions for the current user.
+  Future<List<Map<String, dynamic>>> fetchSessions() async {
+    final token = await getToken();
+    if (token == null) return [];
+    final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.meSessions}');
+    final response = await http.get(
+      uri,
+      headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+    ).timeout(const Duration(seconds: 10));
+    if (response.statusCode == 200) {
+      final list = jsonDecode(utf8.decode(response.bodyBytes)) as List?;
+      return list?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
+    }
+    return [];
+  }
+
+  /// Revokes a session by ID. Returns true on success.
+  Future<bool> revokeSession(int sessionId) async {
+    final token = await getToken();
+    if (token == null) return false;
+    final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.meSessions}/$sessionId');
+    final response = await http.delete(
+      uri,
+      headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+    ).timeout(const Duration(seconds: 10));
+    return response.statusCode == 200;
   }
 }
 

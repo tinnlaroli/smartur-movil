@@ -872,4 +872,125 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get dateFormatPlaceholder => 'Día / Mes / Año';
+
+  @override
+  String get recoTitle => 'Descubrir mis destinos';
+
+  @override
+  String get recoDiscoverNext => 'Descubre tu próxima aventura';
+
+  @override
+  String get recoAiPersonalizedFor => 'IA personalizada para ti';
+
+  @override
+  String get recoTourismType => 'Tipo de turismo';
+
+  @override
+  String get recoChooseOneOrMore => 'Elige uno o más';
+
+  @override
+  String get recoBudget => 'Presupuesto';
+
+  @override
+  String get recoWithWho => '¿Con quién viajas?';
+
+  @override
+  String get recoAgeRange => 'Rango de edad';
+
+  @override
+  String get recoAdditionalPrefs => 'Preferencias adicionales';
+
+  @override
+  String get recoOptional => '(opcional)';
+
+  @override
+  String get recoPreloadedBanner => 'Basado en tu perfil';
+
+  @override
+  String get recoSelectAtLeastOne => 'Selecciona al menos una opción';
+
+  @override
+  String get recoSelectAtLeastOneToContinue =>
+      'Selecciona al menos una opción para continuar';
+
+  @override
+  String get recoDiscoverDestinations => 'Descubrir destinos';
+
+  @override
+  String recoNDestinations(Object n) {
+    return '$n destinos para ti';
+  }
+
+  @override
+  String get recoPersonalizedByAI => 'Personalizados por IA';
+
+  @override
+  String get recoHelpImprove => 'Ayúdanos a mejorar';
+
+  @override
+  String get recoHowLiked => '¿Qué te parecieron estas recomendaciones?';
+
+  @override
+  String get recoSkip => 'Saltar';
+
+  @override
+  String get recoSend => 'Enviar';
+
+  @override
+  String get recoViewDestination => 'Ver destino';
+
+  @override
+  String get recoServiceUnavailable =>
+      'El servicio de recomendaciones no está disponible en este momento';
+
+  @override
+  String get recoConnectionError =>
+      'Error de conexión. Revisa tu internet e intenta de nuevo';
+
+  @override
+  String get recoShareButton => 'Compartir recomendaciones';
+
+  @override
+  String get communityDeletePost => 'Eliminar publicación';
+
+  @override
+  String get communityDeletePostConfirm =>
+      '¿Estás seguro de que deseas eliminar esta publicación? Esta acción no se puede deshacer.';
+
+  @override
+  String get communityReportPost => 'Reportar publicación';
+
+  @override
+  String get communityReportReason => 'Motivo del reporte';
+
+  @override
+  String get communityReportSpam => 'Spam';
+
+  @override
+  String get communityReportInappropriate => 'Contenido inapropiado';
+
+  @override
+  String get communityReportFalse => 'Información falsa';
+
+  @override
+  String get communityReportHateful => 'Discurso de odio';
+
+  @override
+  String get communityReportSent => 'Reporte enviado. Lo revisaremos pronto.';
+
+  @override
+  String get securitySection => 'Seguridad';
+
+  @override
+  String get activeSessions => 'Sesiones activas';
+
+  @override
+  String get activeSessionsSubtitle => 'Administra tus dispositivos conectados';
+
+  @override
+  String get sessionRevokeSuccess => 'Sesión cerrada correctamente';
+
+  @override
+  String get sessionRevokeError =>
+      'No se pudo cerrar la sesión. Inténtalo de nuevo.';
 }

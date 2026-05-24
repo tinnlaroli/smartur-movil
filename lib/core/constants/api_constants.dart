@@ -22,11 +22,17 @@ class ApiConstants {
   static const String meFavorites = '/me/favorites';
   static const String meVisits = '/me/visits';
   static const String communityPosts = '/community/posts';
+  // communityPostReport: replace {id} with actual post ID
+  static const String communityReports = '/community/reports';
 
   // ML interaction telemetry
   static const String meInteractions = '/me/interactions';
   static const String meRating = '/me/rating';
   static const String mlFeedback = '/ml/feedback';
+  static const String mlSessionsMe = '/ml/sessions/me';
+
+  // Session management
+  static const String meSessions = '/me/sessions';
 
   // Explore
   static const String exploreHome = '/explore/home';

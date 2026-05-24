@@ -315,6 +315,26 @@ class UserContentService {
     return list;
   }
 
+  /// Returns the last 20 ML recommendation sessions for the current user.
+  /// Each item: { id, created_at, best_algorithm, execution_time_ms, context_json }
+  /// context_json contains { recommendations: [...], session_id, ... }
+  Future<List<Map<String, dynamic>>> fetchRecommendationSessions() async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.mlSessionsMe}');
+    final response = await ApiClient.get(uri, timeout: const Duration(seconds: 10));
+    if (response.statusCode == 401) {
+      throw UserContentException('Sesión expirada. Inicia sesión de nuevo.');
+    }
+    if (response.statusCode != 200) {
+      throw UserContentException('No se pudo cargar el historial de recomendaciones');
+    }
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    if (decoded is! List) return [];
+    return decoded.map<Map<String, dynamic>>((e) {
+      if (e is! Map) return <String, dynamic>{};
+      return Map<String, dynamic>.from(e as Map);
+    }).toList();
+  }
+
   Future<void> recordVisit(String placeKind, int placeId) async {
     final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.meVisits}');
     try {
@@ -369,6 +389,26 @@ class UserContentService {
       }
     } on TimeoutException {
       throw UserContentException('Tiempo de espera agotado al eliminar.');
+    } catch (e) {
+      if (e is UserContentException) rethrow;
+      throw UserContentException(_networkFailureMessage(e));
+    }
+  }
+
+  /// Reporta una publicación de comunidad.
+  /// [reason] debe ser uno de: spam, inappropriate, false_info, hateful
+  Future<void> reportCommunityPost(int postId, String reason) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.communityPosts}/$postId/report');
+    try {
+      final response = await ApiClient.post(
+        uri,
+        body: jsonEncode({'reason': reason}),
+      );
+      if (response.statusCode == 201) return;
+      final msg = _apiErrorMessageFromBody(response.body, fallback: 'No se pudo enviar el reporte');
+      throw UserContentException(msg);
+    } on TimeoutException {
+      throw UserContentException('Tiempo de espera agotado al reportar.');
     } catch (e) {
       if (e is UserContentException) rethrow;
       throw UserContentException(_networkFailureMessage(e));
