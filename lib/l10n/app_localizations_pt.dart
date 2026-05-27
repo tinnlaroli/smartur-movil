@@ -72,10 +72,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get selectLanguage => 'Selecionar idioma';
 
   @override
-  String get systemLanguage => 'Idioma del sistema';
+  String get systemLanguage => 'Idioma do sistema';
 
   @override
-  String get systemTheme => 'Tema del sistema';
+  String get systemTheme => 'Tema do sistema';
 
   @override
   String get cancel => 'Cancelar';
@@ -287,13 +287,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String get filterAll => 'Todos';
 
   @override
-  String get filterMuseums => 'Museus';
+  String get filterMuseums => 'Cultura';
 
   @override
-  String get filterCafes => 'Cafés';
+  String get filterCafes => 'Gastronomia';
 
   @override
-  String get filterViewpoints => 'Mirantes';
+  String get filterViewpoints => 'Aventuras';
+
+  @override
+  String get filterHotels => 'Hotelaria';
 
   @override
   String get filterMuseumsOnly => 'Somente museus';
@@ -713,7 +716,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get changePasswordSubtitle => 'Atualize sua senha de acesso';
 
   @override
-  String get forgotPassword => '¿Olvidaste tu contraseña?';
+  String get forgotPassword => 'Esqueceu a senha?';
 
   @override
   String get sessionClosed => 'Sessão encerrada';

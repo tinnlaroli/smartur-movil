@@ -72,10 +72,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectLanguage => 'Select Language';
 
   @override
-  String get systemLanguage => 'Idioma del sistema';
+  String get systemLanguage => 'System language';
 
   @override
-  String get systemTheme => 'Tema del sistema';
+  String get systemTheme => 'System theme';
 
   @override
   String get cancel => 'Cancel';
@@ -284,13 +284,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterAll => 'All';
 
   @override
-  String get filterMuseums => 'Museums';
+  String get filterMuseums => 'Culture';
 
   @override
-  String get filterCafes => 'Cafés';
+  String get filterCafes => 'Gastronomy';
 
   @override
-  String get filterViewpoints => 'Viewpoints';
+  String get filterViewpoints => 'Adventures';
+
+  @override
+  String get filterHotels => 'Hotels';
 
   @override
   String get filterMuseumsOnly => 'Museums only';
