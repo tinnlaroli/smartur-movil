@@ -522,7 +522,7 @@ class _SessionCard extends StatelessWidget {
                   if (latencyMs != null)
                     _InfoChip(
                       icon: Icons.speed_outlined,
-                      label: '${latencyMs}ms',
+                      label: l10n.latencyMs(latencyMs!.toString()),
                       color: scheme.onSurfaceVariant,
                     ),
                 ],
