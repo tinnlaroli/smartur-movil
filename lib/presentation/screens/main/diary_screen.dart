@@ -454,6 +454,7 @@ class _SessionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final recs = _parseRecs();
     final algorithm = session['best_algorithm']?.toString() ?? 'hybrid';
     final dateStr = _formatDate(session['created_at']);
