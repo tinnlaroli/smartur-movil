@@ -18,21 +18,28 @@ class NotificationService {
   static bool _registered = false;
   static String? _cachedToken;
 
-  /// Etapa 1: inicializa listeners de sistema sin pedir permisos al usuario.
-  /// Los permisos se solicitan en [registerWithApi] — ya dentro de la app tras el login.
+  /// Etapa 1: permisos + token + listeners globales.
+  /// Llamar en main() después de Firebase.initializeApp().
   static Future<void> setup() async {
     if (_setupDone) return;
 
     try {
       final messaging = FirebaseMessaging.instance;
 
-      // Intentar obtener token si los permisos ya fueron concedidos previamente
-      // (segunda apertura de la app). Si no, se piden en registerWithApi.
-      final current = await messaging.getNotificationSettings();
-      if (current.authorizationStatus == AuthorizationStatus.authorized ||
-          current.authorizationStatus == AuthorizationStatus.provisional) {
-        _cachedToken = await messaging.getToken();
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      if (settings.authorizationStatus != AuthorizationStatus.authorized &&
+          settings.authorizationStatus != AuthorizationStatus.provisional) {
+        debugPrint('[FCM] Permiso de notificaciones denegado.');
+        _setupDone = true;
+        return;
       }
+
+      _cachedToken = await messaging.getToken();
       debugPrint('[FCM] Token obtenido: ${_cachedToken?.substring(0, 20)}...');
 
       // Renovaciones automáticas de token — se registran cuando haya sesión
@@ -56,25 +63,11 @@ class NotificationService {
     }
   }
 
-  /// Etapa 2: pide permisos (primera vez), obtiene token y lo registra en API.
-  /// Llamar en MainScreen.initState() después del primer frame — ya dentro de la app.
+  /// Etapa 2: registro del token en API + banners en primer plano.
+  /// Llamar en MainScreen.initState() después del primer frame.
   static Future<void> registerWithApi({BuildContext? context}) async {
     if (!_setupDone) await setup();
     if (_registered) return;
-
-    // Solicitar permisos aquí — el usuario ya completó el login
-    if (_cachedToken == null) {
-      try {
-        final messaging = FirebaseMessaging.instance;
-        final settings = await messaging.requestPermission(
-          alert: true, badge: true, sound: true,
-        );
-        if (settings.authorizationStatus == AuthorizationStatus.authorized ||
-            settings.authorizationStatus == AuthorizationStatus.provisional) {
-          _cachedToken = await messaging.getToken();
-        }
-      } catch (_) {}
-    }
 
     // Registrar token en la API (requiere sesión activa)
     if (_cachedToken != null) {

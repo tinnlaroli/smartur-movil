@@ -1,9 +1,6 @@
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
@@ -19,22 +16,11 @@ import 'presentation/screens/auth/welcome_screen.dart';
 import 'presentation/screens/main/main_screen.dart';
 import 'presentation/widgets/smartur_loader.dart';
 
-// Analytics singleton accesible en toda la app
-final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Inicializar Firebase (requerido por firebase_messaging y google_sign_in ^7.x)
   await Firebase.initializeApp();
-
-  // Crashlytics: captura todos los errores Flutter + errores nativos no manejados
-  if (!kDebugMode) {
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
-    PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      return true;
-    };
-  }
-
+  // Etapa 1: permisos + token FCM sin necesitar auth ni contexto
   await NotificationService.setup();
   SharedPreferences prefs = await SharedPreferences.getInstance();
   bool seenOnboarding = prefs.getBool('onboarding_seen') ?? false;
@@ -198,10 +184,7 @@ class _SplashGate extends StatefulWidget {
 }
 
 class _SplashGateState extends State<_SplashGate> {
-  // Coordina loader + session check: destination solo se construye
-  // cuando AMBOS han terminado (loader animó + sesión verificada).
-  bool _loaderDone = false;
-  bool _sessionDone = false;
+  bool _showLoader = true;
   bool? _hasSession;
   String? _userName;
   StreamSubscription<void>? _sessionExpiredSub;
@@ -209,7 +192,12 @@ class _SplashGateState extends State<_SplashGate> {
   @override
   void initState() {
     super.initState();
+    if (!widget.seenOnboarding) {
+      _showLoader = false;
+    }
     _checkSession();
+
+    // Escuchar 401s globales desde cualquier servicio → redirigir a login
     _sessionExpiredSub = ApiClient.onSessionExpired.listen((_) {
       _handleGlobalSessionExpired();
     });
@@ -225,12 +213,13 @@ class _SplashGateState extends State<_SplashGate> {
     final auth = AuthService();
     await auth.fullLogout();
     if (!mounted) return;
+    // Resetear estado local
     setState(() {
       _hasSession = false;
       _userName = null;
-      _loaderDone = true;
-      _sessionDone = true;
+      _showLoader = false;
     });
+    // Navegar a WelcomeScreen limpiando el stack
     Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const WelcomeScreen()),
       (_) => false,
@@ -239,47 +228,50 @@ class _SplashGateState extends State<_SplashGate> {
 
   Future<void> _checkSession() async {
     final auth = AuthService();
+
+    // 1. Verificación local rápida (expiry, token presente)
     final hasLocal = await auth.hasSession();
     if (!hasLocal) {
-      if (mounted) setState(() { _hasSession = false; _userName = null; _sessionDone = true; });
+      if (mounted) setState(() { _hasSession = false; _userName = null; });
       return;
     }
+
+    // 2. Validación contra el servidor (detecta tokens revocados / secreto rotado)
     final isValid = await auth.validateTokenWithServer();
     if (!isValid) {
-      if (mounted) setState(() { _hasSession = false; _userName = null; _sessionDone = true; });
+      if (mounted) setState(() { _hasSession = false; _userName = null; });
       return;
     }
+
     final name = await auth.getUserName();
     if (mounted) {
-      setState(() { _hasSession = true; _userName = name; _sessionDone = true; });
+      setState(() {
+        _hasSession = true;
+        _userName = name;
+      });
     }
   }
 
-  bool get _ready => _loaderDone && _sessionDone;
-
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final destination = _destination();
+    // Nunca mostramos loader en el onboarding inicial.
+    final shouldShowLoader = _showLoader && widget.seenOnboarding;
 
-    // Primera apertura (sin onboarding visto): no mostramos loader nunca.
-    if (!widget.seenOnboarding) {
-      return _destination();
-    }
-
-    // Mientras el loader o el check de sesión no terminaron: solo el loader
-    // con fondo opaco. La destination NO se construye debajo.
-    if (!_ready) {
-      return ColoredBox(
-        color: scheme.surface,
-        child: SmartURLoader(
-          key: const ValueKey('loader'),
-          onFinished: () => setState(() => _loaderDone = true),
-        ),
-      );
-    }
-
-    // Ambos listos: mostrar la pantalla correcta.
-    return _destination();
+    return Stack(
+      children: [
+        // Contenido real de la app (welcome / onboarding / main)
+        destination,
+        // Loader como overlay a pantalla completa para continuidad perfecta
+        if (shouldShowLoader)
+          Positioned.fill(
+            child: SmartURLoader(
+              key: const ValueKey('loader'),
+              onFinished: () => setState(() => _showLoader = false),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _destination() {

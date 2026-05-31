@@ -25,10 +25,6 @@ class AuthService {
   static const _userPhotoUrlKey = 'user_photo_url';
   static const _userAvatarIconKey = 'user_avatar_icon_key';
 
-  // Constructor tradicional — usa Chrome Custom Tab / selector de cuenta del sistema.
-  // Funciona con APKs sideloaded via SHA-1, sin necesitar Credential Manager
-  // (GoogleSignIn.instance.authenticate() falla con DEVELOPER_ERROR en APKs
-  // no publicados en Play Store porque Credential Manager no puede verificarlos).
   static final _googleSignIn = GoogleSignIn(
     serverClientId: EnvConfig.googleServerClientId,
     scopes: ['email', 'profile'],
@@ -361,11 +357,11 @@ class AuthService {
 
   Future<Map<String, dynamic>?> loginWithGoogle({bool rememberMe = false}) async {
     try {
-      // Forzar selector de cuenta cada vez
+      // Limpiar credential cacheado para forzar selector de cuenta
       try { await _googleSignIn.signOut(); } catch (_) {}
 
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null; // usuario canceló
+      if (googleUser == null) throw AuthCancelledException();
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;

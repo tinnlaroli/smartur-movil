@@ -25,7 +25,6 @@ import '../preferences/preferences_screen.dart';
 import '../settings/settings_screen.dart';
 import '../auth/welcome_screen.dart';
 import '../explore/detail_view_page.dart';
-import '../../../data/services/update_service.dart';
 
 /// Module-level like cache — liked state persists across widget rebuilds and scroll recycling.
 /// Key: place.id (e.g. 'poi_3', 'svc_7').  Value: liked this session.
@@ -142,19 +141,7 @@ class HomeScreenState extends State<HomeScreen> {
       if (mounted) setState(() => _isLoadingContent = false);
       await _loadWeatherForSelectedCity();
       await _loadHeaderAvatar();
-      _checkForUpdate();
     });
-  }
-
-  static bool _updateCheckedThisSession = false;
-
-  Future<void> _checkForUpdate() async {
-    if (_updateCheckedThisSession) return;
-    _updateCheckedThisSession = true;
-    final result = await UpdateService.check();
-    if (result.hasUpdate && mounted) {
-      UpdateService.showUpdateDialog(context, result.latestVersion);
-    }
   }
 
   @override
@@ -747,8 +734,8 @@ class HomeScreenState extends State<HomeScreen> {
                   slivers: [
                     _buildHeaderAppBar(),
                     SliverToBoxAdapter(child: _buildExploreIntro()),
-                    SliverToBoxAdapter(child: _buildSearchBar()),
                     SliverToBoxAdapter(child: _buildCityFilter()),
+                    SliverToBoxAdapter(child: _buildSearchBar()),
                     ..._buildPlaceShowcaseSlivers(),
                     const SliverToBoxAdapter(child: SizedBox(height: 32)),
                   ],
