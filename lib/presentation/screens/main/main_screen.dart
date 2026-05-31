@@ -37,10 +37,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       duration: const Duration(milliseconds: 420),
       value: 0,
     );
-    // Inicializar FCM después del primer frame para tener acceso al contexto.
-    // NotificationService._initialized evita doble inicialización entre sesiones.
+    // Etapa 2: registrar token en API + activar banners en primer plano.
+    // Se llama después del primer frame para tener contexto disponible.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) NotificationService.init(context: context);
+      if (mounted) NotificationService.registerWithApi(context: context);
     });
   }
 
@@ -177,7 +177,9 @@ class _NavBarItem extends StatelessWidget {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutCubic,
         padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 16.0 : 12.0,
+          horizontal: isSelected
+              ? (MediaQuery.sizeOf(context).width < 360 ? 10.0 : 16.0)
+              : (MediaQuery.sizeOf(context).width < 360 ? 8.0 : 12.0),
           vertical: 10.0,
         ),
         decoration: BoxDecoration(
