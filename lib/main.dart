@@ -198,7 +198,10 @@ class _SplashGate extends StatefulWidget {
 }
 
 class _SplashGateState extends State<_SplashGate> {
-  bool _showLoader = true;
+  // Coordina loader + session check: destination solo se construye
+  // cuando AMBOS han terminado (loader animó + sesión verificada).
+  bool _loaderDone = false;
+  bool _sessionDone = false;
   bool? _hasSession;
   String? _userName;
   StreamSubscription<void>? _sessionExpiredSub;
@@ -206,12 +209,7 @@ class _SplashGateState extends State<_SplashGate> {
   @override
   void initState() {
     super.initState();
-    if (!widget.seenOnboarding) {
-      _showLoader = false;
-    }
     _checkSession();
-
-    // Escuchar 401s globales desde cualquier servicio → redirigir a login
     _sessionExpiredSub = ApiClient.onSessionExpired.listen((_) {
       _handleGlobalSessionExpired();
     });
@@ -227,13 +225,12 @@ class _SplashGateState extends State<_SplashGate> {
     final auth = AuthService();
     await auth.fullLogout();
     if (!mounted) return;
-    // Resetear estado local
     setState(() {
       _hasSession = false;
       _userName = null;
-      _showLoader = false;
+      _loaderDone = true;
+      _sessionDone = true;
     });
-    // Navegar a WelcomeScreen limpiando el stack
     Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const WelcomeScreen()),
       (_) => false,
@@ -242,50 +239,47 @@ class _SplashGateState extends State<_SplashGate> {
 
   Future<void> _checkSession() async {
     final auth = AuthService();
-
-    // 1. Verificación local rápida (expiry, token presente)
     final hasLocal = await auth.hasSession();
     if (!hasLocal) {
-      if (mounted) setState(() { _hasSession = false; _userName = null; });
+      if (mounted) setState(() { _hasSession = false; _userName = null; _sessionDone = true; });
       return;
     }
-
-    // 2. Validación contra el servidor (detecta tokens revocados / secreto rotado)
     final isValid = await auth.validateTokenWithServer();
     if (!isValid) {
-      if (mounted) setState(() { _hasSession = false; _userName = null; });
+      if (mounted) setState(() { _hasSession = false; _userName = null; _sessionDone = true; });
       return;
     }
-
     final name = await auth.getUserName();
     if (mounted) {
-      setState(() {
-        _hasSession = true;
-        _userName = name;
-      });
+      setState(() { _hasSession = true; _userName = name; _sessionDone = true; });
     }
   }
 
+  bool get _ready => _loaderDone && _sessionDone;
+
   @override
   Widget build(BuildContext context) {
-    final destination = _destination();
-    // Nunca mostramos loader en el onboarding inicial.
-    final shouldShowLoader = _showLoader && widget.seenOnboarding;
+    final scheme = Theme.of(context).colorScheme;
 
-    return Stack(
-      children: [
-        // Contenido real de la app (welcome / onboarding / main)
-        destination,
-        // Loader como overlay a pantalla completa para continuidad perfecta
-        if (shouldShowLoader)
-          Positioned.fill(
-            child: SmartURLoader(
-              key: const ValueKey('loader'),
-              onFinished: () => setState(() => _showLoader = false),
-            ),
-          ),
-      ],
-    );
+    // Primera apertura (sin onboarding visto): no mostramos loader nunca.
+    if (!widget.seenOnboarding) {
+      return _destination();
+    }
+
+    // Mientras el loader o el check de sesión no terminaron: solo el loader
+    // con fondo opaco. La destination NO se construye debajo.
+    if (!_ready) {
+      return ColoredBox(
+        color: scheme.surface,
+        child: SmartURLoader(
+          key: const ValueKey('loader'),
+          onFinished: () => setState(() => _loaderDone = true),
+        ),
+      );
+    }
+
+    // Ambos listos: mostrar la pantalla correcta.
+    return _destination();
   }
 
   Widget _destination() {
