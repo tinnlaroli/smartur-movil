@@ -10,9 +10,15 @@ class UpdateService {
   static const _downloadUrl =
       'https://github.com/tinnlaroli/smartur-movil/releases/latest/download/app-release.apk';
 
-  /// Retorna true si hay una versión más nueva en GitHub Releases.
+  /// Versión instalada actualmente (ej. "2.2.7").
+  static Future<String> currentVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    return info.version;
+  }
+
+  /// Retorna hasUpdate=true y la versión latest si hay una versión más nueva.
   /// Silencioso — nunca lanza excepción.
-  static Future<({bool hasUpdate, String latestVersion})> check() async {
+  static Future<({bool hasUpdate, String latestVersion, String currentVersion})> check() async {
     try {
       final info = await PackageInfo.fromPlatform();
       final current = info.version;
@@ -20,16 +26,27 @@ class UpdateService {
       final resp = await http
           .get(Uri.parse(_apiUrl),
               headers: {'Accept': 'application/vnd.github+json'})
-          .timeout(const Duration(seconds: 6));
+          .timeout(const Duration(seconds: 8));
 
-      if (resp.statusCode != 200) return (hasUpdate: false, latestVersion: current);
+      if (resp.statusCode != 200) {
+        return (hasUpdate: false, latestVersion: current, currentVersion: current);
+      }
 
-      final tag = (jsonDecode(resp.body)['tag_name'] as String? ?? '').replaceFirst('v', '');
-      if (tag.isEmpty) return (hasUpdate: false, latestVersion: current);
+      final tag = (jsonDecode(resp.body)['tag_name'] as String? ?? '')
+          .replaceFirst('v', '');
+      if (tag.isEmpty) {
+        return (hasUpdate: false, latestVersion: current, currentVersion: current);
+      }
 
-      return (hasUpdate: _isNewer(tag, current), latestVersion: tag);
+      return (
+        hasUpdate: _isNewer(tag, current),
+        latestVersion: tag,
+        currentVersion: current,
+      );
     } catch (_) {
-      return (hasUpdate: false, latestVersion: '');
+      final info = await PackageInfo.fromPlatform().catchError((_) =>
+          PackageInfo(appName: '', packageName: '', version: '?', buildNumber: ''));
+      return (hasUpdate: false, latestVersion: '?', currentVersion: info.version);
     }
   }
 
@@ -47,16 +64,19 @@ class UpdateService {
     return false;
   }
 
-  /// Abre la URL de descarga del APK en el navegador externo.
+  /// Abre el APK en el navegador externo. Usa launchUrl directo — canLaunchUrl
+  /// falla en Android con https si no está declarado el intent (ya está en manifest).
   static Future<void> openDownload() async {
     final uri = Uri.parse(_downloadUrl);
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // Fallback: intentar con el modo de plataforma por defecto
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
     }
   }
 
   /// Muestra diálogo de actualización disponible.
-  /// Solo debe llamarse cuando [check()] retorna hasUpdate = true.
   static void showUpdateDialog(BuildContext context, String latestVersion) {
     showDialog(
       context: context,
