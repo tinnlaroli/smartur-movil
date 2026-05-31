@@ -75,13 +75,13 @@ const _ageRanges = ['18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
 
 class _RecommendationScreenState extends State<RecommendationScreen> {
   // ── Form state ────────────────────────────────────────────────────────────
-  final Set<String> _selectedTypes = {'cultural', 'gastronomico'};
+  final Set<String> _selectedTypes = {};
   String _budget = 'medio';
-  String _groupType = 'familia';
-  String _ageRange = '35-44';
+  String _groupType = 'pareja';
+  String _ageRange = '25-34';
   bool _wantsTours = false;
   bool _needsHotel = false;
-  bool _prefFood = true;
+  bool _prefFood = false;
   bool _reqAccesibilidad = false;
   bool _prefOutdoor = false;
 

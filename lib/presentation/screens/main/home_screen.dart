@@ -747,8 +747,8 @@ class HomeScreenState extends State<HomeScreen> {
                   slivers: [
                     _buildHeaderAppBar(),
                     SliverToBoxAdapter(child: _buildExploreIntro()),
-                    SliverToBoxAdapter(child: _buildCityFilter()),
                     SliverToBoxAdapter(child: _buildSearchBar()),
+                    SliverToBoxAdapter(child: _buildCityFilter()),
                     ..._buildPlaceShowcaseSlivers(),
                     const SliverToBoxAdapter(child: SizedBox(height: 32)),
                   ],

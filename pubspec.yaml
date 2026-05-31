@@ -70,7 +70,10 @@ flutter_launcher_icons:
   image_path: "assets/imgs/logo.png"
   min_sdk_android: 21
   adaptive_icon_background: "#FFFFFF"
-  # Sin adaptive_icon_foreground explícito: flutter_launcher_icons escala
-  # automáticamente image_path al 66% del foreground layer, respetando la
-  # safe zone de Android (centro 72dp de los 108dp totales del icono adaptativo).
-  # Esto evita que el logo se vea recortado o "demasiado grande" en Pixel/Samsung.
+  # adaptive_icon_foreground define el logo dentro del área segura del ícono adaptativo.
+  # Al usar image_path sin foreground, Flutter lo escala al 66% automáticamente.
+  # Con adaptive_icon_foreground_image_path podemos controlar el tamaño exacto.
+  adaptive_icon_foreground: "assets/imgs/logo.png"
+  # Reducir padding del ícono — valor 0.2 deja 20% de margen alrededor del logo
+  # (en lugar del recorte agresivo por defecto).
+  adaptive_icon_padding: 20.0
