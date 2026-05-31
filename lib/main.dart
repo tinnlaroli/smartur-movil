@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
@@ -10,15 +13,29 @@ import 'core/settings/app_settings.dart';
 import 'core/settings/app_settings_scope.dart';
 import 'data/services/api_client.dart';
 import 'data/services/auth_service.dart';
+import 'data/services/notification_service.dart';
 import 'presentation/screens/auth/onboarding_screen.dart';
 import 'presentation/screens/auth/welcome_screen.dart';
 import 'presentation/screens/main/main_screen.dart';
 import 'presentation/widgets/smartur_loader.dart';
 
+// Analytics singleton accesible en toda la app
+final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Inicializar Firebase (requerido por firebase_messaging y google_sign_in ^7.x)
   await Firebase.initializeApp();
+
+  // Crashlytics: captura todos los errores Flutter + errores nativos no manejados
+  if (!kDebugMode) {
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  }
+
+  await NotificationService.setup();
   SharedPreferences prefs = await SharedPreferences.getInstance();
   bool seenOnboarding = prefs.getBool('onboarding_seen') ?? false;
 
