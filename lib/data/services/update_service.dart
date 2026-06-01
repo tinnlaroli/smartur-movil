@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:open_file_plus/open_file_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
 
 class UpdateService {
   static const _apiUrl =
@@ -10,11 +12,8 @@ class UpdateService {
   static const _downloadUrl =
       'https://github.com/tinnlaroli/smartur-movil/releases/latest/download/app-release.apk';
 
-  // Cache: avoid hitting GitHub API on every tap
   static DateTime? _lastCheck;
   static ({bool hasUpdate, String latestVersion, String currentVersion})? _cached;
-
-  // Don't show the dialog more than once per session
   static bool _shownThisSession = false;
 
   static Future<String> currentVersion() async {
@@ -23,7 +22,6 @@ class UpdateService {
   }
 
   /// Checks GitHub for a newer release. Caches result for 1 hour.
-  /// Never throws — returns hasUpdate=false on any error.
   static Future<({bool hasUpdate, String latestVersion, String currentVersion})> check({
     bool forceRefresh = false,
   }) async {
@@ -74,7 +72,7 @@ class UpdateService {
   }
 
   /// Call once after login. Shows dialog only if update available and not yet
-  /// shown this session. Non-blocking — caller does not need to await.
+  /// shown this session.
   static Future<void> checkAndPromptIfNeeded(BuildContext context) async {
     if (_shownThisSession) return;
     final result = await check();
@@ -85,7 +83,6 @@ class UpdateService {
   }
 
   static bool _isNewer(String latest, String current) {
-    // Strip any pre-release suffix (e.g. "2.3.2-beta" → "2.3.2")
     final clean = (String v) => v.split('-').first;
     final parse = (String v) =>
         clean(v).split('.').map((p) => int.tryParse(p) ?? 0).toList();
@@ -100,54 +97,143 @@ class UpdateService {
     return false;
   }
 
-  /// Open the APK download URL in the external browser.
-  static Future<void> openDownload() async {
-    final uri = Uri.parse(_downloadUrl);
+  /// Downloads the APK to the app cache directory and opens the system
+  /// package installer. [onProgress] receives 0.0–1.0 as bytes arrive.
+  static Future<void> downloadAndInstall({
+    void Function(double progress)? onProgress,
+  }) async {
+    final dir = await getTemporaryDirectory();
+    final filePath = '${dir.path}/smartur-update.apk';
+    final file = File(filePath);
+
+    final client = http.Client();
     try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      await launchUrl(uri, mode: LaunchMode.platformDefault);
+      final request = http.Request('GET', Uri.parse(_downloadUrl));
+      final response = await client.send(request);
+      final total = response.contentLength ?? 0;
+      var received = 0;
+
+      final sink = file.openWrite();
+      await response.stream.map((chunk) {
+        received += chunk.length;
+        if (total > 0) onProgress?.call(received / total);
+        return chunk;
+      }).pipe(sink);
+    } finally {
+      client.close();
     }
+
+    await OpenFile.open(filePath);
   }
 
   static void showUpdateDialog(BuildContext context, String latestVersion) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.system_update_rounded, color: Color(0xFF7C3AED)),
-            SizedBox(width: 8),
-            Text('Nueva versión disponible',
-                style: TextStyle(fontFamily: 'CalSans', fontSize: 18)),
-          ],
-        ),
-        content: Text(
-          'La versión $latestVersion de SMARTUR está disponible.\n'
-          'Descárgala para disfrutar las últimas mejoras y correcciones.',
-          style: const TextStyle(fontFamily: 'Outfit', fontSize: 14, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Después', style: TextStyle(color: Colors.grey)),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.of(context).pop();
-              UpdateService.openDownload();
-            },
-            icon: const Icon(Icons.download_rounded),
-            label: const Text('Actualizar ahora'),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF7C3AED),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
+      builder: (_) => _UpdateDialog(latestVersion: latestVersion),
+    );
+  }
+}
+
+class _UpdateDialog extends StatefulWidget {
+  final String latestVersion;
+  const _UpdateDialog({required this.latestVersion});
+
+  @override
+  State<_UpdateDialog> createState() => _UpdateDialogState();
+}
+
+class _UpdateDialogState extends State<_UpdateDialog> {
+  double? _progress; // null = idle, 0.0–1.0 = downloading
+  bool _error = false;
+
+  Future<void> _startUpdate() async {
+    setState(() {
+      _progress = 0;
+      _error = false;
+    });
+    try {
+      await UpdateService.downloadAndInstall(
+        onProgress: (p) {
+          if (mounted) setState(() => _progress = p);
+        },
+      );
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) setState(() { _error = true; _progress = null; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDownloading = _progress != null;
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Row(
+        children: [
+          Icon(Icons.system_update_rounded, color: Color(0xFF7C3AED)),
+          SizedBox(width: 8),
+          Text('Nueva versión disponible',
+              style: TextStyle(fontFamily: 'CalSans', fontSize: 18)),
         ],
       ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'La versión ${widget.latestVersion} de SMARTUR está disponible.\n'
+            'Se descargará e instalará directamente en el app.',
+            style: const TextStyle(fontFamily: 'Outfit', fontSize: 14, height: 1.5),
+          ),
+          if (isDownloading) ...[
+            const SizedBox(height: 16),
+            LinearProgressIndicator(
+              value: _progress,
+              backgroundColor: const Color(0xFFEDE9FE),
+              color: const Color(0xFF7C3AED),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _progress! < 1.0
+                  ? 'Descargando... ${(_progress! * 100).toStringAsFixed(0)}%'
+                  : 'Abriendo instalador...',
+              style: const TextStyle(
+                  fontFamily: 'Outfit', fontSize: 12, color: Colors.grey),
+            ),
+          ],
+          if (_error) ...[
+            const SizedBox(height: 12),
+            const Text(
+              'Error al descargar. Verifica tu conexión e intenta de nuevo.',
+              style: TextStyle(fontFamily: 'Outfit', fontSize: 12, color: Colors.red),
+            ),
+          ],
+        ],
+      ),
+      actions: isDownloading && !_error
+          ? null
+          : [
+              if (!isDownloading)
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Después',
+                      style: TextStyle(color: Colors.grey)),
+                ),
+              FilledButton.icon(
+                onPressed: _startUpdate,
+                icon: Icon(
+                    _error ? Icons.refresh_rounded : Icons.download_rounded),
+                label: Text(_error ? 'Reintentar' : 'Actualizar ahora'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF7C3AED),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
     );
   }
 }
