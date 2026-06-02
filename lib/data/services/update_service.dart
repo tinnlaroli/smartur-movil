@@ -1,14 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:smartur/core/theme/smartur_theme_extensions.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
 class UpdateService {
+  static const _installChannel = MethodChannel('mx.smartur.app/installer');
+
   static const _apiUrl =
       'https://api.github.com/repos/tinnlaroli/smartur-movil/releases/latest';
   static const _downloadUrl =
@@ -99,8 +102,7 @@ class UpdateService {
     return false;
   }
 
-  /// Downloads the APK to cache and opens Android's system package installer
-  /// via share_plus (handles FileProvider for Android 7+ internally).
+  /// Downloads the APK and launches the system package installer (Android).
   /// [onProgress] receives 0.0–1.0 as bytes arrive.
   static Future<void> downloadAndInstall({
     void Function(double progress)? onProgress,
@@ -108,29 +110,53 @@ class UpdateService {
     final dir = await getTemporaryDirectory();
     final filePath = '${dir.path}/smartur-update.apk';
     final file = File(filePath);
+    if (await file.exists()) {
+      await file.delete();
+    }
 
     final client = http.Client();
     try {
       final request = http.Request('GET', Uri.parse(_downloadUrl));
       final response = await client.send(request);
+      if (response.statusCode != 200) {
+        throw HttpException('Download failed (${response.statusCode})');
+      }
+
       final total = response.contentLength ?? 0;
       var received = 0;
 
       final sink = file.openWrite();
-      await response.stream.map((chunk) {
-        received += chunk.length;
-        if (total > 0) onProgress?.call(received / total);
-        return chunk;
-      }).pipe(sink);
+      try {
+        await response.stream.map((chunk) {
+          received += chunk.length;
+          if (total > 0) onProgress?.call(received / total);
+          return chunk;
+        }).pipe(sink);
+      } finally {
+        await sink.close();
+      }
     } finally {
       client.close();
     }
 
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(filePath, mimeType: 'application/vnd.android.package-archive')],
-      ),
+    onProgress?.call(1.0);
+
+    if (!await file.exists() || await file.length() < 1024) {
+      throw const FileSystemException('Downloaded APK is missing or incomplete');
+    }
+
+    if (Platform.isAndroid) {
+      await _installChannel.invokeMethod<void>('installApk', {'path': filePath});
+      return;
+    }
+
+    final opened = await launchUrl(
+      Uri.parse(_downloadUrl),
+      mode: LaunchMode.externalApplication,
     );
+    if (!opened) {
+      throw const FileSystemException('Could not open update URL');
+    }
   }
 
   static void showUpdateDialog(BuildContext context, String latestVersion) {
@@ -229,31 +255,49 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               ),
             ),
           ],
-        ],
-      ),
-      actions: isDownloading && !_error
-          ? null
-          : [
-              if (!isDownloading)
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
-                    l10n.updateLater,
-                    style: TextStyle(color: scheme.onSurfaceVariant),
+          if (!isDownloading) ...[
+            const SizedBox(height: 20),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  l10n.updateLater,
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
-              FilledButton.icon(
+              ),
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
                 onPressed: _startUpdate,
                 icon: Icon(
-                    _error ? Icons.refresh_rounded : Icons.download_rounded),
+                  _error ? Icons.refresh_rounded : Icons.download_rounded,
+                ),
                 label: Text(_error ? l10n.updateRetry : l10n.updateNow),
                 style: FilledButton.styleFrom(
                   backgroundColor: scheme.primary,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
-            ],
+            ),
+          ],
+        ],
+      ),
+      actions: isDownloading && !_error
+          ? [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(l10n.updateLater),
+              ),
+            ]
+          : null,
     );
   }
 }

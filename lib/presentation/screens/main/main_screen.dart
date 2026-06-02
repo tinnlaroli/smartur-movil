@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
-import '../../../core/motion/smartur_motion.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../data/services/notification_service.dart';
 import 'home_screen.dart';
@@ -68,32 +67,22 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: scheme.surface,
-      body: AnimatedSwitcher(
-        duration: SmarturMotion.normal,
-        switchInCurve: SmarturMotion.enter,
-        switchOutCurve: SmarturMotion.exit,
-        transitionBuilder: (child, animation) => FadeTransition(
-          opacity: animation,
-          child: child,
-        ),
-        child: IndexedStack(
-          key: ValueKey<int>(_currentIndex),
-          index: _currentIndex,
-          children: [
-            HomeScreen(
-              key: _homeScreenKey,
-              userName: widget.userName,
-              isNewLogin: widget.isNewLogin,
-            ),
-            DiaryScreen(
-              key: const ValueKey<String>('main_tab_diary'),
-              diaryTabActive: _currentIndex == 1,
-            ),
-            const RecommendationScreen(key: ValueKey<String>('main_tab_ia')),
-            const CommunityScreen(key: ValueKey<String>('main_tab_community')),
-            const ProfileScreen(key: ValueKey<String>('main_tab_profile')),
-          ],
-        ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          HomeScreen(
+            key: _homeScreenKey,
+            userName: widget.userName,
+            isNewLogin: widget.isNewLogin,
+          ),
+          DiaryScreen(
+            key: const ValueKey<String>('main_tab_diary'),
+            diaryTabActive: _currentIndex == 1,
+          ),
+          const RecommendationScreen(key: ValueKey<String>('main_tab_ia')),
+          const CommunityScreen(key: ValueKey<String>('main_tab_community')),
+          const ProfileScreen(key: ValueKey<String>('main_tab_profile')),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

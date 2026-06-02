@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 import 'package:smartur/l10n/app_localizations.dart';
-import 'core/motion/smartur_motion.dart';
+import 'core/motion/smartur_routes.dart';
 import 'core/theme/style_guide.dart';
 import 'core/theme/smartur_theme_extensions.dart';
 import 'core/settings/app_settings.dart';
@@ -164,8 +164,11 @@ ThemeData _baseTheme(ColorScheme scheme) {
     ),
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
-        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.android: SmarturPageTransitionsBuilder(),
+        TargetPlatform.iOS: SmarturPageTransitionsBuilder(),
+        TargetPlatform.macOS: SmarturPageTransitionsBuilder(),
+        TargetPlatform.windows: SmarturPageTransitionsBuilder(),
+        TargetPlatform.linux: SmarturPageTransitionsBuilder(),
       },
     ),
     cardTheme: CardThemeData(
@@ -307,7 +310,7 @@ class _SplashGateState extends State<_SplashGate> {
     });
     // Navegar a WelcomeScreen limpiando el stack
     Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+      smarturFadeRoute(const WelcomeScreen()),
       (_) => false,
     );
   }
@@ -367,6 +370,7 @@ class _SplashGateState extends State<_SplashGate> {
               ignoring: _loaderAnimDone,
               child: SmartURLoader(
                 key: const ValueKey('loader'),
+                showBackground: true,
                 onFinished: () => setState(() {
                   _loaderAnimDone = true;
                   if (_sessionReady) _showLoader = false;

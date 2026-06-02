@@ -9,6 +9,10 @@ class SmarturMotion {
   static const Duration slow = Duration(milliseconds: 500);
   static const Duration splashFade = Duration(milliseconds: 450);
   static const Duration loaderMini = Duration(milliseconds: 400);
+  static const Duration routeIn = Duration(milliseconds: 320);
+  static const Duration routeOut = Duration(milliseconds: 240);
+  static const Duration routeDetailIn = Duration(milliseconds: 360);
+  static const Duration routeDetailOut = Duration(milliseconds: 280);
 
   static const Curve standard = Curves.easeOutCubic;
   static const Curve enter = Curves.easeOut;

@@ -714,8 +714,8 @@ class _SessionReplaySheetState extends State<_SessionReplaySheet> {
                               Navigator.pop(ctx);
                               Navigator.push(
                                 navContext,
-                                MaterialPageRoute(
-                                  builder: (_) => DetailViewPage(
+                                smarturDetailRoute(
+                                  DetailViewPage(
                                     title: place.name,
                                     heroTag: 'session_replay_$itemId',
                                     heroImageUrl: place.imageUrl,

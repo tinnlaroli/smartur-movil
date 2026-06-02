@@ -9,6 +9,7 @@ import 'package:local_auth_android/local_auth_android.dart';
 import 'package:http/http.dart' as http;
 import 'package:smartur/l10n/app_localizations.dart';
 
+import '../../../core/motion/smartur_routes.dart';
 import '../../../core/theme/smartur_theme_extensions.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../core/constants/env_config.dart';
@@ -216,9 +217,7 @@ class HomeScreenState extends State<HomeScreen> {
     if (!saved && mounted) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => PreferencesScreen(userName: widget.userName),
-        ),
+        smarturFadeRoute(PreferencesScreen(userName: widget.userName)),
       );
     }
   }
@@ -530,9 +529,9 @@ class HomeScreenState extends State<HomeScreen> {
                     Navigator.pop(ctx);
                     Navigator.push(
                       ctx,
-                      MaterialPageRoute(
-                          builder: (_) =>
-                              PreferencesScreen(userName: widget.userName)),
+                      smarturFadeRoute(
+                        PreferencesScreen(userName: widget.userName),
+                      ),
                     );
                     return;
                   }
@@ -592,9 +591,9 @@ class HomeScreenState extends State<HomeScreen> {
                             Navigator.pop(ctx);
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                  builder: (_) => PreferencesScreen(
-                                      userName: widget.userName)),
+                              smarturFadeRoute(
+                                PreferencesScreen(userName: widget.userName),
+                              ),
                             );
                           },
                           style: ElevatedButton.styleFrom(
@@ -669,7 +668,7 @@ class HomeScreenState extends State<HomeScreen> {
                   Navigator.pop(ctx);
                   await Navigator.push<void>(
                     context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    smarturFadeRoute(const SettingsScreen()),
                   );
                   if (mounted) await refreshUserIdentity();
                 },
@@ -684,7 +683,7 @@ class HomeScreenState extends State<HomeScreen> {
                     if (mounted) {
                       Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (_) => WelcomeScreen()),
+                        smarturFadeRoute(const WelcomeScreen()),
                         (_) => false,
                       );
                     }
@@ -1456,14 +1455,8 @@ class HomeScreenState extends State<HomeScreen> {
     }
     Navigator.push(
       context,
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 400),
-        reverseTransitionDuration: const Duration(milliseconds: 350),
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            _HomePlaceSwipeView(places: allPlaces, initialIndex: initialIndex),
-        transitionsBuilder: (context, anim, secondaryAnim, child) {
-          return FadeTransition(opacity: anim, child: child);
-        },
+      smarturDetailRoute(
+        _HomePlaceSwipeView(places: allPlaces, initialIndex: initialIndex),
       ),
     );
   }

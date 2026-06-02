@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
+import '../../../core/motion/smartur_routes.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
@@ -535,8 +536,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                             Navigator.pop(context);
                                             Navigator.pushReplacement(
                                               context,
-                                              MaterialPageRoute(
-                                                builder: (_) => MainScreen(userName: savedName, isNewLogin: true),
+                                              smarturFadeRoute(
+                                                MainScreen(userName: savedName, isNewLogin: true),
                                               ),
                                             );
                                           } else {
@@ -609,8 +610,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                       Navigator.pop(context);
                                       Navigator.pushReplacement(
                                         context,
-                                        MaterialPageRoute(
-                                          builder: (_) => MainScreen(
+                                        smarturFadeRoute(
+                                          MainScreen(
                                             userName: savedName,
                                             isNewLogin: true,
                                           ),
@@ -996,8 +997,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       if (token != null && context.mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (_) => const MainScreen(userName: null, isNewLogin: false),
+          smarturFadeRoute(
+            const MainScreen(userName: null, isNewLogin: false),
           ),
         );
       } else if (context.mounted) {

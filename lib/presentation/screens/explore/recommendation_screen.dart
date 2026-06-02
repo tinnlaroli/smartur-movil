@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/motion/smartur_routes.dart';
 import '../../../core/theme/smartur_theme_extensions.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../l10n/app_localizations.dart';
@@ -20,6 +21,7 @@ import '../../../data/services/explore_service.dart';
 import '../../../data/models/place_model.dart';
 import '../../../core/utils/notifications.dart';
 import '../../widgets/smartur_background.dart';
+import '../../widgets/smartur_loader.dart';
 import 'detail_view_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -161,13 +163,12 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   Future<void> _loadProfile() async {
     try {
       final p = await ProfileService.fetchMyProfileForPreferences();
-      if (!mounted || p.isEmpty) return;
-      final interests = (p['interests'] as List?)?.cast<String>() ?? [];
-      final hasServerPreferences = interests.isNotEmpty ||
-          p['travel_type'] != null ||
-          p['age'] != null ||
-          p['has_accessibility'] == true;
-      if (!hasServerPreferences) return;
+      if (!mounted) return;
+      if (!_profileHasPreferences(p)) {
+        _clearFormSelections();
+        _prefsWereLoaded = false;
+        return;
+      }
       bool changed = false;
       final age = p['age'] as int?;
       if (age != null) {
@@ -180,11 +181,16 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         else               range = '65+';
         if (range != _ageRange) { _ageRange = range; changed = true; }
       }
-      final valid = interests.where((e) => _tourTypes.any((t) => t.id == e.toLowerCase())).toList();
-      if (valid.isNotEmpty) {
+      final interests = (p['interests'] as List?)?.cast<String>() ?? [];
+      final mappedTypes = <String>{};
+      for (final interest in interests) {
+        final id = _mapInterestToTourId(interest);
+        if (id != null) mappedTypes.add(id);
+      }
+      if (mappedTypes.isNotEmpty) {
         _selectedTypes
           ..clear()
-          ..addAll(valid.map((e) => e.toLowerCase()));
+          ..addAll(mappedTypes);
         changed = true;
       }
       if (interests.any((e) => e.toLowerCase().contains('gastro'))) {
@@ -219,8 +225,50 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         changed = true;
       }
       if (p['has_accessibility'] == true) { _reqAccesibilidad = true; changed = true; }
-      if (changed) _prefsWereLoaded = true;
-    } catch (_) {}
+      _prefsWereLoaded = true;
+    } catch (_) {
+      if (mounted) {
+        _clearFormSelections();
+        _prefsWereLoaded = false;
+      }
+    }
+  }
+
+  bool _profileHasPreferences(Map<String, dynamic> p) {
+    if (p.isEmpty) return false;
+    final interests = (p['interests'] as List?)?.cast<String>() ?? [];
+    return interests.isNotEmpty ||
+        p['travel_type'] != null ||
+        p['age'] != null ||
+        p['activity_level'] != null ||
+        p['preferred_place'] != null ||
+        p['has_accessibility'] == true;
+  }
+
+  String? _mapInterestToTourId(String raw) {
+    final v = raw.toLowerCase().trim();
+    for (final t in _tourTypes) {
+      if (v == t.id || v.contains(t.id)) return t.id;
+    }
+    if (v.contains('cultur') || v.contains('museum') || v.contains('histor')) {
+      return 'cultural';
+    }
+    if (v.contains('natur') || v.contains('forest') || v.contains('eco')) {
+      return 'naturaleza';
+    }
+    if (v.contains('gastro') || v.contains('food') || v.contains('restaur')) {
+      return 'gastronomico';
+    }
+    if (v.contains('avent') || v.contains('hik') || v.contains('trek')) {
+      return 'aventura';
+    }
+    if (v.contains('descans') || v.contains('relax') || v.contains('spa')) {
+      return 'descanso';
+    }
+    if (v.contains('nocturn') || v.contains('night') || v.contains('fiesta')) {
+      return 'nocturno';
+    }
+    return null;
   }
 
   bool get _isFormReady =>
@@ -390,8 +438,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         onNavigateToPlace: (place, itemId) {
           Navigator.push(
             navContext,
-            MaterialPageRoute(
-              builder: (_) => DetailViewPage(
+            smarturDetailRoute(
+              DetailViewPage(
                 title: place.name,
                 heroTag: 'reco_$itemId',
                 heroImageUrl: place.imageUrl,
@@ -445,19 +493,48 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         ),
       ),
       body: SmarturBackgroundTop(
-        child: _isLoadingProfile
-            ? Center(child: CircularProgressIndicator(color: semantic.onImageText))
-            : _buildBody(scheme),
+        child: Stack(
+          children: [
+            if (!_isLoadingProfile) _buildBody(scheme),
+            if (_isLoadingProfile)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: scheme.surface.withValues(alpha: 0.88),
+                  child: const Center(
+                    child: SmartURLoader(isMini: true, continuous: true),
+                  ),
+                ),
+              ),
+            if (_isFetching)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: scheme.scrim.withValues(alpha: 0.35),
+                  child: const Center(
+                    child: SmartURLoader(isMini: true, continuous: true),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildBody(ColorScheme scheme) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, kToolbarHeight + 40, 16, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mq = MediaQuery.of(context);
+        final top = mq.padding.top + kToolbarHeight + 16;
+        final bottom = mq.padding.bottom + 24;
+        final maxW = constraints.maxWidth;
+        final hPad = maxW > 600 ? (maxW - 560) / 2 + 16 : 16.0;
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(hPad, top, hPad, bottom),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight - top - bottom),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
           // ── Header ────────────────────────────────────────────────
           _GlassCard(
             child: Column(
@@ -746,8 +823,11 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                 textAlign: TextAlign.center,
               ),
             ),
-        ],
-      ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

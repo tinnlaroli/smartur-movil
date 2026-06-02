@@ -162,9 +162,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () async {
               await Navigator.push<void>(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const EditProfileAvatarScreen(),
-                ),
+                smarturFadeRoute(const EditProfileAvatarScreen()),
               );
             },
           ),
@@ -550,7 +548,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (parentCtx.mounted) {
                   Navigator.pushAndRemoveUntil(
                     parentCtx,
-                    MaterialPageRoute(builder: (_) => WelcomeScreen()),
+                    smarturFadeRoute(const WelcomeScreen()),
                     (_) => false,
                   );
                 }
@@ -588,7 +586,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => WelcomeScreen()),
+        smarturFadeRoute(const WelcomeScreen()),
         (_) => false,
       );
     }

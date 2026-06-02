@@ -1,29 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../core/motion/smartur_motion.dart';
+import '../../core/motion/smartur_routes.dart';
 import '../../core/theme/style_guide.dart';
 
-/// Transición suave al abrir pantallas secundarias.
-Route<T> smarturFadeRoute<T>(Widget page) {
-  return PageRouteBuilder<T>(
-    pageBuilder: (_, __, ___) => page,
-    transitionDuration: SmarturMotion.normal,
-    reverseTransitionDuration: SmarturMotion.fast,
-    transitionsBuilder: (_, animation, __, child) {
-      final curved = CurvedAnimation(parent: animation, curve: SmarturMotion.standard);
-      return FadeTransition(
-        opacity: curved,
-        child: SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 0.04),
-            end: Offset.zero,
-          ).animate(curved),
-          child: child,
-        ),
-      );
-    },
-  );
-}
+export '../../core/motion/smartur_routes.dart'
+    show
+        SmarturNavigator,
+        smarturDetailRoute,
+        smarturFadeRoute;
 
 /// Entrada escalonada para listas y secciones.
 class SmarturFadeIn extends StatefulWidget {
@@ -222,7 +207,10 @@ TabBar smarturTabBar(
     indicatorSize: TabBarIndicatorSize.tab,
     dividerColor: Colors.transparent,
     indicator: BoxDecoration(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(12),
+        topRight: Radius.circular(12),
+      ),
       color: SmarturStyle.purple.withValues(alpha: 0.14),
     ),
     labelColor: SmarturStyle.purple,
