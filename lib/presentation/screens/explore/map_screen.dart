@@ -134,7 +134,10 @@ class _MapScreenState extends State<MapScreen> {
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () { setState(() { _isLoading = true; _error = null; }); _loadPlaces(); },
-                child: const Text('Reintentar', style: TextStyle(fontFamily: 'Outfit')),
+                child: Text(
+                  l10n.mapRetry,
+                  style: const TextStyle(fontFamily: 'Outfit'),
+                ),
               ),
             ],
           ),

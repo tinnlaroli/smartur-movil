@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:smartur/core/theme/smartur_theme_extensions.dart';
+import 'package:smartur/l10n/app_localizations.dart';
 
 class UpdateService {
   static const _apiUrl =
@@ -171,16 +173,21 @@ class _UpdateDialogState extends State<_UpdateDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     final isDownloading = _progress != null;
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.system_update_rounded, color: Color(0xFF7C3AED)),
-          SizedBox(width: 8),
-          Text('Nueva versión disponible',
-              style: TextStyle(fontFamily: 'CalSans', fontSize: 18)),
+          Icon(Icons.system_update_rounded, color: scheme.primary),
+          const SizedBox(width: 8),
+          Text(
+            l10n.updateTitle,
+            style: const TextStyle(fontFamily: 'CalSans', fontSize: 18),
+          ),
         ],
       ),
       content: Column(
@@ -188,32 +195,38 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'La versión ${widget.latestVersion} de SMARTUR está disponible.\n'
-            'Se descargará e instalará desde el app.',
+            l10n.updateBody(widget.latestVersion),
             style: const TextStyle(fontFamily: 'Outfit', fontSize: 14, height: 1.5),
           ),
           if (isDownloading) ...[
             const SizedBox(height: 16),
             LinearProgressIndicator(
               value: _progress,
-              backgroundColor: const Color(0xFFEDE9FE),
-              color: const Color(0xFF7C3AED),
+              backgroundColor: scheme.primaryContainer,
+              color: scheme.primary,
               borderRadius: BorderRadius.circular(4),
             ),
             const SizedBox(height: 8),
             Text(
               _progress! < 1.0
-                  ? 'Descargando... ${(_progress! * 100).toStringAsFixed(0)}%'
-                  : 'Preparando instalador...',
-              style: const TextStyle(
-                  fontFamily: 'Outfit', fontSize: 12, color: Colors.grey),
+                  ? l10n.updateDownloading((_progress! * 100).toStringAsFixed(0))
+                  : l10n.updatePreparingInstaller,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 12,
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ],
           if (_error) ...[
             const SizedBox(height: 12),
-            const Text(
-              'Error al descargar. Verifica tu conexión e intenta de nuevo.',
-              style: TextStyle(fontFamily: 'Outfit', fontSize: 12, color: Colors.red),
+            Text(
+              l10n.updateDownloadError,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 12,
+                color: semantic.danger,
+              ),
             ),
           ],
         ],
@@ -224,16 +237,18 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               if (!isDownloading)
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Después',
-                      style: TextStyle(color: Colors.grey)),
+                  child: Text(
+                    l10n.updateLater,
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
                 ),
               FilledButton.icon(
                 onPressed: _startUpdate,
                 icon: Icon(
                     _error ? Icons.refresh_rounded : Icons.download_rounded),
-                label: Text(_error ? 'Reintentar' : 'Actualizar ahora'),
+                label: Text(_error ? l10n.updateRetry : l10n.updateNow),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF7C3AED),
+                  backgroundColor: scheme.primary,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),

@@ -8,6 +8,7 @@ import '../../widgets/smartur_background.dart';
 import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/smartur_user_avatar.dart';
 import 'edit_profile_avatar_screen.dart';
+import '../../widgets/smartur_ui_kit.dart';
 import '../settings/settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -171,9 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             onPressed: () async {
                               await Navigator.push(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (_) => const SettingsScreen(),
-                                ),
+                                smarturFadeRoute(const SettingsScreen()),
                               );
                               _loadProfile();
                             },

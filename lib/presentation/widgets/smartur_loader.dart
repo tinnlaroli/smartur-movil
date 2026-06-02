@@ -2,6 +2,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../core/motion/smartur_motion.dart';
+
 // ══════════════════════════════════════════════════════════════════════════════
 // DIMENSIONES DEL VIEWPORT SVG
 // ══════════════════════════════════════════════════════════════════════════════
@@ -264,6 +266,14 @@ class _SmartURLoaderState extends State<SmartURLoader>
   }
 
   Future<void> _runSequence() async {
+    if (mounted && SmarturMotion.prefersReducedMotion(context)) {
+      await Future.delayed(SmarturMotion.loaderMini);
+      if (!mounted) return;
+      setState(() => _phase = _Phase.done);
+      widget.onFinished?.call();
+      return;
+    }
+
     // ── 1. Orbit: planes enter staggered & begin spinning ────────────────
     for (int i = 0; i < 4; i++) {
       Future.delayed(Duration(milliseconds: i * 170), () {
