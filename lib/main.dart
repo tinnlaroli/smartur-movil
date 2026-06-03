@@ -13,23 +13,30 @@ import 'core/settings/app_settings_scope.dart';
 import 'data/services/api_client.dart';
 import 'data/services/auth_service.dart';
 import 'data/services/notification_service.dart';
+import 'data/services/update_service.dart';
 import 'presentation/screens/auth/onboarding_screen.dart';
 import 'presentation/screens/auth/welcome_screen.dart';
 import 'presentation/screens/main/main_screen.dart';
 import 'presentation/widgets/smartur_loader.dart';
 
+/// Indica si Firebase se inicializó correctamente.
+/// Usar para deshabilitar FCM graciosamente cuando no está disponible.
+bool kFirebaseAvailable = false;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Catch unhandled Flutter framework errors so the app never shows a blank screen
+  // Captura errores del framework Flutter para evitar pantallas en blanco
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
   };
 
   try {
     await Firebase.initializeApp();
+    kFirebaseAvailable = true;
   } catch (e) {
     debugPrint('[main] Firebase init failed (FCM unavailable): $e');
+    // kFirebaseAvailable permanece false — NotificationService lo verifica
   }
 
   try {
@@ -67,13 +74,49 @@ class SmarturApp extends StatelessWidget {
               locale: appSettings.locale,
               supportedLocales: AppLocalizations.supportedLocales,
               localizationsDelegates: AppLocalizations.localizationsDelegates,
-              home: _SplashGate(seenOnboarding: seenOnboarding),
+              home: _AppLifecycleWatcher(
+                child: _SplashGate(seenOnboarding: seenOnboarding),
+              ),
             ),
           );
         },
       ),
     );
   }
+}
+
+/// Tras volver del instalador del sistema, revalida la versión instalada.
+class _AppLifecycleWatcher extends StatefulWidget {
+  final Widget child;
+  const _AppLifecycleWatcher({required this.child});
+
+  @override
+  State<_AppLifecycleWatcher> createState() => _AppLifecycleWatcherState();
+}
+
+class _AppLifecycleWatcherState extends State<_AppLifecycleWatcher>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      UpdateService.invalidateCache();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 ThemeData _baseTheme(ColorScheme scheme) {
