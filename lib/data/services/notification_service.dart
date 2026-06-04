@@ -2,8 +2,13 @@ import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import '../../core/constants/api_constants.dart';
+import '../../core/navigation/notification_router.dart';
+import '../../main.dart' show kFirebaseAvailable;
+
+enum NotificationStatus { enabled, disabled, permissionDenied, unavailable }
 
 /// Maneja notificaciones push via Firebase Cloud Messaging.
 ///
@@ -21,6 +26,10 @@ class NotificationService {
   /// Los permisos se solicitan en [registerWithApi] — ya dentro de la app tras el login.
   static Future<void> setup() async {
     if (_setupDone) return;
+    if (!kFirebaseAvailable) {
+      debugPrint('[FCM] Firebase no disponible — setup omitido.');
+      return;
+    }
 
     try {
       final messaging = FirebaseMessaging.instance;
@@ -43,10 +52,14 @@ class NotificationService {
       // Handler para mensajes con la app cerrada (top-level, sin contexto)
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-      // Registro en app abierta desde notificación
-      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        debugPrint('[FCM] App abierta desde notificación: ${message.notification?.title}');
-      });
+      // Tap desde background — app ya estaba abierta
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
+
+      // Tap desde app cerrada (cold start)
+      final initial = await FirebaseMessaging.instance.getInitialMessage();
+      if (initial != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _handleNotificationTap(initial));
+      }
 
       _setupDone = true;
       debugPrint('[FCM] Setup completado.');
@@ -58,6 +71,10 @@ class NotificationService {
   /// Etapa 2: pide permisos (primera vez), obtiene token y lo registra en API.
   /// Llamar en MainScreen.initState() después del primer frame — ya dentro de la app.
   static Future<void> registerWithApi({BuildContext? context}) async {
+    if (!kFirebaseAvailable) {
+      debugPrint('[FCM] Firebase no disponible — registro omitido.');
+      return;
+    }
     if (!_setupDone) await setup();
     if (_registered) return;
 
@@ -97,6 +114,50 @@ class NotificationService {
     _registered = false;
   }
 
+  static const _prefKey = 'notifications_enabled';
+
+  /// Devuelve el estado actual: permiso OS + preferencia guardada.
+  static Future<NotificationStatus> getStatus() async {
+    if (!kFirebaseAvailable) return NotificationStatus.unavailable;
+    final settings = await FirebaseMessaging.instance.getNotificationSettings();
+    if (settings.authorizationStatus == AuthorizationStatus.denied) {
+      return NotificationStatus.permissionDenied;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool(_prefKey) ?? true;
+    return enabled ? NotificationStatus.enabled : NotificationStatus.disabled;
+  }
+
+  /// Activa notificaciones: pide permiso OS si falta → registra token → guarda preferencia.
+  static Future<NotificationStatus> enable() async {
+    if (!kFirebaseAvailable) return NotificationStatus.unavailable;
+    final messaging = FirebaseMessaging.instance;
+    final settings = await messaging.requestPermission(alert: true, badge: true, sound: true);
+    if (settings.authorizationStatus != AuthorizationStatus.authorized &&
+        settings.authorizationStatus != AuthorizationStatus.provisional) {
+      return NotificationStatus.permissionDenied;
+    }
+    _cachedToken ??= await messaging.getToken();
+    if (_cachedToken != null) await _registerToken(_cachedToken!, 'android');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefKey, true);
+    _registered = true;
+    return NotificationStatus.enabled;
+  }
+
+  /// Desactiva notificaciones: elimina token del API → guarda preferencia.
+  static Future<void> disable() async {
+    if (!kFirebaseAvailable) return;
+    try {
+      await ApiClient.delete(Uri.parse('${ApiConstants.baseUrl}/me/device-token'));
+    } catch (e) {
+      debugPrint('[FCM] Error desregistrando token: $e');
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefKey, false);
+    _registered = false;
+  }
+
   static Future<void> _registerToken(String token, String platform) async {
     const maxAttempts = 3;
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -115,6 +176,12 @@ class NotificationService {
       }
     }
     debugPrint('[FCM] No se pudo registrar el token tras $maxAttempts intentos.');
+  }
+
+  static void _handleNotificationTap(RemoteMessage message) {
+    final screen = message.data['screen'] as String?;
+    debugPrint('[FCM] Tap en notificación — screen: $screen');
+    if (screen != null) pendingNotificationScreen.value = screen;
   }
 
   static void _showForegroundBanner(BuildContext context, RemoteMessage message) {

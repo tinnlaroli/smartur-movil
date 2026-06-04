@@ -5,6 +5,7 @@ import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/theme/style_guide.dart';
 import '../../../data/services/notification_service.dart';
+import '../../../core/navigation/notification_router.dart';
 import 'home_screen.dart';
 import 'diary_screen.dart';
 import 'community_screen.dart';
@@ -39,6 +40,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       duration: const Duration(milliseconds: 420),
       value: 0,
     );
+    pendingNotificationScreen.addListener(_onNotificationRoute);
     // Etapa 2: registrar token en API + activar banners en primer plano.
     // Se llama después del primer frame para tener contexto disponible.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -48,8 +50,21 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
   @override
   void dispose() {
+    pendingNotificationScreen.removeListener(_onNotificationRoute);
     _diaryBookAnim.dispose();
     super.dispose();
+  }
+
+  void _onNotificationRoute() {
+    final screen = pendingNotificationScreen.value;
+    if (screen == null) return;
+    pendingNotificationScreen.value = null;
+    switch (screen) {
+      case 'diary':     _onTabTapped(MainTabIndex.diary);     break;
+      case 'community': _onTabTapped(MainTabIndex.community); break;
+      case 'discover':  _onTabTapped(MainTabIndex.discover);  break;
+      case 'home':      _onTabTapped(MainTabIndex.home);      break;
+    }
   }
 
   void _onTabTapped(int index) {
