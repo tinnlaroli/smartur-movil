@@ -12,6 +12,7 @@ import '../../../core/theme/smartur_theme_extensions.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../data/models/place_model.dart';
 import '../../../data/services/user_content_service.dart';
+import '../../widgets/add_to_route_sheet.dart';
 
 class DetailViewPage extends StatefulWidget {
   final String title;
@@ -37,6 +38,14 @@ class DetailViewPage extends StatefulWidget {
   /// Used when the caller provides its own fixed overlay (e.g. swipe view).
   final bool showTopButtons;
 
+  // ── Campos de servicio (opcionales — solo para svc_* placeIds) ──
+  final double? priceFrom;
+  final double? priceTo;
+  final String? currency;
+  final int? durationMinutes;
+  final String? contactPhone;
+  final Map<String, String>? operatingHours;
+
   const DetailViewPage({
     super.key,
     required this.title,
@@ -51,6 +60,12 @@ class DetailViewPage extends StatefulWidget {
     this.lon,
     this.cityPlaces,
     this.showTopButtons = true,
+    this.priceFrom,
+    this.priceTo,
+    this.currency,
+    this.durationMinutes,
+    this.contactPhone,
+    this.operatingHours,
   });
 
   @override
@@ -319,6 +334,20 @@ class _DetailViewPageState extends State<DetailViewPage>
                             color: semantic.onImageText, size: 22),
                       ),
                     ),
+                    if (widget.placeId != null)
+                      Positioned(
+                        top: 8,
+                        right: 112,
+                        child: _GlassCircle(
+                          onTap: () => showAddToRouteSheet(
+                            context,
+                            placeName: widget.title,
+                            placeId: widget.placeId!,
+                          ),
+                          child: Icon(Icons.add_rounded,
+                              color: semantic.onImageText, size: 22),
+                        ),
+                      ),
                     Positioned(
                       top: 8,
                       right: 60,
@@ -369,6 +398,12 @@ class _DetailViewPageState extends State<DetailViewPage>
                       lat: widget.lat,
                       lon: widget.lon,
                       cityPlaces: widget.cityPlaces,
+                      priceFrom: widget.priceFrom,
+                      priceTo: widget.priceTo,
+                      currency: widget.currency,
+                      durationMinutes: widget.durationMinutes,
+                      contactPhone: widget.contactPhone,
+                      operatingHours: widget.operatingHours,
                     ),
                   ),
                 ],
@@ -390,7 +425,6 @@ class _GlassCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -450,6 +484,12 @@ class _BottomContent extends StatelessWidget {
   final double? lat;
   final double? lon;
   final List<Place>? cityPlaces;
+  final double? priceFrom;
+  final double? priceTo;
+  final String? currency;
+  final int? durationMinutes;
+  final String? contactPhone;
+  final Map<String, String>? operatingHours;
 
   const _BottomContent({
     required this.title,
@@ -462,7 +502,19 @@ class _BottomContent extends StatelessWidget {
     this.lat,
     this.lon,
     this.cityPlaces,
+    this.priceFrom,
+    this.priceTo,
+    this.currency,
+    this.durationMinutes,
+    this.contactPhone,
+    this.operatingHours,
   });
+
+  bool get _hasServiceInfo =>
+      priceFrom != null ||
+      durationMinutes != null ||
+      contactPhone != null ||
+      (operatingHours?.isNotEmpty ?? false);
 
   @override
   Widget build(BuildContext context) {
@@ -541,6 +593,17 @@ class _BottomContent extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (_hasServiceInfo) ...[
+                        _SectionLabel(label: 'Información del servicio'),
+                        _ServiceInfoBand(
+                          priceFrom: priceFrom,
+                          priceTo: priceTo,
+                          currency: currency ?? 'MXN',
+                          durationMinutes: durationMinutes,
+                          contactPhone: contactPhone,
+                          operatingHours: operatingHours,
+                        ),
+                      ],
                       _SectionLabel(label: l10n.tabHistory),
                       _TabText(
                         text: subtitle.isNotEmpty
@@ -623,114 +686,120 @@ class _BottomContent extends StatelessWidget {
   }
 }
 
-// ── Location tab — opens Google Maps if coordinates are available ──
+// ── Reusable small widgets ──
 
-class _LocationTab extends StatelessWidget {
-  final double? lat;
-  final double? lon;
-  final String locationLine;
-  final String placeName;
-  final AppLocalizations l10n;
+class _ServiceInfoBand extends StatelessWidget {
+  final double? priceFrom;
+  final double? priceTo;
+  final String currency;
+  final int? durationMinutes;
+  final String? contactPhone;
+  final Map<String, String>? operatingHours;
 
-  const _LocationTab({
-    required this.lat,
-    required this.lon,
-    required this.locationLine,
-    required this.placeName,
-    required this.l10n,
+  const _ServiceInfoBand({
+    this.priceFrom,
+    this.priceTo,
+    required this.currency,
+    this.durationMinutes,
+    this.contactPhone,
+    this.operatingHours,
   });
 
-  Future<void> _openMaps() async {
-    final encodedName = Uri.encodeComponent(placeName);
-    final Uri uri;
-    if (lat != null && lon != null) {
-      // Deep-link to the exact coordinates with place name as label
-      uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lon&query_place_id=$encodedName');
-    } else {
-      // Fallback: search by place name in the region
-      uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent("$placeName, Veracruz, México")}');
+  String _formatPrice() {
+    if (priceFrom == null && priceTo == null) return '';
+    final sym = currency == 'MXN' ? '\$' : currency;
+    if (priceFrom != null && priceTo != null && priceTo != priceFrom) {
+      return '$sym${priceFrom!.toStringAsFixed(0)}–${priceTo!.toStringAsFixed(0)}';
     }
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      // url_launcher couldn't open — silently degrade (Maps not installed)
-    }
+    final val = priceFrom ?? priceTo!;
+    return '$sym${val.toStringAsFixed(0)}';
+  }
+
+  String _formatDuration() {
+    if (durationMinutes == null) return '';
+    final h = durationMinutes! ~/ 60;
+    final m = durationMinutes! % 60;
+    if (h > 0 && m > 0) return '${h}h ${m}min';
+    if (h > 0) return '${h}h';
+    return '${m}min';
   }
 
   @override
   Widget build(BuildContext context) {
-    final hasCoords = lat != null && lon != null;
     final scheme = Theme.of(context).colorScheme;
+    final chips = <_InfoChip>[];
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 4),
-        if (hasCoords)
-            Row(
-              children: [
-                Icon(Icons.location_on_outlined, color: scheme.onSurfaceVariant, size: 13),
-                const SizedBox(width: 4),
-                Text(
-                  '${lat!.toStringAsFixed(5)}, ${lon!.toStringAsFixed(5)}',
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 11,
-                    color: scheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            )
-          else
-            Row(
-              children: [
-                Icon(Icons.location_city_outlined, color: scheme.onSurfaceVariant, size: 13),
-                const SizedBox(width: 4),
-                Text(
-                  locationLine,
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 11,
-                    color: scheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: _openMaps,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-              decoration: BoxDecoration(
-                color: SmarturStyle.blue.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: SmarturStyle.blue.withValues(alpha: 0.50),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.map_outlined, size: 15, color: SmarturStyle.blue),
-                  const SizedBox(width: 6),
-                  Text(
-                    l10n.openInMaps,
-                    style: const TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: SmarturStyle.blue,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      );
+    final price = _formatPrice();
+    if (price.isNotEmpty) {
+      chips.add(_InfoChip(icon: Icons.attach_money_rounded, label: price, color: SmarturStyle.green));
+    }
+
+    final dur = _formatDuration();
+    if (dur.isNotEmpty) {
+      chips.add(_InfoChip(icon: Icons.schedule_rounded, label: dur, color: SmarturStyle.blue));
+    }
+
+    if (contactPhone != null) {
+      chips.add(_InfoChip(icon: Icons.phone_rounded, label: contactPhone!, color: SmarturStyle.purple));
+    }
+
+    if (operatingHours != null && operatingHours!.isNotEmpty) {
+      final dayOrder = ['lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom'];
+      final today = dayOrder[DateTime.now().weekday - 1 < 7 ? DateTime.now().weekday - 1 : 6];
+      final todayHours = operatingHours![today];
+      if (todayHours != null) {
+        chips.add(_InfoChip(icon: Icons.door_front_door_rounded, label: 'Hoy: $todayHours', color: SmarturStyle.orange));
+      }
+    }
+
+    if (chips.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        children: chips,
+      ),
+    );
   }
 }
 
-// ── Reusable small widgets ──
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _InfoChip({required this.icon, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _SectionLabel extends StatelessWidget {
   final String label;
