@@ -122,43 +122,26 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           REPO="${GITHUB_REPOSITORY}"
 
-          # gh CLI is pre-authenticated via GITHUB_TOKEN
-          # Check if release exists
-          EXISTING_ID=$(gh api "repos/${REPO}/releases/tags/${TAG}" --jq '.id' 2>/dev/null || echo "")
-
-          if [ -n "$EXISTING_ID" ]; then
-            echo "Release $TAG exists (id=$EXISTING_ID) — uploading artifacts..."
+          # Check if release exists; gh release view exits non-zero when absent
+          if gh release view "$TAG" &>/dev/null; then
+            echo "Release $TAG already exists — uploading artifacts..."
           else
             echo "Creating release $TAG..."
-            gh api "repos/${REPO}/releases" --method POST \
-              --field "tag_name=$TAG" \
-              --field "name=$TAG" \
-              --field "generate_release_notes=true" > /dev/null
-            EXISTING_ID=$(gh api "repos/${REPO}/releases/tags/${TAG}" --jq '.id')
-            echo "Created release id=$EXISTING_ID"
+            gh release create "$TAG" --generate-notes
           fi
 
           # Upload APK
           echo "Uploading app-release.apk..."
-          gh api "repos/${REPO}/releases/${EXISTING_ID}/assets?name=app-release.apk" \
-            --method POST \
-            --input "build/app/outputs/flutter-apk/app-release.apk" \
-            --field "content_type=application/vnd.android.package-archive" \
-            --jq '.state' 2>/dev/null || \
-          curl -s -X POST \
-            -H "Authorization: token $(gh auth token)" \
-            "https://uploads.github.com/repos/${REPO}/releases/${EXISTING_ID}/assets?name=app-release.apk" \
-            -H "Content-Type: application/vnd.android.package-archive" \
-            --data-binary "@build/app/outputs/flutter-apk/app-release.apk" | grep -o '"state":"[^"]*"' || echo "APK upload done"
+          gh release upload "$TAG" \
+            "build/app/outputs/flutter-apk/app-release.apk" \
+            --clobber
 
           # Upload AAB
           if [ -f "build/app/outputs/bundle/release/app-release.aab" ]; then
             echo "Uploading app-release.aab..."
-            curl -s -X POST \
-              -H "Authorization: token $(gh auth token)" \
-              "https://uploads.github.com/repos/${REPO}/releases/${EXISTING_ID}/assets?name=app-release.aab" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary "@build/app/outputs/bundle/release/app-release.aab" | grep -o '"state":"[^"]*"' || echo "AAB upload done"
+            gh release upload "$TAG" \
+              "build/app/outputs/bundle/release/app-release.aab" \
+              --clobber
           else
             echo "Warning: AAB not found, skipping"
           fi
