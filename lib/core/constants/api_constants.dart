@@ -30,6 +30,7 @@ class ApiConstants {
   static const String meRating = '/me/rating';
   static const String mlFeedback = '/ml/feedback';
   static const String mlSessionsMe = '/ml/sessions/me';
+  static const String mlRecommend = '/ml/recommend';
 
   // Session management
   static const String meSessions = '/me/sessions';

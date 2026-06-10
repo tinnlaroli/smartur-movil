@@ -14,6 +14,7 @@ import '../../../core/motion/smartur_routes.dart';
 import '../../../core/theme/smartur_theme_extensions.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../core/constants/env_config.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/update_service.dart';
@@ -73,6 +74,10 @@ class HomeScreenState extends State<HomeScreen> {
   List<CityData> _cities = [];
   String? _exploreError;
   bool _exploreLoaded = false;
+
+  // ── ML recommendations ──
+  List<Place> _recommendedPlaces = [];
+  bool _recommendationsLoaded = false;
 
   // ── Offline mode ──
   bool _isOffline = false;
@@ -157,6 +162,7 @@ class HomeScreenState extends State<HomeScreen> {
 
       _loadWeatherForSelectedCity();
       _loadHeaderAvatar();
+      _loadRecommendations();
       if (mounted) UpdateService.checkAndPromptIfNeeded(context);
     });
   }
@@ -503,6 +509,48 @@ class HomeScreenState extends State<HomeScreen> {
         _isOffline = false;
         _offlineCacheAge = null;
       });
+    }
+  }
+
+  Future<void> _loadRecommendations() async {
+    try {
+      final userId = await _authService.getUserId();
+      final token = await _authService.getToken();
+      if (userId == null || token == null) return;
+
+      final url = Uri.parse(
+          '${ApiConstants.baseUrl}${ApiConstants.mlRecommend}/$userId');
+      final res = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'top_n': 8}),
+      ).timeout(const Duration(seconds: 12));
+
+      if (!mounted) return;
+      if (res.statusCode != 200) return;
+
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final recs = (data['recommendations'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      if (recs.isEmpty) return;
+
+      final allPlaces = _cities.expand((c) => c.places).toList();
+      final placeById = {for (final p in allPlaces) p.id: p};
+
+      final matched = recs
+          .map((r) => placeById[r['item_id'] as String?])
+          .whereType<Place>()
+          .toList();
+
+      if (!mounted || matched.isEmpty) return;
+      setState(() {
+        _recommendedPlaces = matched;
+        _recommendationsLoaded = true;
+      });
+    } catch (_) {
+      // Non-fatal — section simply won't appear
     }
   }
 
@@ -1433,6 +1481,60 @@ class HomeScreenState extends State<HomeScreen> {
     }
 
     final List<Widget> slivers = [];
+
+    // "Para ti" — ML recommendations carousel (shown only when available)
+    if (_recommendationsLoaded && _recommendedPlaces.isNotEmpty) {
+      final name = _greetingName?.split(' ').first;
+      final label = name != null && name.isNotEmpty
+          ? l10n.recommendationsForYou(name)
+          : l10n.forYouLabel;
+      slivers.add(
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 0, 4),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.auto_awesome_rounded,
+                        size: 16, color: SmarturStyle.purple),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: SmarturStyle.calSansTitle.copyWith(fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 160,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(right: 20),
+                    itemCount: _recommendedPlaces.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (ctx, i) => SizedBox(
+                      width: 140,
+                      child: _PlaceCard(
+                        place: _recommendedPlaces[i],
+                        isHero: false,
+                        onTap: () => _openPlaceDetail(_recommendedPlaces, i),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     // Hero card (first place)
     slivers.add(
