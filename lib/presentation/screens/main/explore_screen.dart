@@ -11,7 +11,6 @@ import '../../../data/models/itinerary_model.dart';
 import '../../../data/services/itinerary_service.dart';
 import '../../../data/services/user_content_service.dart';
 import '../../../data/services/auth_service.dart';
-import '../../widgets/smartur_background.dart';
 import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/public_profile_sheet.dart';
 import '../../widgets/smartur_user_avatar.dart';
@@ -62,14 +61,12 @@ class _ExploreScreenState extends State<ExploreScreen>
           ],
         ),
       ),
-      body: SmarturBackgroundTop(
-        child: TabBarView(
-          controller: _tabCtrl,
-          children: const [
-            _RoutesTab(),
-            _CommunityTab(),
-          ],
-        ),
+      body: TabBarView(
+        controller: _tabCtrl,
+        children: const [
+          _RoutesTab(),
+          _CommunityTab(),
+        ],
       ),
     );
   }
