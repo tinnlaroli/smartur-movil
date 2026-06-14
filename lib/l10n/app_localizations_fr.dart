@@ -189,6 +189,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get navHome => 'Accueil';
 
   @override
+  String get navExplore => 'Explorer';
+
+  @override
+  String get navRoutes => 'Mes Itinéraires';
+
+  @override
   String get navDiary => 'Journal';
 
   @override
@@ -199,6 +205,88 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get navUser => 'Profil';
+
+  @override
+  String get exploreTitle => 'Explorer';
+
+  @override
+  String get routesSectionLabel => 'Itinéraires';
+
+  @override
+  String get routesSectionCertified => 'Itinéraires certifiés SMARTUR';
+
+  @override
+  String get routesSectionMostCopied => 'Les plus copiés';
+
+  @override
+  String get routesSectionFollowing => 'De personnes que vous suivez';
+
+  @override
+  String get routesSectionNoItems => 'Bientôt disponible par ici';
+
+  @override
+  String get routesFollowingEmpty =>
+      'Suivez des voyageurs pour voir leurs itinéraires ici';
+
+  @override
+  String get searchRoutesHint =>
+      'Rechercher des itinéraires ou des utilisateurs...';
+
+  @override
+  String get seeAll => 'Voir tout';
+
+  @override
+  String get misRutasTitle => 'Mes Itinéraires';
+
+  @override
+  String get misRutasEmptyTitle => 'Pas encore d\'itinéraires';
+
+  @override
+  String get misRutasEmptySubtitle =>
+      'Créez votre premier itinéraire et commencez à planifier votre prochaine aventure';
+
+  @override
+  String get misRutasCreate => 'Nouvel itinéraire';
+
+  @override
+  String get profileTabProfile => 'Profil';
+
+  @override
+  String get addToRoute => 'Ajouter à l\'itinéraire';
+
+  @override
+  String get createNewRoute => 'Nouvel itinéraire';
+
+  @override
+  String get genrePickerTitle => 'Qu\'aimez-vous explorer?';
+
+  @override
+  String get genrePickerSubtitle =>
+      'Choisissez jusqu\'à 3 thèmes qui vous intéressent le plus';
+
+  @override
+  String get genrePickerContinue => 'Continuer';
+
+  @override
+  String get genrePickerSkip => 'Passer pour l\'instant';
+
+  @override
+  String get genreNature => 'Nature';
+
+  @override
+  String get genreAdventure => 'Aventure';
+
+  @override
+  String get genreGastronomy => 'Gastronomie';
+
+  @override
+  String get genreCulture => 'Culture';
+
+  @override
+  String get genreRelax => 'Détente';
+
+  @override
+  String get genreHistory => 'Histoire';
 
   @override
   String get communityTitle => 'Communauté';
@@ -413,6 +501,9 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get forYouLabel => 'Pour vous';
+
+  @override
   String get weatherNow => 'Météo actuelle';
 
   @override
@@ -453,9 +544,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get free => 'Gratuit';
-
-  @override
-  String get createOneDayRoute => 'Créer un itinéraire d\'1 jour';
 
   @override
   String get openInMaps => 'Ouvrir dans Google Maps';
@@ -1068,6 +1156,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Pas de connexion. Activez Internet pour voir la carte.';
 
   @override
+  String get welcomeGreeting => 'Bienvenue';
+
+  @override
+  String get recoPreloadedBannerDesc =>
+      'Pré-rempli selon vos préférences enregistrées';
+
+  @override
   String get onboardingTitle1 => 'Votre aventure commence ici';
 
   @override
@@ -1087,4 +1182,430 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get onboardingDesc3 =>
       'Connectez-vous avec des guides locaux et soutenez le tourisme régional tout en créant des souvenirs inoubliables.';
+
+  @override
+  String get errorTitle => 'Erreur';
+
+  @override
+  String get settingsCheckUpdate => 'Rechercher une mise à jour';
+
+  @override
+  String settingsAppUpToDate(Object version) {
+    return 'SMARTUR v$version est à jour.';
+  }
+
+  @override
+  String get languageSpanish => 'Espagnol';
+
+  @override
+  String get languageEnglish => 'Anglais';
+
+  @override
+  String get languageFrench => 'Français';
+
+  @override
+  String get languagePortuguese => 'Portugais';
+
+  @override
+  String get themeLight => 'Clair';
+
+  @override
+  String get themeDark => 'Sombre';
+
+  @override
+  String get navAiShort => 'IA';
+
+  @override
+  String get diaryAiSessionsEmptyTitle => 'Aucune session de recommandations';
+
+  @override
+  String get diaryAiSessionsEmptySubtitle =>
+      'Les sessions générées depuis l\'application ou la plateforme web apparaîtront ici.';
+
+  @override
+  String diaryMoreCount(Object count) {
+    return '+$count de plus';
+  }
+
+  @override
+  String diarySessionDestinationsCount(Object count) {
+    return '$count destinations dans cette session';
+  }
+
+  @override
+  String get diaryTapDestinationHint =>
+      'Touchez une destination pour en voir plus';
+
+  @override
+  String get mapRetry => 'Réessayer';
+
+  @override
+  String get updateTitle => 'Nouvelle version disponible';
+
+  @override
+  String updateBody(Object version) {
+    return 'La version $version de SMARTUR est disponible.\nElle sera téléchargée et installée depuis l\'application.';
+  }
+
+  @override
+  String updateDownloading(Object progress) {
+    return 'Téléchargement... $progress%';
+  }
+
+  @override
+  String get updatePreparingInstaller => 'Préparation de l\'installateur...';
+
+  @override
+  String get updateDownloadError =>
+      'Erreur de téléchargement. Vérifiez votre connexion et réessayez.';
+
+  @override
+  String get updateLater => 'Plus tard';
+
+  @override
+  String get updateRetry => 'Réessayer';
+
+  @override
+  String get updateNow => 'Mettre à jour';
+
+  @override
+  String get updateConfirmInstall =>
+      'Sur l\'écran système, appuyez sur Installer pour terminer la mise à jour. Si vous annulez, vous resterez sur l\'ancienne version.';
+
+  @override
+  String get updateInstallPermission =>
+      'Autorisez l\'installation depuis cette source dans les Réglages, puis réessayez.';
+
+  @override
+  String get updateInstallDone => 'Compris';
+
+  @override
+  String imageShareTitle(Object city) {
+    return 'Mes recommandations à $city';
+  }
+
+  @override
+  String get imageShareSubtitle =>
+      'Basé sur mon profil de voyageur intelligent';
+
+  @override
+  String get imageShareGeneratedBy => 'Généré par SMARTUR AI';
+
+  @override
+  String imageShareMessage(Object city) {
+    return 'Regardez ce que SMARTUR me recommande à $city !';
+  }
+
+  @override
+  String get commonPlaceFallback => 'Lieu';
+
+  @override
+  String get recoTypeCultural => 'Culturel';
+
+  @override
+  String get recoTypeNature => 'Nature';
+
+  @override
+  String get recoTypeGastronomy => 'Gastronomique';
+
+  @override
+  String get recoTypeAdventure => 'Aventure';
+
+  @override
+  String get recoTypeRelax => 'Détente';
+
+  @override
+  String get recoTypeNight => 'Nocturne';
+
+  @override
+  String get recoBudgetLowLabel => 'Économique';
+
+  @override
+  String get recoBudgetLowSub => 'Max. \$500/jour';
+
+  @override
+  String get recoBudgetMediumLabel => 'Modéré';
+
+  @override
+  String get recoBudgetMediumSub => '\$500–1500/jour';
+
+  @override
+  String get recoBudgetHighLabel => 'Premium';
+
+  @override
+  String get recoBudgetHighSub => '\$1500+/jour';
+
+  @override
+  String get recoGroupSolo => 'Solo';
+
+  @override
+  String get recoGroupCouple => 'Couple';
+
+  @override
+  String get recoGroupFamily => 'Famille';
+
+  @override
+  String get recoGroupFriends => 'Amis';
+
+  @override
+  String recoShareList(Object items) {
+    return '🌿 Mes destinations recommandées à Altas Montañas, Veracruz :\n\n• $items\n\n📱 Découvrez-les avec SMARTUR';
+  }
+
+  @override
+  String detailShareMessage(
+    Object title,
+    Object location,
+    Object description,
+    Object mapsUrl,
+  ) {
+    return 'Découvrez $title à $location ! 📍$description\nVoir sur Maps : $mapsUrl\n\nDécouvert avec SMARTUR — Altas Montañas, Veracruz';
+  }
+
+  @override
+  String get mapsLabel => 'Maps';
+
+  @override
+  String get youAreHere => '← Vous êtes ici';
+
+  @override
+  String get recoSavedInDiary =>
+      'Recommandations enregistrées. Vous pouvez les consulter dans Journal.';
+
+  @override
+  String get recoResultsDone => 'Terminé';
+
+  @override
+  String get recoResultsRankHint =>
+      'Classés selon la compatibilité avec votre profil';
+
+  @override
+  String get googleSignInReleaseConfig =>
+      'Google Sign-In n\'est pas configuré pour cette version. Enregistrez l\'empreinte SHA du keystore release dans Firebase.';
+
+  @override
+  String get communityEmpty => 'Aucune publication pour l\'instant';
+
+  @override
+  String get communityEmptyHint =>
+      'Soyez le premier à partager votre expérience';
+
+  @override
+  String get communityFirstPost => 'Créer une publication';
+
+  @override
+  String get communityPostHint => 'Que voulez-vous partager?';
+
+  @override
+  String get communityReport => 'Signaler';
+
+  @override
+  String get communityReportTitle =>
+      'Pourquoi signalez-vous cette publication?';
+
+  @override
+  String get communityReportOther => 'Autre motif';
+
+  @override
+  String get plannerTitle => 'Planificateur';
+
+  @override
+  String get plannerDelete => 'Supprimer l\'itinéraire';
+
+  @override
+  String get plannerDeleteConfirm => 'Supprimer cet itinéraire définitivement?';
+
+  @override
+  String get plannerAddStop => 'Ajouter un arrêt';
+
+  @override
+  String get plannerNoStops => 'Aucun arrêt';
+
+  @override
+  String get plannerNoStopsSubtitle =>
+      'Appuyez sur + partout pour ajouter des arrêts';
+
+  @override
+  String get plannerOptimize => 'Améliorer mon itinéraire';
+
+  @override
+  String get plannerOptimizeComingSoon => 'Bientôt disponible sur SMARTUR';
+
+  @override
+  String get plannerRouteName => 'Nom de l\'itinéraire';
+
+  @override
+  String get plannerRouteNameHint => 'Ex.: Mon itinéraire à Xalapa';
+
+  @override
+  String get plannerMakePublic => 'Rendre l\'itinéraire public';
+
+  @override
+  String get plannerStopDate => 'Date de visite';
+
+  @override
+  String get plannerStopNotes => 'Notes';
+
+  @override
+  String get plannerStopDelete => 'Retirer l\'arrêt';
+
+  @override
+  String itineraryNStops(int n) {
+    return '$n arrêts';
+  }
+
+  @override
+  String get itineraryCertified => 'Certifié SMARTUR';
+
+  @override
+  String get itineraryCopy => 'Copier l\'itinéraire';
+
+  @override
+  String get itineraryCopied => 'Itinéraire copié';
+
+  @override
+  String get itineraryDetail => 'Détail de l\'itinéraire';
+
+  @override
+  String get itineraryPublic => 'Public';
+
+  @override
+  String get itineraryPrivate => 'Privé';
+
+  @override
+  String get itineraryStops => 'Arrêts';
+
+  @override
+  String get routesLoadError => 'Erreur de chargement des itinéraires';
+
+  @override
+  String get socialFollow => 'Suivre';
+
+  @override
+  String get socialFollowing => 'Suivi';
+
+  @override
+  String get socialUnfollow => 'Ne plus suivre';
+
+  @override
+  String get socialFollowers => 'Abonnés';
+
+  @override
+  String socialFollowersCount(int n) {
+    return '$n abonnés';
+  }
+
+  @override
+  String socialFollowingCount(int n) {
+    return '$n abonnements';
+  }
+
+  @override
+  String get socialSearchUsers => 'Rechercher des utilisateurs...';
+
+  @override
+  String get socialNoResults => 'Aucun utilisateur trouvé';
+
+  @override
+  String get publicRoutes => 'Itinéraires publics';
+
+  @override
+  String get noPublicRoutes => 'Pas encore d\'itinéraires publics';
+
+  @override
+  String get copyToMyRoutes => 'Copier dans mes itinéraires';
+
+  @override
+  String get routeCopied => 'Itinéraire copié dans Mes Routes';
+
+  @override
+  String get viewProfile => 'Voir le profil';
+
+  @override
+  String get compareTitle => 'Comparer les Itinéraires';
+
+  @override
+  String get compareYourRoute => 'Votre itinéraire';
+
+  @override
+  String get compareOptimized => 'Itinéraire optimisé';
+
+  @override
+  String get compareDistanceLabel => 'Distance';
+
+  @override
+  String get compareSavingsLabel => 'Économie';
+
+  @override
+  String get compareMoreEfficient => 'plus efficace';
+
+  @override
+  String get compareKeep => 'Garder mon itinéraire';
+
+  @override
+  String get compareApply => 'Utiliser l\'itinéraire optimisé';
+
+  @override
+  String get compareLoading => 'Optimisation en cours...';
+
+  @override
+  String get compareApplied => 'Itinéraire optimisé appliqué';
+
+  @override
+  String get compareMinStops =>
+      'Vous avez besoin d\'au moins 2 arrêts avec une localisation';
+
+  @override
+  String get bookingTitle => 'Réserver le service';
+
+  @override
+  String get bookingDate => 'Date de visite';
+
+  @override
+  String get bookingTime => 'Heure (facultatif)';
+
+  @override
+  String get bookingGuests => 'Personnes';
+
+  @override
+  String get bookingNotes => 'Notes (facultatif)';
+
+  @override
+  String get bookingConfirm => 'Confirmer la réservation';
+
+  @override
+  String get bookingSuccess => 'Réservation envoyée avec succès';
+
+  @override
+  String get bookingStatusPending => 'En attente';
+
+  @override
+  String get bookingStatusConfirmed => 'Confirmée';
+
+  @override
+  String get bookingStatusCancelled => 'Annulée';
+
+  @override
+  String get bookingMyBookings => 'Mes réservations';
+
+  @override
+  String get bookingNoBookings => 'Pas encore de réservations';
+
+  @override
+  String get bookingCancel => 'Annuler la réservation';
+
+  @override
+  String get chatTitle => 'Messages';
+
+  @override
+  String get chatSend => 'Envoyer';
+
+  @override
+  String get chatNoConversations => 'Pas encore de conversations';
+
+  @override
+  String get chatTypeHere => 'Écrire un message...';
+
+  @override
+  String get chatContact => 'Contacter l\'entreprise';
 }

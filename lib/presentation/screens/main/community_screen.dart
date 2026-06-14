@@ -14,6 +14,8 @@ import '../../widgets/smartur_background.dart';
 import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/public_profile_sheet.dart';
 import '../../widgets/smartur_user_avatar.dart';
+import '../../widgets/smartur_ui_kit.dart';
+import '../../widgets/smartur_loader.dart';
 
 /// Devuelve kind API (`svc` / `poi`) e id numérico desde [Place.id] tipo `svc_12`.
 ({String kind, int id})? _parsePlaceRef(String placeId) {
@@ -57,14 +59,27 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final l10n = AppLocalizations.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.communityDeletePost, style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
-        content: Text(l10n.communityDeletePostConfirm, style: const TextStyle(fontFamily: 'Outfit')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel, style: const TextStyle(color: Colors.grey))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.communityDeletePost, style: const TextStyle(color: Colors.red))),
-        ],
-      ),
+      builder: (ctx) {
+        final s = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(l10n.communityDeletePost,
+              style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+          content: Text(l10n.communityDeletePostConfirm,
+              style: const TextStyle(fontFamily: 'Outfit')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel, style: TextStyle(color: s.onSurfaceVariant)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.communityDeletePost,
+                  style: TextStyle(color: s.error, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirm != true) return;
@@ -150,40 +165,53 @@ class _CommunityScreenState extends State<CommunityScreen> {
       ),
       body: SmarturBackgroundTop(
         child: _error != null && !_loading
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(_error!, textAlign: TextAlign.center),
-              ),
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SmarturEmptyState(
+                  icon: Icons.cloud_off_outlined,
+                  title: l10n.connectionError,
+                  subtitle: _error,
+                  action: FilledButton.icon(
+                    onPressed: _load,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(l10n.mapRetry),
+                  ),
+                ),
+              ],
             )
           : RefreshIndicator(
               color: SmarturStyle.purple,
               onRefresh: _load,
-              child: SmarturShimmer(
-                enabled: _loading,
-                child: _loading
-                    ? ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.only(bottom: 80),
-                        children: const [
-                          SkeletonCommunityPostCard(),
-                          SkeletonCommunityPostCard(),
-                          SkeletonCommunityPostCard(),
-                        ],
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 80),
-                        itemCount: _posts.length,
-                        itemBuilder: (context, index) {
-                          final post = _posts[index];
-                          return _PostCard(
-                            data: post,
-                            currentUserId: _currentUserId,
-                            onDelete: () => _deletePost(post['id'] as int),
-                            onReport: (reason) => _reportPost(post['id'] as int, reason),
-                          );
-                        },
-                      ),
+              child: SmarturLoadTransition(
+                loading: _loading,
+                loadingChild: SmarturShimmer(
+                  enabled: true,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(bottom: 80),
+                    children: const [
+                      SkeletonCommunityPostCard(),
+                      SkeletonCommunityPostCard(),
+                      SkeletonCommunityPostCard(),
+                    ],
+                  ),
+                ),
+                child: SmarturFadeIn(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 80),
+                    itemCount: _posts.length,
+                    itemBuilder: (context, index) {
+                      final post = _posts[index];
+                      return _PostCard(
+                        data: post,
+                        currentUserId: _currentUserId,
+                        onDelete: () => _deletePost(post['id'] as int),
+                        onReport: (reason) => _reportPost(post['id'] as int, reason),
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
       ),
@@ -340,7 +368,9 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
             if (_loadingPlaces)
               const Padding(
                 padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator(color: SmarturStyle.purple)),
+                child: Center(
+                  child: SmartURLoader(isMini: true, continuous: true),
+                ),
               )
             else if (_placesError != null)
               Text(_placesError!, style: TextStyle(color: scheme.error, fontFamily: 'Outfit'))
@@ -532,116 +562,159 @@ class _PostCard extends StatelessWidget {
     final postUserId = data['user_id'] is int ? data['user_id'] as int : int.tryParse(data['user_id']?.toString() ?? '');
     final isOwner = currentUserId != null && currentUserId == postUserId;
 
+    void openProfile() => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          builder: (ctx) => PublicProfileSheet(author: author),
+        );
+
+    Widget menuButton() => PopupMenuButton<String>(
+          icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant, size: 20),
+          onSelected: (val) async {
+            if (val == 'delete') {
+              onDelete();
+            } else if (val == 'report') {
+              await _showReportDialog(context);
+            }
+          },
+          itemBuilder: (context) {
+            final l10n = AppLocalizations.of(context)!;
+            return [
+              if (isOwner)
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(children: [
+                    const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                    const SizedBox(width: 8),
+                    Text(l10n.communityDeletePost,
+                        style: const TextStyle(color: Colors.red, fontFamily: 'Outfit')),
+                  ]),
+                ),
+              if (!isOwner)
+                PopupMenuItem(
+                  value: 'report',
+                  child: Row(children: [
+                    Icon(Icons.flag_outlined, color: scheme.error, size: 20),
+                    const SizedBox(width: 8),
+                    Text(l10n.communityReportPost,
+                        style: TextStyle(color: scheme.error, fontFamily: 'Outfit')),
+                  ]),
+                ),
+            ];
+          },
+        );
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 2,
+        elevation: 0,
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              onTap: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                  ),
-                  builder: (ctx) => PublicProfileSheet(author: author),
-                );
-              },
-              leading: SmarturUserAvatar(
-                radius: 22,
-                photoUrl: photoUrl,
-                avatarIconKey: iconKey,
-                displayName: name,
-                backgroundColor: SmarturStyle.purple.withValues(alpha: 0.12),
-                foregroundColor: SmarturStyle.purple,
-              ),
-              title: Text(
-                name,
-                style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600),
-              ),
-              trailing: PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
-                      onSelected: (val) async {
-                        if (val == 'delete') {
-                          onDelete();
-                        } else if (val == 'report') {
-                          await _showReportDialog(context);
-                        }
-                      },
-                      itemBuilder: (context) {
-                        final l10n = AppLocalizations.of(context)!;
-                        return [
-                          if (isOwner)
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                                  const SizedBox(width: 8),
-                                  Text(l10n.communityDeletePost, style: const TextStyle(color: Colors.red, fontFamily: 'Outfit')),
-                                ],
-                              ),
-                            ),
-                          if (!isOwner)
-                            PopupMenuItem(
-                              value: 'report',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.flag_outlined, color: scheme.error, size: 20),
-                                  const SizedBox(width: 8),
-                                  Text(l10n.communityReportPost, style: TextStyle(color: scheme.error, fontFamily: 'Outfit')),
-                                ],
-                              ),
-                            ),
-                        ];
-                      },
-                    ),
-            ),
-            if (placeName.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Chip(
-                    avatar: const Icon(Icons.place, size: 18, color: SmarturStyle.purple),
-                    label: Text(
-                      placeName,
-                      style: const TextStyle(fontFamily: 'Outfit', fontSize: 13),
-                    ),
-                    backgroundColor: SmarturStyle.purple.withValues(alpha: 0.12),
-                    side: BorderSide.none,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                ),
-              ),
-            if (caption.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Text(
-                  caption,
-                  style: const TextStyle(fontFamily: 'Outfit', fontSize: 14),
-                ),
-              ),
+            // ── Imagen arriba (si existe) ──
             if (imageUrl.isNotEmpty)
-              AspectRatio(
-                aspectRatio: 4 / 3,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
                   child: Image.network(
                     imageUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: scheme.outlineVariant,
-                      child: Icon(Icons.photo, size: 64, color: scheme.onSurfaceVariant),
+                    loadingBuilder: (_, child, progress) => progress == null
+                        ? child
+                        : Container(
+                            color: scheme.outlineVariant.withValues(alpha: 0.3),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                          ),
+                    errorBuilder: (_, __, ___) => Container(
+                      color: scheme.outlineVariant.withValues(alpha: 0.3),
+                      child: Icon(Icons.broken_image_outlined,
+                          size: 40, color: scheme.onSurfaceVariant),
                     ),
                   ),
                 ),
               ),
+
+            // ── Autor + lugar + caption ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 10, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Fila autor
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      GestureDetector(
+                        onTap: openProfile,
+                        child: SmarturUserAvatar(
+                          radius: 18,
+                          photoUrl: photoUrl,
+                          avatarIconKey: iconKey,
+                          displayName: name,
+                          backgroundColor: SmarturStyle.purple.withValues(alpha: 0.12),
+                          foregroundColor: SmarturStyle.purple,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: openProfile,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(name,
+                                  style: const TextStyle(
+                                      fontFamily: 'Outfit', fontWeight: FontWeight.w600, fontSize: 14)),
+                              if (placeName.isNotEmpty)
+                                Row(children: [
+                                  Icon(Icons.place_outlined,
+                                      size: 12, color: SmarturStyle.purple),
+                                  const SizedBox(width: 3),
+                                  Flexible(
+                                    child: Text(
+                                      placeName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          fontFamily: 'Outfit',
+                                          fontSize: 11,
+                                          color: SmarturStyle.purple),
+                                    ),
+                                  ),
+                                ]),
+                            ],
+                          ),
+                        ),
+                      ),
+                      menuButton(),
+                    ],
+                  ),
+
+                  // Caption
+                  if (caption.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Text(caption,
+                        style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 14,
+                            height: 1.4,
+                            color: scheme.onSurface)),
+                  ],
+                ],
+              ),
+            ),
           ],
         ),
       ),

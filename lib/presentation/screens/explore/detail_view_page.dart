@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -8,9 +8,12 @@ import 'package:share_plus/share_plus.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/constants/api_constants.dart';
+import '../../../core/theme/smartur_theme_extensions.dart';
 import '../../../core/theme/style_guide.dart';
-import '../../../data/models/place_model.dart';
+import '../../../data/services/api_client.dart';
 import '../../../data/services/user_content_service.dart';
+import '../../widgets/add_to_route_sheet.dart';
 
 class DetailViewPage extends StatefulWidget {
   final String title;
@@ -28,9 +31,17 @@ class DetailViewPage extends StatefulWidget {
   final double? lat;
   final double? lon;
 
-  /// Lugares de la misma ciudad — se usa para "Crear Ruta de 1 Día".
-  /// Pasar null en callers que no tienen acceso a la lista de ciudad.
-  final List<Place>? cityPlaces;
+  /// When false, the top buttons (back/share/like) are not rendered.
+  /// Used when the caller provides its own fixed overlay (e.g. swipe view).
+  final bool showTopButtons;
+
+  // ── Campos de servicio (opcionales — solo para svc_* placeIds) ──
+  final double? priceFrom;
+  final double? priceTo;
+  final String? currency;
+  final int? durationMinutes;
+  final String? contactPhone;
+  final Map<String, String>? operatingHours;
 
   const DetailViewPage({
     super.key,
@@ -44,7 +55,13 @@ class DetailViewPage extends StatefulWidget {
     this.placeId,
     this.lat,
     this.lon,
-    this.cityPlaces,
+    this.showTopButtons = true,
+    this.priceFrom,
+    this.priceTo,
+    this.currency,
+    this.durationMinutes,
+    this.contactPhone,
+    this.operatingHours,
   });
 
   @override
@@ -68,6 +85,8 @@ class _DetailViewPageState extends State<DetailViewPage>
   bool _isFavorite = false;
   String? _kind;
   int? _pid;
+
+  List<Map<String, dynamic>> _activities = const [];
 
   // Dwell time tracking
   final Stopwatch _dwell = Stopwatch();
@@ -140,20 +159,34 @@ class _DetailViewPageState extends State<DetailViewPage>
     }
     final svc = UserContentService();
     await svc.recordVisit(_kind!, _pid!);
-    // Also fire a detail_open interaction event
     svc.batchInteractions([
       {'place_kind': _kind, 'place_id': _pid, 'event_type': 'detail_open'}
     ]);
     try {
-      final results = await Future.wait([
+      final futures = <Future>[
         svc.isFavorite(_kind!, _pid!),
         svc.fetchRating(_kind!, _pid!),
-      ]);
+      ];
+      if (_kind == 'svc') futures.add(_loadActivities());
+      final results = await Future.wait(futures);
       if (mounted) {
         setState(() {
           _isFavorite = results[0] as bool;
           _userRating = results[1] as int?;
         });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadActivities() async {
+    try {
+      final uri = Uri.parse(
+          '${ApiConstants.baseUrl}${ApiConstants.touristServices}/$_pid/activities');
+      final response = await ApiClient.get(uri, timeout: const Duration(seconds: 8));
+      if (response.statusCode == 200 && mounted) {
+        final data = jsonDecode(response.body);
+        final list = (data['activities'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        setState(() => _activities = list);
       }
     } catch (_) {}
   }
@@ -193,6 +226,7 @@ class _DetailViewPageState extends State<DetailViewPage>
   }
 
   void _sharePlace() {
+    final l10n = AppLocalizations.of(context)!;
     final title = widget.title;
     final location = widget.locationLine;
     final desc = widget.subtitle.isNotEmpty ? widget.subtitle : '';
@@ -204,15 +238,15 @@ class _DetailViewPageState extends State<DetailViewPage>
       final encoded = Uri.encodeComponent('$title, Veracruz, México');
       mapsUrl = 'https://www.google.com/maps/search/?api=1&query=$encoded';
     }
-    final text = '¡Descubre $title en $location! 📍'
-        '${shortDesc.isNotEmpty ? '\n$shortDesc' : ''}'
-        '\nVer en Maps: $mapsUrl'
-        '\n\nDescubierto con SMARTUR — Altas Montañas, Veracruz';
+    final descLine = shortDesc.isNotEmpty ? '\n$shortDesc' : '';
+    final text = l10n.detailShareMessage(title, location, descLine, mapsUrl);
     SharePlus.instance.share(ShareParams(text: text, subject: title));
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     return DefaultTabController(
       length: 4,
       child: Scaffold(
@@ -224,20 +258,20 @@ class _DetailViewPageState extends State<DetailViewPage>
               child: SizedBox.expand(
                 child: widget.heroImageUrl.isEmpty
                     ? Container(
-                        color: Colors.grey.shade900,
-                        child: const Icon(Icons.image_not_supported_outlined,
-                            color: Colors.white38, size: 48),
+                        color: scheme.surfaceContainerHighest,
+                        child: Icon(Icons.image_not_supported_outlined,
+                            color: semantic.onImageMuted, size: 48),
                       )
                     : CachedNetworkImage(
                         imageUrl: widget.heroImageUrl,
                         fit: BoxFit.cover,
                         filterQuality: FilterQuality.high,
                         fadeInDuration: const Duration(milliseconds: 300),
-                        placeholder: (_, __) => Container(color: Colors.grey.shade900),
+                        placeholder: (_, __) => Container(color: scheme.surfaceContainerHighest),
                         errorWidget: (_, __, ___) => Container(
-                          color: Colors.grey.shade900,
-                          child: const Icon(Icons.image_not_supported_outlined,
-                              color: Colors.white38, size: 48),
+                          color: scheme.surfaceContainerHighest,
+                          child: Icon(Icons.image_not_supported_outlined,
+                              color: semantic.onImageMuted, size: 48),
                         ),
                       ),
               ),
@@ -255,11 +289,13 @@ class _DetailViewPageState extends State<DetailViewPage>
                         opacity: _heartOpacity.value,
                         child: Transform.scale(
                           scale: _heartScale.value,
-                          child: const Icon(
+                          child: Icon(
                             Icons.favorite_rounded,
-                            color: Colors.white,
+                            color: semantic.onImageText,
                             size: 100,
-                            shadows: [Shadow(color: Colors.black38, blurRadius: 20)],
+                            shadows: [
+                              Shadow(color: semantic.imageScrimStrong, blurRadius: 20),
+                            ],
                           ),
                         ),
                       ),
@@ -270,7 +306,7 @@ class _DetailViewPageState extends State<DetailViewPage>
             ),
 
             // Dark gradient overlay
-            const Positioned.fill(
+            Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -278,10 +314,10 @@ class _DetailViewPageState extends State<DetailViewPage>
                     end: Alignment.bottomCenter,
                     stops: [0.0, 0.3, 0.7, 1.0],
                     colors: [
-                      Color(0x30000000),
-                      Color(0x10000000),
-                      Color(0x90000000),
-                      Color(0xDD000000),
+                      semantic.imageScrimSoft.withValues(alpha: 0.40),
+                      semantic.imageScrimSoft.withValues(alpha: 0.20),
+                      semantic.imageScrimStrong.withValues(alpha: 0.70),
+                      semantic.imageScrimStrong.withValues(alpha: 0.95),
                     ],
                   ),
                 ),
@@ -299,44 +335,55 @@ class _DetailViewPageState extends State<DetailViewPage>
                     ),
                   ),
 
-                  // Top row — atrás + favoritos (diario)
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: _GlassCircle(
-                      onTap: () => Navigator.pop(context),
-                      child: const Icon(Icons.arrow_back_rounded,
-                          color: Colors.white, size: 22),
-                    ),
-                  ),
-                  // Share button — top-right, left of favorite
-                  Positioned(
-                    top: 8,
-                    right: 60,
-                    child: _GlassCircle(
-                      onTap: _sharePlace,
-                      child: const Icon(
-                        Icons.share_rounded,
-                        color: Colors.white,
-                        size: 20,
+                  // Top buttons — hidden when caller provides its own overlay
+                  if (widget.showTopButtons) ...[
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _GlassCircle(
+                        onTap: () => Navigator.pop(context),
+                        child: Icon(Icons.arrow_back_rounded,
+                            color: semantic.onImageText, size: 22),
                       ),
                     ),
-                  ),
-                  // Favorite button — top-right
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: _GlassCircle(
-                      onTap: _kind != null && _pid != null ? _toggleFavorite : () {},
-                      child: Icon(
-                        _isFavorite
-                            ? Icons.favorite_rounded
-                            : Icons.favorite_border_rounded,
-                        color: _isFavorite ? SmarturStyle.pink : Colors.white,
-                        size: 22,
+                    if (widget.placeId != null)
+                      Positioned(
+                        top: 8,
+                        right: 112,
+                        child: _GlassCircle(
+                          onTap: () => showAddToRouteSheet(
+                            context,
+                            placeName: widget.title,
+                            placeId: widget.placeId!,
+                          ),
+                          child: Icon(Icons.add_rounded,
+                              color: semantic.onImageText, size: 22),
+                        ),
+                      ),
+                    Positioned(
+                      top: 8,
+                      right: 60,
+                      child: _GlassCircle(
+                        onTap: _sharePlace,
+                        child: Icon(Icons.share_rounded,
+                            color: semantic.onImageText, size: 20),
                       ),
                     ),
-                  ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: _GlassCircle(
+                        onTap: _kind != null && _pid != null ? _toggleFavorite : () {},
+                        child: Icon(
+                          _isFavorite
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          color: _isFavorite ? SmarturStyle.pink : semantic.onImageText,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ],
 
                   // Right mosaic thumbnails
                   if (widget.galleryUrls.length > 1)
@@ -362,7 +409,14 @@ class _DetailViewPageState extends State<DetailViewPage>
                       onRate: _kind != null && _pid != null ? _ratePlace : (_) {},
                       lat: widget.lat,
                       lon: widget.lon,
-                      cityPlaces: widget.cityPlaces,
+                      placeId: widget.placeId,
+                      priceFrom: widget.priceFrom,
+                      priceTo: widget.priceTo,
+                      currency: widget.currency,
+                      durationMinutes: widget.durationMinutes,
+                      contactPhone: widget.contactPhone,
+                      operatingHours: widget.operatingHours,
+                      activities: _activities,
                     ),
                   ),
                 ],
@@ -386,17 +440,15 @@ class _GlassCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: ClipOval(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            width: 44,
-            height: 44,
-            alignment: Alignment.center,
-            color: Colors.white.withValues(alpha: 0.12),
-            child: child,
-          ),
+      child: Container(
+        width: 44,
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.38),
+          shape: BoxShape.circle,
         ),
+        child: child,
       ),
     );
   }
@@ -444,7 +496,14 @@ class _BottomContent extends StatelessWidget {
   final void Function(int) onRate;
   final double? lat;
   final double? lon;
-  final List<Place>? cityPlaces;
+  final String? placeId;
+  final double? priceFrom;
+  final double? priceTo;
+  final String? currency;
+  final int? durationMinutes;
+  final String? contactPhone;
+  final Map<String, String>? operatingHours;
+  final List<Map<String, dynamic>> activities;
 
   const _BottomContent({
     required this.title,
@@ -456,27 +515,40 @@ class _BottomContent extends StatelessWidget {
     required this.onRate,
     this.lat,
     this.lon,
-    this.cityPlaces,
+    this.placeId,
+    this.priceFrom,
+    this.priceTo,
+    this.currency,
+    this.durationMinutes,
+    this.contactPhone,
+    this.operatingHours,
+    this.activities = const [],
   });
+
+  bool get _hasServiceInfo =>
+      priceFrom != null ||
+      durationMinutes != null ||
+      contactPhone != null ||
+      (operatingHours?.isNotEmpty ?? false);
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.42),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border(
-              top: BorderSide(
-                color: Colors.white.withValues(alpha: 0.12),
-              ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border(
+            top: BorderSide(
+              color: semantic.overlayBorder,
             ),
           ),
+        ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -491,18 +563,18 @@ class _BottomContent extends StatelessWidget {
                   Expanded(
                     child: Row(
                       children: [
-                        const Icon(Icons.place_outlined,
-                            color: Colors.white54, size: 14),
+                        Icon(Icons.place_outlined,
+                            color: scheme.onSurfaceVariant, size: 14),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             locationLine,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Outfit',
                               fontSize: 11,
-                              color: Colors.white54,
+                              color: scheme.onSurfaceVariant,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -517,259 +589,311 @@ class _BottomContent extends StatelessWidget {
               // Title
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'CalSans',
                   fontSize: 36,
                   fontWeight: FontWeight.bold,
                   height: 1.0,
-                  color: Colors.white,
+                  color: scheme.onSurface,
                 ),
               ),
               const SizedBox(height: 14),
 
-              // Tabs
-              TabBar(
-                isScrollable: true,
-                indicatorColor: SmarturStyle.orange,
-                indicatorSize: TabBarIndicatorSize.label,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white54,
-                labelStyle: const TextStyle(
-                  fontFamily: 'Outfit',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
+              // Contenido unificado — todas las secciones en vista continua
+              Container(
+                constraints: BoxConstraints(
+                  maxHeight: (MediaQuery.sizeOf(context).height * 0.35).clamp(240.0, 320.0),
                 ),
-                dividerHeight: 0,
-                tabAlignment: TabAlignment.start,
-                tabs: [
-                  Tab(text: l10n.tabHistory),
-                  Tab(text: l10n.tabLocation),
-                  Tab(text: l10n.tabGastronomy),
-                  Tab(text: l10n.tabRate),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              SizedBox(
-                height: (MediaQuery.sizeOf(context).height * 0.17).clamp(120.0, 160.0),
-                child: TabBarView(
-                  children: [
-                    _TabText(
-                      text: subtitle.isNotEmpty
-                          ? subtitle
-                          : 'Próximamente — agrega una reseña sobre este lugar.',
-                    ),
-                    _LocationTab(
-                      lat: lat,
-                      lon: lon,
-                      locationLine: locationLine,
-                      placeName: title,
-                      l10n: l10n,
-                    ),
-                    _TabText(text: _gastronomyForCity(locationLine)),
-                    _RatingTab(
-                      userRating: userRating,
-                      busy: ratingBusy,
-                      onRate: onRate,
-                    ),
-                  ],
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_hasServiceInfo) ...[
+                        _SectionLabel(label: 'Información del servicio'),
+                        _ServiceInfoBand(
+                          priceFrom: priceFrom,
+                          priceTo: priceTo,
+                          currency: currency ?? 'MXN',
+                          durationMinutes: durationMinutes,
+                          contactPhone: contactPhone,
+                          operatingHours: operatingHours,
+                        ),
+                      ],
+                      _SectionLabel(label: l10n.tabHistory),
+                      _TabText(
+                        text: subtitle.isNotEmpty
+                            ? subtitle
+                            : 'Próximamente — agrega una reseña sobre este lugar.',
+                      ),
+                      if (activities.isNotEmpty) ...[
+                        _SectionLabel(label: 'Actividades disponibles'),
+                        ...activities.map((a) => _ActivityCard(activity: a)),
+                      ],
+                      _SectionLabel(label: l10n.tabGastronomy),
+                      _TabText(text: _gastronomyForCity(locationLine)),
+                      _RatingTab(
+                        userRating: userRating,
+                        busy: ratingBusy,
+                        onRate: onRate,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
 
-              // CTA row: price + button
-              Row(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        l10n.fromPrice,
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 10,
-                          color: Colors.white.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      Text(
-                        l10n.free,
-                        style: TextStyle(
-                          fontFamily: 'CalSans',
-                          fontSize: 22,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: ElevatedButton.icon(
+              // CTA button — add to route
+              ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: SmarturStyle.orange,
+                        backgroundColor: SmarturStyle.purple,
                         foregroundColor: Colors.white,
-                        minimumSize: const Size(0, 52),
+                        minimumSize: const Size(double.infinity, 52),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                         elevation: 0,
                       ),
-                      onPressed: () {
-                        if (cityPlaces != null && cityPlaces!.isNotEmpty) {
-                          // Build a minimal Place-like object for the current view
-                          final fakeCurrentPlace = cityPlaces!.firstWhere(
-                            (p) => p.name == title,
-                            orElse: () => cityPlaces!.first,
-                          );
-                          showModalBottomSheet<void>(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => DayPlanSheet(
-                              currentPlace: fakeCurrentPlace,
-                              cityPlaces: cityPlaces!,
-                            ),
-                          );
-                        } else {
-                          // No city list — open Maps with directions
-                          final Uri uri;
-                          if (lat != null && lon != null) {
-                            uri = Uri.parse(
-                              'https://www.google.com/maps/dir/?api=1&destination=$lat,$lon',
-                            );
-                          } else {
-                            final encoded = Uri.encodeComponent('$title, Veracruz, México');
-                            uri = Uri.parse(
-                              'https://www.google.com/maps/search/?api=1&query=$encoded',
-                            );
-                          }
-                          launchUrl(uri, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      icon: const Icon(Icons.map_rounded, size: 18),
+                      onPressed: placeId != null
+                          ? () => showAddToRouteSheet(
+                                context,
+                                placeName: title,
+                                placeId: placeId!,
+                              )
+                          : null,
+                      icon: const Icon(Icons.add_rounded, size: 18),
                       label: Text(
-                        cityPlaces != null && cityPlaces!.isNotEmpty
-                            ? l10n.createOneDayRoute
-                            : '¿Cómo llegar?',
+                        l10n.addToRoute,
                         style: const TextStyle(
                           fontFamily: 'Outfit',
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
                         ),
                       ),
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
         ),
+    );
+  }
+}
+
+// ── Reusable small widgets ──
+
+class _ActivityCard extends StatelessWidget {
+  final Map<String, dynamic> activity;
+  const _ActivityCard({required this.activity});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final name = activity['name'] as String? ?? '';
+    final description = activity['description'] as String? ?? '';
+    final price = activity['price'];
+    final durationMin = activity['duration_minutes'] as int?;
+
+    String? priceLabel;
+    if (price != null) {
+      priceLabel = '\$${(price as num).toStringAsFixed(0)} MXN';
+    }
+
+    String? durationLabel;
+    if (durationMin != null) {
+      final h = durationMin ~/ 60;
+      final m = durationMin % 60;
+      if (h > 0 && m > 0) {
+        durationLabel = '${h}h ${m}min';
+      } else if (h > 0) {
+        durationLabel = '${h}h';
+      } else {
+        durationLabel = '${m}min';
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: SmarturStyle.purple.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: SmarturStyle.purple.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  name,
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+              if (priceLabel != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: SmarturStyle.green.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    priceLabel,
+                    style: const TextStyle(
+                      fontFamily: 'Outfit',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                      color: SmarturStyle.green,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (durationLabel != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.schedule_rounded, size: 11, color: scheme.onSurfaceVariant),
+                const SizedBox(width: 4),
+                Text(
+                  durationLabel,
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 11,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (description.isNotEmpty) ...[
+            const SizedBox(height: 5),
+            Text(
+              description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 11,
+                height: 1.4,
+                color: scheme.onSurface.withValues(alpha: 0.65),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
-// ── Location tab — opens Google Maps if coordinates are available ──
+class _ServiceInfoBand extends StatelessWidget {
+  final double? priceFrom;
+  final double? priceTo;
+  final String currency;
+  final int? durationMinutes;
+  final String? contactPhone;
+  final Map<String, String>? operatingHours;
 
-class _LocationTab extends StatelessWidget {
-  final double? lat;
-  final double? lon;
-  final String locationLine;
-  final String placeName;
-  final AppLocalizations l10n;
-
-  const _LocationTab({
-    required this.lat,
-    required this.lon,
-    required this.locationLine,
-    required this.placeName,
-    required this.l10n,
+  const _ServiceInfoBand({
+    this.priceFrom,
+    this.priceTo,
+    required this.currency,
+    this.durationMinutes,
+    this.contactPhone,
+    this.operatingHours,
   });
 
-  Future<void> _openMaps() async {
-    final encodedName = Uri.encodeComponent(placeName);
-    final Uri uri;
-    if (lat != null && lon != null) {
-      // Deep-link to the exact coordinates with place name as label
-      uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lon&query_place_id=$encodedName');
-    } else {
-      // Fallback: search by place name in the region
-      uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent("$placeName, Veracruz, México")}');
+  String _formatPrice() {
+    if (priceFrom == null && priceTo == null) return '';
+    final sym = currency == 'MXN' ? '\$' : currency;
+    if (priceFrom != null && priceTo != null && priceTo != priceFrom) {
+      return '$sym${priceFrom!.toStringAsFixed(0)}–${priceTo!.toStringAsFixed(0)}';
     }
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      // url_launcher couldn't open — silently degrade (Maps not installed)
-    }
+    final val = priceFrom ?? priceTo!;
+    return '$sym${val.toStringAsFixed(0)}';
+  }
+
+  String _formatDuration() {
+    if (durationMinutes == null) return '';
+    final h = durationMinutes! ~/ 60;
+    final m = durationMinutes! % 60;
+    if (h > 0 && m > 0) return '${h}h ${m}min';
+    if (h > 0) return '${h}h';
+    return '${m}min';
   }
 
   @override
   Widget build(BuildContext context) {
-    final hasCoords = lat != null && lon != null;
+    final chips = <_InfoChip>[];
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(top: 4),
-      child: Column(
+    final price = _formatPrice();
+    if (price.isNotEmpty) {
+      chips.add(_InfoChip(icon: Icons.attach_money_rounded, label: price, color: SmarturStyle.green));
+    }
+
+    final dur = _formatDuration();
+    if (dur.isNotEmpty) {
+      chips.add(_InfoChip(icon: Icons.schedule_rounded, label: dur, color: SmarturStyle.blue));
+    }
+
+    if (contactPhone != null) {
+      chips.add(_InfoChip(icon: Icons.phone_rounded, label: contactPhone!, color: SmarturStyle.purple));
+    }
+
+    if (operatingHours != null && operatingHours!.isNotEmpty) {
+      final dayOrder = ['lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom'];
+      final today = dayOrder[DateTime.now().weekday - 1 < 7 ? DateTime.now().weekday - 1 : 6];
+      final todayHours = operatingHours![today];
+      if (todayHours != null) {
+        chips.add(_InfoChip(icon: Icons.door_front_door_rounded, label: 'Hoy: $todayHours', color: SmarturStyle.orange));
+      }
+    }
+
+    if (chips.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        children: chips,
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _InfoChip({required this.icon, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (hasCoords)
-            Row(
-              children: [
-                const Icon(Icons.location_on_outlined, color: Colors.white54, size: 13),
-                const SizedBox(width: 4),
-                Text(
-                  '${lat!.toStringAsFixed(5)}, ${lon!.toStringAsFixed(5)}',
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.55),
-                  ),
-                ),
-              ],
-            )
-          else
-            Row(
-              children: [
-                const Icon(Icons.location_city_outlined, color: Colors.white54, size: 13),
-                const SizedBox(width: 4),
-                Text(
-                  locationLine,
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.55),
-                  ),
-                ),
-              ],
-            ),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: _openMaps,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-              decoration: BoxDecoration(
-                color: SmarturStyle.blue.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: SmarturStyle.blue.withValues(alpha: 0.50),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.map_outlined, size: 15, color: SmarturStyle.blue),
-                  const SizedBox(width: 6),
-                  Text(
-                    l10n.openInMaps,
-                    style: const TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: SmarturStyle.blue,
-                    ),
-                  ),
-                ],
-              ),
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
           ),
         ],
@@ -778,7 +902,41 @@ class _LocationTab extends StatelessWidget {
   }
 }
 
-// ── Reusable small widgets ──
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  const _SectionLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 14, bottom: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 3,
+            height: 13,
+            decoration: BoxDecoration(
+              color: SmarturStyle.orange,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 7),
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontWeight: FontWeight.w700,
+              fontSize: 10,
+              letterSpacing: 0.8,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _RatingPill extends StatelessWidget {
   final double rating;
@@ -786,10 +944,11 @@ class _RatingPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: SmarturStyle.orange.withValues(alpha: 0.25),
+        color: SmarturStyle.orange.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: SmarturStyle.orange.withValues(alpha: 0.45)),
       ),
@@ -800,10 +959,10 @@ class _RatingPill extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             rating.toStringAsFixed(1),
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Outfit',
               fontWeight: FontWeight.w800,
-              color: Colors.white,
+              color: scheme.onSurface,
               fontSize: 12,
             ),
           ),
@@ -819,6 +978,7 @@ class _RightMosaic extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     final items = galleryUrls.skip(1).take(3).toList();
     final remaining = (galleryUrls.length - 1 - items.length).clamp(0, 999);
 
@@ -834,15 +994,15 @@ class _RightMosaic extends StatelessWidget {
             height: 46,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.40),
+              color: semantic.imageScrimStrong.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+              border: Border.all(color: semantic.overlayBorder),
             ),
             child: Text(
               '+$remaining',
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Outfit',
-                color: Colors.white,
+                color: semantic.onImageText,
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
               ),
@@ -860,22 +1020,24 @@ class _MiniThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
+        border: Border.all(color: semantic.overlayBorder.withValues(alpha: 0.9), width: 2),
       ),
       child: ClipOval(
         child: CachedNetworkImage(
           imageUrl: url,
           fit: BoxFit.cover,
           filterQuality: FilterQuality.medium,
-          placeholder: (_, __) => Container(color: Colors.grey.shade800),
+          placeholder: (_, __) => Container(color: scheme.surfaceContainerHighest),
           errorWidget: (_, __, ___) => Container(
-            color: Colors.grey.shade800,
-            child: const Icon(Icons.image_not_supported_outlined, color: Colors.white38, size: 20),
+            color: scheme.surfaceContainerHighest,
+            child: Icon(Icons.image_not_supported_outlined, color: semantic.onImageMuted, size: 20),
           ),
         ),
       ),
@@ -889,17 +1051,16 @@ class _TabText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 12,
-            height: 1.4,
-            color: Colors.white.withValues(alpha: 0.72),
-          ),
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontFamily: 'Outfit',
+          fontSize: 12,
+          height: 1.4,
+          color: scheme.onSurface.withValues(alpha: 0.8),
         ),
       ),
     );
@@ -928,27 +1089,29 @@ class _DirectionsChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     return GestureDetector(
       onTap: _openDirections,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A73E8).withValues(alpha: 0.20),
+          color: semantic.info.withValues(alpha: 0.20),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFF1A73E8).withValues(alpha: 0.40)),
+          border: Border.all(color: semantic.info.withValues(alpha: 0.40)),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.directions_rounded, size: 12, color: Color(0xFF82B4FF)),
-            SizedBox(width: 4),
+            Icon(Icons.directions_rounded, size: 12, color: semantic.info),
+            const SizedBox(width: 4),
             Text(
-              '¿Cómo llegar?',
+              l10n.openInMaps,
               style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF82B4FF),
+                color: semantic.info,
               ),
             ),
           ],
@@ -974,20 +1137,21 @@ class _RatingTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     final hasRated = userRating != null;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (!hasRated) ...[
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: 4),
+        if (!hasRated) ...[
             Text(
               l10n.rateHint,
               style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 11,
-                color: Colors.white.withValues(alpha: 0.7),
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
               textAlign: TextAlign.center,
             ),
@@ -1006,7 +1170,7 @@ class _RatingTab extends StatelessWidget {
                   child: Icon(
                     filled ? Icons.star_rounded : Icons.star_border_rounded,
                     size: 32,
-                    color: filled ? const Color(0xFFFBBF24) : Colors.white38,
+                    color: filled ? semantic.warning : scheme.onSurfaceVariant,
                   ),
                 ),
               );
@@ -1022,316 +1186,28 @@ class _RatingTab extends StatelessWidget {
             ),
             Text(
               l10n.rateThanks,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 11,
-                color: Color(0xFFFBBF24),
+                color: semantic.warning,
               ),
             ),
           ],
           if (busy)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(top: 6),
               child: SizedBox(
                 width: 14,
                 height: 14,
                 child: CircularProgressIndicator(
                   strokeWidth: 1.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white54),
+                  valueColor: AlwaysStoppedAnimation<Color>(scheme.onSurfaceVariant),
                 ),
               ),
             ),
         ],
-      ),
-    );
+      );
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// DayPlanSheet — "Crear Ruta de 1 Día" bottom sheet
-// ═══════════════════════════════════════════════════════════════════
 
-/// Categorías de lugares para el día plan
-enum _DaySlot {
-  morning('🌅 Mañana', 'Naturaleza / Aventura', Icons.terrain_rounded, Color(0xFF9CCC44)),
-  midday('🍴 Mediodía', 'Gastronomía / Restaurante', Icons.restaurant_rounded, Color(0xFFFF7D1F)),
-  afternoon('🏛️ Tarde', 'Cultural / Museo', Icons.museum_rounded, Color(0xFF984EFD)),
-  sunset('🌆 Atardecer', 'Mirador / Parque', Icons.landscape_rounded, Color(0xFF4DB9CA));
-
-  final String label;
-  final String categoryHint;
-  final IconData icon;
-  final Color color;
-  const _DaySlot(this.label, this.categoryHint, this.icon, this.color);
-}
-
-class DayPlanSheet extends StatelessWidget {
-  final Place currentPlace;
-  final List<Place> cityPlaces;
-
-  const DayPlanSheet({
-    super.key,
-    required this.currentPlace,
-    required this.cityPlaces,
-  });
-
-  /// Asigna un slot del día a un lugar según su categoría.
-  _DaySlot _slotFor(Place p) {
-    final cats = p.category;
-    switch (cats) {
-      case PlaceCategory.adventures:
-        return _DaySlot.morning;
-      case PlaceCategory.restaurants:
-        return _DaySlot.midday;
-      case PlaceCategory.museums:
-        return _DaySlot.afternoon;
-      case PlaceCategory.hotels:
-        return _DaySlot.sunset;
-    }
-  }
-
-  /// Construye el itinerario: uno por slot, el currentPlace tiene prioridad en su slot.
-  List<({_DaySlot slot, Place place})> _buildItinerary() {
-    final Map<_DaySlot, Place> slots = {};
-
-    // Primero poner el lugar actual en su slot
-    slots[_slotFor(currentPlace)] = currentPlace;
-
-    // Rellenar otros slots con lugares de la ciudad (orden de prioridad)
-    for (final place in cityPlaces) {
-      if (place.id == currentPlace.id) continue;
-      final slot = _slotFor(place);
-      if (!slots.containsKey(slot)) {
-        slots[slot] = place;
-      }
-    }
-
-    // Ordenar por slot del día
-    return _DaySlot.values
-        .where(slots.containsKey)
-        .map((s) => (slot: s, place: slots[s]!))
-        .toList();
-  }
-
-  Future<void> _openMaps(Place p) async {
-    final Uri uri;
-    if (p.lat != null && p.lon != null) {
-      uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}');
-    } else {
-      final encoded = Uri.encodeComponent('${p.name}, Veracruz, México');
-      uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$encoded');
-    }
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final itinerary = _buildItinerary();
-    final cityName = currentPlace.city;
-
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      child: Container(
-        color: const Color(0xFF1A1A2E),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                // Title
-                const Row(
-                  children: [
-                    Icon(Icons.route_rounded, color: SmarturStyle.orange, size: 22),
-                    SizedBox(width: 10),
-                    Text(
-                      'Ruta de 1 Día',
-                      style: TextStyle(
-                        fontFamily: 'CalSans',
-                        fontSize: 22,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Itinerario sugerido para explorar $cityName',
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.55),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // Itinerary steps
-                ...itinerary.map((entry) => _DayStepTile(
-                  slot: entry.slot,
-                  place: entry.place,
-                  isCurrent: entry.place.id == currentPlace.id,
-                  onOpenMaps: () => _openMaps(entry.place),
-                )),
-                if (itinerary.length < 3) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.explore_outlined, color: Colors.white38, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Explora más lugares en $cityName para completar tu ruta.',
-                            style: TextStyle(
-                              fontFamily: 'Outfit',
-                              fontSize: 11,
-                              color: Colors.white.withValues(alpha: 0.50),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DayStepTile extends StatelessWidget {
-  final _DaySlot slot;
-  final Place place;
-  final bool isCurrent;
-  final VoidCallback onOpenMaps;
-
-  const _DayStepTile({
-    required this.slot,
-    required this.place,
-    required this.isCurrent,
-    required this.onOpenMaps,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isCurrent
-              ? slot.color.withValues(alpha: 0.15)
-              : Colors.white.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isCurrent
-                ? slot.color.withValues(alpha: 0.40)
-                : Colors.white.withValues(alpha: 0.08),
-          ),
-        ),
-        child: Row(
-          children: [
-            // Slot icon
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: slot.color.withValues(alpha: 0.20),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(slot.icon, color: slot.color, size: 20),
-            ),
-            const SizedBox(width: 12),
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    slot.label,
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: slot.color,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    place.name,
-                    style: const TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (isCurrent)
-                    Text(
-                      '← Estás aquí',
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 10,
-                        color: slot.color.withValues(alpha: 0.80),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            // Maps chip
-            GestureDetector(
-              onTap: onOpenMaps,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.map_outlined, size: 12, color: Colors.white54),
-                    SizedBox(width: 4),
-                    Text(
-                      'Maps',
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        fontSize: 10,
-                        color: Colors.white54,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
@@ -9,8 +9,12 @@ import 'package:local_auth_android/local_auth_android.dart';
 import 'package:http/http.dart' as http;
 import 'package:smartur/l10n/app_localizations.dart';
 
+import '../../../core/motion/smartur_motion.dart';
+import '../../../core/motion/smartur_routes.dart';
+import '../../../core/theme/smartur_theme_extensions.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../core/constants/env_config.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/update_service.dart';
@@ -25,6 +29,7 @@ import '../../widgets/offline_banner.dart';
 import '../preferences/preferences_screen.dart';
 import '../settings/settings_screen.dart';
 import '../auth/welcome_screen.dart';
+import '../../widgets/add_to_route_sheet.dart';
 import '../explore/detail_view_page.dart';
 
 /// Module-level like cache — liked state persists across widget rebuilds and scroll recycling.
@@ -52,7 +57,7 @@ class HomeScreenState extends State<HomeScreen> {
   /// 0 = header expandido (transparente), 1 = colapsado (fondo surface del tema).
   double _homeHeaderCollapseT = 0;
 
-  bool _isLoadingContent = true;
+  static bool _isLoadingContent = true;
   bool _welcomeShown = false;
   static bool _welcomeShownOnce = false;
   static bool _preferencesCheckedOnce = false;
@@ -68,6 +73,10 @@ class HomeScreenState extends State<HomeScreen> {
   List<CityData> _cities = [];
   String? _exploreError;
   bool _exploreLoaded = false;
+
+  // ── ML recommendations ──
+  List<Place> _recommendedPlaces = [];
+  bool _recommendationsLoaded = false;
 
   // ── Offline mode ──
   bool _isOffline = false;
@@ -134,15 +143,25 @@ class HomeScreenState extends State<HomeScreen> {
       _greetingName = w;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _applyGreetingName();
+      // Greeting: local storage, no network — fire immediately.
+      _applyGreetingName();
+
+      // Start city load in parallel so network round-trip overlaps setup checks.
+      final cityFuture = _loadCitiesFromApi();
+
+      // Setup checks must finish before home content appears (original UX).
       await _showWelcome();
       await _checkPreferences();
       await _offerBiometricSetup();
-      await _loadCitiesFromApi();
-      if (mounted) setState(() => _isLoadingContent = false);
-      await _loadWeatherForSelectedCity();
-      await _loadHeaderAvatar();
-      // Passive update check — shows dialog only once per session, never blocks
+
+      // Wait for cities if they haven't loaded yet (often already done).
+      await cityFuture;
+      if (!mounted) return;
+      setState(() => _isLoadingContent = false);
+
+      _loadWeatherForSelectedCity();
+      _loadHeaderAvatar();
+      _loadRecommendations();
       if (mounted) UpdateService.checkAndPromptIfNeeded(context);
     });
   }
@@ -195,6 +214,24 @@ class HomeScreenState extends State<HomeScreen> {
     await _refreshHeaderAvatarFromStorage();
   }
 
+  Future<void> _onRefresh() async {
+    await _loadCitiesFromApi();
+    if (!mounted) return;
+    _loadWeatherForSelectedCity();
+    _loadHeaderAvatar();
+    _loadRecommendations();
+  }
+
+  /// Segundo toque en la pestaña Inicio: vuelve al inicio del scroll.
+  void scrollToTop() {
+    if (!_homeScrollController.hasClients) return;
+    _homeScrollController.animateTo(
+      0,
+      duration: SmarturMotion.normal,
+      curve: SmarturMotion.standard,
+    );
+  }
+
   Future<void> _refreshHeaderAvatarFromStorage() async {
     final photo = await _authService.getUserPhotoUrl();
     final icon = await _authService.getUserAvatarIconKey();
@@ -211,13 +248,12 @@ class HomeScreenState extends State<HomeScreen> {
     if (_preferencesCheckedOnce) return;
     _preferencesCheckedOnce = true;
 
+    if (!widget.isNewLogin) return;
     final saved = await ProfileService.hasPreferencesSaved();
     if (!saved && mounted) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => PreferencesScreen(userName: widget.userName),
-        ),
+        smarturFadeRoute(PreferencesScreen(userName: widget.userName)),
       );
     }
   }
@@ -231,7 +267,7 @@ class HomeScreenState extends State<HomeScreen> {
     _welcomeShownOnce = true;
 
     final name = widget.userName;
-    const greeting = 'Bienvenido';
+    final greeting = AppLocalizations.of(context)!.welcomeGreeting;
     final message = (name != null && name.isNotEmpty)
         ? '$greeting, $name 👋'
         : '$greeting 👋';
@@ -481,6 +517,70 @@ class HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _loadRecommendations() async {
+    try {
+      final userId = await _authService.getUserId();
+      final token = await _authService.getToken();
+      if (userId == null || token == null) return;
+
+      final profile = await ProfileService.fetchMyProfileForPreferences();
+      final context = <String, dynamic>{};
+      final interests = profile['interests'];
+      if (interests is List && interests.isNotEmpty) {
+        context['interests'] = interests;
+      }
+      if (profile['activity_level'] != null) {
+        context['activity_level'] = profile['activity_level'];
+      }
+      if (profile['travel_type'] != null) {
+        context['travel_type'] = profile['travel_type'];
+      }
+      if (profile['preferred_place'] != null) {
+        context['preferred_place'] = profile['preferred_place'];
+      }
+      if (profile['age'] != null) {
+        context['age'] = profile['age'];
+      }
+
+      final url = Uri.parse(
+          '${ApiConstants.baseUrl}${ApiConstants.mlRecommend}/$userId');
+      final res = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'top_n': 8,
+          if (context.isNotEmpty) 'context': context,
+        }),
+      ).timeout(const Duration(seconds: 12));
+
+      if (!mounted) return;
+      if (res.statusCode != 200) return;
+
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final recs = (data['recommendations'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      if (recs.isEmpty) return;
+
+      final allPlaces = _cities.expand((c) => c.places).toList();
+      final placeById = {for (final p in allPlaces) p.id: p};
+
+      final matched = recs
+          .map((r) => placeById[r['item_id'] as String?])
+          .whereType<Place>()
+          .toList();
+
+      if (!mounted || matched.isEmpty) return;
+      setState(() {
+        _recommendedPlaces = matched;
+        _recommendationsLoaded = true;
+      });
+    } catch (_) {
+      // Non-fatal — section simply won't appear
+    }
+  }
+
   void _showProfile() {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
@@ -529,9 +629,9 @@ class HomeScreenState extends State<HomeScreen> {
                     Navigator.pop(ctx);
                     Navigator.push(
                       ctx,
-                      MaterialPageRoute(
-                          builder: (_) =>
-                              PreferencesScreen(userName: widget.userName)),
+                      smarturFadeRoute(
+                        PreferencesScreen(userName: widget.userName),
+                      ),
                     );
                     return;
                   }
@@ -591,9 +691,9 @@ class HomeScreenState extends State<HomeScreen> {
                             Navigator.pop(ctx);
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                  builder: (_) => PreferencesScreen(
-                                      userName: widget.userName)),
+                              smarturFadeRoute(
+                                PreferencesScreen(userName: widget.userName),
+                              ),
                             );
                           },
                           style: ElevatedButton.styleFrom(
@@ -668,7 +768,7 @@ class HomeScreenState extends State<HomeScreen> {
                   Navigator.pop(ctx);
                   await Navigator.push<void>(
                     context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    smarturFadeRoute(const SettingsScreen()),
                   );
                   if (mounted) await refreshUserIdentity();
                 },
@@ -683,7 +783,7 @@ class HomeScreenState extends State<HomeScreen> {
                     if (mounted) {
                       Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (_) => WelcomeScreen()),
+                        smarturFadeRoute(const WelcomeScreen()),
                         (_) => false,
                       );
                     }
@@ -729,19 +829,23 @@ class HomeScreenState extends State<HomeScreen> {
             child: SmarturBackgroundTop(
               child: SmarturShimmer(
                 enabled: _isLoadingContent,
-                child: CustomScrollView(
-                  controller: _homeScrollController,
-                  physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
+                child: RefreshIndicator(
+                  onRefresh: _onRefresh,
+                  color: SmarturStyle.purple,
+                  child: CustomScrollView(
+                    controller: _homeScrollController,
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    slivers: [
+                      _buildHeaderAppBar(),
+                      SliverToBoxAdapter(child: _buildExploreIntro()),
+                      SliverToBoxAdapter(child: _buildSearchBar()),
+                      SliverToBoxAdapter(child: _buildCityFilter()),
+                      ..._buildPlaceShowcaseSlivers(),
+                      const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                    ],
                   ),
-                  slivers: [
-                    _buildHeaderAppBar(),
-                    SliverToBoxAdapter(child: _buildExploreIntro()),
-                    SliverToBoxAdapter(child: _buildCityFilter()),
-                    SliverToBoxAdapter(child: _buildSearchBar()),
-                    ..._buildPlaceShowcaseSlivers(),
-                    const SliverToBoxAdapter(child: SizedBox(height: 32)),
-                  ],
                 ),
               ),
             ),
@@ -850,19 +954,28 @@ class HomeScreenState extends State<HomeScreen> {
                                     l10n.weatherNow,
                                     style: TextStyle(
                                       fontFamily: 'Outfit',
-                                      fontSize: 11,
+                                      fontSize: 10,
                                       color: scheme.onSurfaceVariant,
                                     ),
                                   ),
+                                  if (_weatherCity != null)
+                                    Text(
+                                      _weatherCity!.name,
+                                      style: TextStyle(
+                                        fontFamily: 'Outfit',
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: scheme.onSurface,
+                                      ),
+                                    ),
                                   Text(
                                     _weatherLoading
                                         ? l10n.loading
                                         : (_weatherSummary ?? l10n.notAvailable),
                                     style: TextStyle(
                                       fontFamily: 'Outfit',
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: scheme.onSurface,
+                                      fontSize: 11,
+                                      color: scheme.onSurfaceVariant,
                                     ),
                                   ),
                                 ],
@@ -892,7 +1005,7 @@ class HomeScreenState extends State<HomeScreen> {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
       child: TextField(
         controller: _searchController,
         onChanged: (v) => setState(() => _searchQuery = v.trim()),
@@ -1400,6 +1513,60 @@ class HomeScreenState extends State<HomeScreen> {
 
     final List<Widget> slivers = [];
 
+    // "Para ti" — ML recommendations carousel (shown only when available)
+    if (_recommendationsLoaded && _recommendedPlaces.isNotEmpty) {
+      final name = _greetingName?.split(' ').first;
+      final label = name != null && name.isNotEmpty
+          ? l10n.recommendationsForYou(name)
+          : l10n.forYouLabel;
+      slivers.add(
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 0, 4),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.auto_awesome_rounded,
+                        size: 16, color: SmarturStyle.purple),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: SmarturStyle.calSansTitle.copyWith(fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 160,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(right: 20),
+                    itemCount: _recommendedPlaces.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (ctx, i) => SizedBox(
+                      width: 140,
+                      child: _PlaceCard(
+                        place: _recommendedPlaces[i],
+                        isHero: false,
+                        onTap: () => _openPlaceDetail(_recommendedPlaces, i),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     // Hero card (first place)
     slivers.add(
       SliverPadding(
@@ -1417,28 +1584,71 @@ class HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    // Remaining cards in 2-column grid
+    // Remaining cards in bento grid
     if (places.length > 1) {
+      // Pattern: (leftFlex, rightFlex, rowHeight)
+      const bentoPat = [
+        (3, 2, 210.0),
+        (1, 1, 160.0),
+        (2, 3, 215.0),
+        (1, 2, 185.0),
+      ];
+      final rowCount = ((places.length - 1) / 2).ceil();
       slivers.add(
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 14,
-              crossAxisSpacing: 14,
-              childAspectRatio: 0.82,
-            ),
+          sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final place = places[index + 1];
-                return _PlaceCard(
-                  place: place,
-                  isHero: false,
-                  onTap: () => _openPlaceDetail(places, index + 1),
+              (context, rowIndex) {
+                final leftIdx = rowIndex * 2 + 1;
+                final rightIdx = leftIdx + 1;
+                final pat = bentoPat[rowIndex % bentoPat.length];
+                final rowHeight = pat.$3;
+
+                Widget rowContent;
+                if (rightIdx >= places.length) {
+                  rowContent = SizedBox(
+                    height: rowHeight,
+                    child: _PlaceCard(
+                      place: places[leftIdx],
+                      isHero: false,
+                      onTap: () => _openPlaceDetail(places, leftIdx),
+                    ),
+                  );
+                } else {
+                  rowContent = SizedBox(
+                    height: rowHeight,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Flexible(
+                          flex: pat.$1,
+                          child: _PlaceCard(
+                            place: places[leftIdx],
+                            isHero: false,
+                            onTap: () => _openPlaceDetail(places, leftIdx),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Flexible(
+                          flex: pat.$2,
+                          child: _PlaceCard(
+                            place: places[rightIdx],
+                            isHero: false,
+                            onTap: () => _openPlaceDetail(places, rightIdx),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: rowContent,
                 );
               },
-              childCount: places.length - 1,
+              childCount: rowCount,
             ),
           ),
         ),
@@ -1455,14 +1665,8 @@ class HomeScreenState extends State<HomeScreen> {
     }
     Navigator.push(
       context,
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 400),
-        reverseTransitionDuration: const Duration(milliseconds: 350),
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            _HomePlaceSwipeView(places: allPlaces, initialIndex: initialIndex),
-        transitionsBuilder: (context, anim, secondaryAnim, child) {
-          return FadeTransition(opacity: anim, child: child);
-        },
+      smarturDetailRoute(
+        _HomePlaceSwipeView(places: allPlaces, initialIndex: initialIndex),
       ),
     );
   }
@@ -1574,10 +1778,12 @@ class _PlaceCardState extends State<_PlaceCard>
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     final place = widget.place;
     final isHero = widget.isHero;
 
-    return GestureDetector(
+    return RepaintBoundary(
+      child: GestureDetector(
       onTap: widget.onTap,
       onDoubleTap: _onDoubleTap,
       child: Hero(
@@ -1587,7 +1793,7 @@ class _PlaceCardState extends State<_PlaceCard>
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
+                color: semantic.imageScrimStrong.withValues(alpha: 0.20),
                 blurRadius: isHero ? 14 : 10,
                 offset: const Offset(0, 4),
               ),
@@ -1604,8 +1810,8 @@ class _PlaceCardState extends State<_PlaceCard>
                 place.imageUrl.isEmpty
                     ? Container(
                         color: scheme.outlineVariant,
-                        child: const Icon(Icons.image_not_supported_outlined,
-                            color: Colors.white54, size: 36),
+                        child: Icon(Icons.image_not_supported_outlined,
+                            color: semantic.onImageMuted, size: 36),
                       )
                     : CachedNetworkImage(
                         imageUrl: place.imageUrl,
@@ -1617,12 +1823,12 @@ class _PlaceCardState extends State<_PlaceCard>
                         ),
                         errorWidget: (_, __, ___) => Container(
                           color: scheme.outlineVariant,
-                          child: const Icon(Icons.image_not_supported_outlined,
-                              color: Colors.white54, size: 36),
+                          child: Icon(Icons.image_not_supported_outlined,
+                              color: semantic.onImageMuted, size: 36),
                         ),
                       ),
 
-                // ── Gradient overlay ──
+                // ── Gradient overlay — tinted with category color ──
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -1630,56 +1836,96 @@ class _PlaceCardState extends State<_PlaceCard>
                       end: Alignment.bottomCenter,
                       stops: isHero
                           ? const [0.0, 0.3, 0.7, 1.0]
-                          : const [0.0, 0.35, 1.0],
+                          : const [0.0, 0.30, 1.0],
                       colors: isHero
-                          ? const [
-                              Color(0x00000000), Color(0x10000000),
-                              Color(0x80000000), Color(0xDD000000),
+                          ? [
+                              Colors.transparent,
+                              semantic.imageScrimSoft.withValues(alpha: 0.12),
+                              semantic.imageScrimStrong.withValues(alpha: 0.55),
+                              semantic.imageScrimStrong.withValues(alpha: 0.92),
                             ]
-                          : const [
-                              Color(0x05000000), Color(0x20000000), Color(0xCC000000),
+                          : [
+                              place.category.color.withValues(alpha: 0.04),
+                              semantic.imageScrimSoft.withValues(alpha: 0.22),
+                              Color.lerp(semantic.imageScrimStrong,
+                                      place.category.color, 0.12)!
+                                  .withValues(alpha: 0.90),
                             ],
                     ),
                   ),
                 ),
 
-                // ── Category pill (glassmorphism) ──
+                // ── Category accent bar (top) ──
+                if (!isHero)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 3,
+                      decoration: BoxDecoration(
+                        color: place.category.color,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(18),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // ── Category pill ──
                 Positioned(
                   top: isHero ? 12 : 10,
                   left: isHero ? 12 : 10,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isHero ? 10 : 8,
-                          vertical: isHero ? 5 : 4,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isHero ? 10 : 8,
+                      vertical: isHero ? 5 : 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: place.category.color.withValues(alpha: 0.88),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(place.category.icon,
+                            size: isHero ? 13 : 11, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(
+                          place.category.label,
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: isHero ? 10 : 9,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white, letterSpacing: 0.3,
+                          ),
                         ),
-                        decoration: BoxDecoration(
-                          color: place.category.color.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2), width: 0.5),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(place.category.icon,
-                                size: isHero ? 13 : 11, color: Colors.white),
-                            const SizedBox(width: 4),
-                            Text(
-                              place.category.label,
-                              maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontFamily: 'Outfit',
-                                fontSize: isHero ? 10 : 9,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white, letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
-                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ── Add to route button (top-right, below like) ──
+                Positioned(
+                  top: isHero ? 46 : 40,
+                  right: isHero ? 10 : 8,
+                  child: GestureDetector(
+                    onTap: () => showAddToRouteSheet(
+                      context,
+                      placeName: place.name,
+                      placeId: place.id,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: SmarturStyle.purple.withValues(alpha: 0.80),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.add_rounded,
+                        size: isHero ? 18 : 15,
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -1691,24 +1937,18 @@ class _PlaceCardState extends State<_PlaceCard>
                   right: isHero ? 10 : 8,
                   child: GestureDetector(
                     onTap: _toggleLike,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: _liked
-                                ? SmarturStyle.pink.withValues(alpha: 0.85)
-                                : Colors.black.withValues(alpha: 0.30),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            _liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                            size: isHero ? 18 : 15,
-                            color: Colors.white,
-                          ),
-                        ),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: _liked
+                            ? SmarturStyle.pink.withValues(alpha: 0.92)
+                            : Colors.black.withValues(alpha: 0.40),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        size: isHero ? 18 : 15,
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -1724,12 +1964,15 @@ class _PlaceCardState extends State<_PlaceCard>
                         opacity: _heartOpacity.value,
                         child: Transform.scale(
                           scale: _heartScale.value,
-                          child: const Icon(
+                          child: Icon(
                             Icons.favorite_rounded,
-                            color: Colors.white,
+                            color: semantic.onImageText,
                             size: 80,
                             shadows: [
-                              Shadow(color: Colors.black26, blurRadius: 12),
+                              Shadow(
+                                color: semantic.imageScrimStrong.withValues(alpha: 0.70),
+                                blurRadius: 12,
+                              ),
                             ],
                           ),
                         ),
@@ -1753,7 +1996,7 @@ class _PlaceCardState extends State<_PlaceCard>
                         style: TextStyle(
                           fontFamily: 'CalSans',
                           fontSize: isHero ? 20.0 : 15.0,
-                          color: Colors.white,
+                          color: semantic.onImageText,
                           fontWeight: FontWeight.bold,
                           height: 1.15,
                         ),
@@ -1767,7 +2010,7 @@ class _PlaceCardState extends State<_PlaceCard>
                             maxLines: 2, overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontFamily: 'Outfit', fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: semantic.onImageText.withValues(alpha: 0.8),
                               height: 1.3,
                             ),
                           ),
@@ -1780,12 +2023,32 @@ class _PlaceCardState extends State<_PlaceCard>
                             place.rating.toStringAsFixed(1),
                             style: TextStyle(
                               fontFamily: 'Outfit', fontWeight: FontWeight.w800,
-                              fontSize: isHero ? 12 : 11, color: Colors.white,
+                              fontSize: isHero ? 12 : 11, color: semantic.onImageText,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          if (place.rating >= 4.7) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: SmarturStyle.orange,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'TOP',
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(width: 6),
                           Icon(Icons.location_on_outlined,
-                              size: isHero ? 13 : 11, color: Colors.white.withValues(alpha: 0.7)),
+                              size: isHero ? 13 : 11, color: semantic.onImageText.withValues(alpha: 0.7)),
                           const SizedBox(width: 2),
                           Expanded(
                             child: Text(
@@ -1794,7 +2057,7 @@ class _PlaceCardState extends State<_PlaceCard>
                               style: TextStyle(
                                 fontFamily: 'Outfit',
                                 fontSize: isHero ? 11 : 10,
-                                color: Colors.white.withValues(alpha: 0.7),
+                                color: semantic.onImageText.withValues(alpha: 0.7),
                               ),
                             ),
                           ),
@@ -1808,9 +2071,12 @@ class _PlaceCardState extends State<_PlaceCard>
           ),
         ),
       ),
+      ),
     );
   }
 }
+
+// ── Swipe view — fixed chrome + animated page transition ──────────────────
 
 class _HomePlaceSwipeView extends StatefulWidget {
   final List<Place> places;
@@ -1823,42 +2089,202 @@ class _HomePlaceSwipeView extends StatefulWidget {
 }
 
 class _HomePlaceSwipeViewState extends State<_HomePlaceSwipeView> {
-  late final PageController _controller;
+  late final PageController _ctrl;
+  int _idx = 0;
+
+  // Favorite state per place — populated lazily as pages are viewed
+  final Map<String, bool> _favs = {};
+  final Map<String, bool> _favBusy = {};
 
   @override
   void initState() {
     super.initState();
-    _controller = PageController(initialPage: widget.initialIndex);
+    _idx = widget.initialIndex;
+    _ctrl = PageController(initialPage: _idx);
+    _ctrl.addListener(_onScroll);
+    _loadFav(widget.places[_idx]);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _ctrl.removeListener(_onScroll);
+    _ctrl.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    final p = (_ctrl.page ?? _idx).round().clamp(0, widget.places.length - 1);
+    if (p != _idx) {
+      setState(() => _idx = p);
+      _loadFav(widget.places[p]);
+    }
+  }
+
+  Future<void> _loadFav(Place place) async {
+    if (_favs.containsKey(place.id)) return;
+    final ref = _parsePlaceRef(place.id);
+    if (ref == null) return;
+    try {
+      final v = await UserContentService().isFavorite(ref.$1, ref.$2);
+      if (mounted) setState(() => _favs[place.id] = v);
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFav() async {
+    final place = widget.places[_idx];
+    if (_favBusy[place.id] == true) return;
+    final ref = _parsePlaceRef(place.id);
+    if (ref == null) return;
+    final was = _favs[place.id] ?? false;
+    HapticFeedback.lightImpact();
+    setState(() { _favs[place.id] = !was; _favBusy[place.id] = true; });
+    try {
+      if (was) await UserContentService().removeFavorite(ref.$1, ref.$2);
+      else     await UserContentService().addFavorite(ref.$1, ref.$2);
+    } catch (_) {
+      if (mounted) setState(() => _favs[place.id] = was);
+    } finally {
+      if (mounted) setState(() => _favBusy[place.id] = false);
+    }
+  }
+
+  void _share() {
+    final p = widget.places[_idx];
+    final String url;
+    if (p.lat != null && p.lon != null) {
+      url = 'https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}';
+    } else {
+      url = 'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent('${p.name}, Veracruz, México')}';
+    }
+    SharePlus.instance.share(ShareParams(
+      text: '${p.name}\n${p.city}\n$url',
+      subject: p.name,
+    ));
+  }
+
+  // Parse 'svc_12' or 'poi_5' → ('svc', 12) / ('poi', 5)
+  (String, int)? _parsePlaceRef(String id) {
+    if (id.startsWith('svc_')) {
+      final n = int.tryParse(id.substring(4));
+      if (n != null) return ('svc', n);
+    }
+    if (id.startsWith('poi_')) {
+      final n = int.tryParse(id.substring(4));
+      if (n != null) return ('poi', n);
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    return PageView.builder(
-      controller: _controller,
-      itemCount: widget.places.length,
-      itemBuilder: (context, index) {
-        final place = widget.places[index];
-        return DetailViewPage(
-          key: ValueKey('home_place_swipe_${place.id}'),
-          title: place.name,
-          heroTag: 'home_swipe_${place.id}_$index',
-          heroImageUrl: place.imageUrl,
-          subtitle: place.description,
-          locationLine: '${place.locationLine} · ${place.city}',
-          rating: place.rating,
-          galleryUrls: place.galleryUrls,
-          placeId: place.id,
-          lat: place.lat,
-          lon: place.lon,
-          cityPlaces: widget.places,
-        );
-      },
+    final isFav = _favs[widget.places[_idx].id] ?? false;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // ── Animated page view ────────────────────────────────────
+          PageView.builder(
+            controller: _ctrl,
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            itemCount: widget.places.length,
+            itemBuilder: (ctx, i) {
+              final place = widget.places[i];
+              return AnimatedBuilder(
+                animation: _ctrl,
+                builder: (ctx, child) {
+                  double offset = 0;
+                  if (_ctrl.hasClients && _ctrl.position.haveDimensions) {
+                    final page = _ctrl.page ?? i.toDouble();
+                    offset = (page - i).abs().clamp(0.0, 1.0);
+                  }
+                  return Transform.scale(
+                    scale: 1.0 - offset * 0.05,
+                    child: child,
+                  );
+                },
+                child: DetailViewPage(
+                  key: ValueKey('swipe_${place.id}_$i'),
+                  showTopButtons: false,
+                  title: place.name,
+                  heroTag: 'home_swipe_${place.id}_$i',
+                  heroImageUrl: place.imageUrl,
+                  subtitle: place.description,
+                  locationLine: '${place.locationLine} · ${place.city}',
+                  rating: place.rating,
+                  galleryUrls: place.galleryUrls,
+                  placeId: place.id,
+                  lat: place.lat,
+                  lon: place.lon,
+                ),
+              );
+            },
+          ),
+
+          // ── Fixed chrome overlay ──────────────────────────────────
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: Row(
+                children: [
+                  _SwipeOverlayButton(
+                    icon: Icons.arrow_back_rounded,
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  const Spacer(),
+                  _SwipeOverlayButton(
+                    icon: Icons.share_rounded,
+                    onTap: _share,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  _SwipeOverlayButton(
+                    icon: isFav
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    iconColor: isFav ? SmarturStyle.pink : Colors.white,
+                    onTap: _toggleFav,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Simple circular button for the fixed overlay
+class _SwipeOverlayButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color iconColor;
+  final double size;
+
+  const _SwipeOverlayButton({
+    required this.icon,
+    required this.onTap,
+    this.iconColor = Colors.white,
+    this.size = 22,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.38),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: iconColor, size: size),
+      ),
     );
   }
 }

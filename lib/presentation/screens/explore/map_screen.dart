@@ -3,10 +3,13 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
+import '../../../core/motion/smartur_routes.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../data/models/place_model.dart';
 import '../../../data/services/explore_service.dart';
 import '../../widgets/smartur_background.dart';
+import '../../widgets/smartur_loader.dart';
+import '../../widgets/smartur_ui_kit.dart';
 import 'detail_view_page.dart';
 
 /// Filtro activo en el mapa.
@@ -96,27 +99,27 @@ class _MapScreenState extends State<MapScreen> {
       backgroundColor: scheme.surface,
       body: SmarturBackgroundTop(
         child: SafeArea(
-          child: _isLoading
-              ? _buildLoader(scheme)
-              : _error != null
-                  ? _buildError(l10n, scheme)
-                  : Stack(
+          child: SmarturLoadTransition(
+            loading: _isLoading,
+            loadingChild: const Center(
+              child: SmartURLoader(isMini: true, continuous: true),
+            ),
+            child: _error != null
+                ? _buildError(l10n, scheme)
+                : SmarturFadeIn(
+                    child: Stack(
                       children: [
                         _buildMap(),
                         _buildTopFiltersBar(l10n, scheme),
                         _buildBottomCard(l10n, scheme),
                       ],
                     ),
+                  ),
+          ),
         ),
       ),
     );
   }
-
-  // ── Loading ──────────────────────────────────────────────────────────────
-
-  Widget _buildLoader(ColorScheme scheme) => Center(
-        child: CircularProgressIndicator(color: scheme.primary),
-      );
 
   Widget _buildError(AppLocalizations l10n, ColorScheme scheme) => Center(
         child: Padding(
@@ -134,7 +137,10 @@ class _MapScreenState extends State<MapScreen> {
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () { setState(() { _isLoading = true; _error = null; }); _loadPlaces(); },
-                child: const Text('Reintentar', style: TextStyle(fontFamily: 'Outfit')),
+                child: Text(
+                  l10n.mapRetry,
+                  style: const TextStyle(fontFamily: 'Outfit'),
+                ),
               ),
             ],
           ),
@@ -344,8 +350,8 @@ class _MapScreenState extends State<MapScreen> {
       child: GestureDetector(
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => DetailViewPage(
+          smarturDetailRoute(
+            DetailViewPage(
               title: place.name,
               heroTag: 'map_${place.id}',
               heroImageUrl: place.imageUrl,

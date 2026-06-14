@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
-
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -31,6 +30,15 @@ class AuthService {
   );
 
   AuthService();
+
+  // Parsea el body de la respuesta — lanza AuthException si el JSON es inválido
+  static Map<String, dynamic> _parseBody(http.Response response) {
+    try {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } on FormatException {
+      throw AuthException('Respuesta del servidor inválida (código ${response.statusCode}).');
+    }
+  }
 
   // ── Token persistence ───────────────────────────────────────────────────
 
@@ -298,9 +306,9 @@ class AuthService {
     if (response.statusCode == 201 || response.statusCode == 200) {
       return true;
     } else {
-      final errorMsg =
-          jsonDecode(response.body)['message'] ?? 'Error al registrarse.';
-      throw AuthException(errorMsg);
+      final body = _parseBody(response);
+      final errorMsg = body['message'] ?? 'Error al registrarse.';
+      throw AuthException(errorMsg as String);
     }
   }
 
@@ -316,7 +324,7 @@ class AuthService {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      return _parseBody(response);
     }
     if (response.statusCode == 429) {
       throw AuthRateLimitException();
@@ -336,8 +344,8 @@ class AuthService {
     );
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final String? token = data['token'];
+      final data = _parseBody(response);
+      final String? token = data['token'] as String?;
       final String? refresh = data['refreshToken'];
       if (token != null) await saveToken(token);
       if (refresh != null) await saveRefreshToken(refresh);
@@ -407,10 +415,33 @@ class AuthService {
       rethrow;
     } on TimeoutException {
       throw AuthException(
-          'La conexión tardó demasiado. Verifica tu internet.');
+          'La conexión tardó demasiado. Verifica tu internet.',
+          code: 'auth.timeout',
+        );
+    } on PlatformException catch (e) {
+      final msg = (e.message ?? '').toLowerCase();
+      final isConfig = e.code == 'sign_in_failed' ||
+          msg.contains('developer_error') ||
+          msg.contains('10') ||
+          msg.contains('12500');
+      throw AuthException(
+        isConfig
+            ? 'Google Sign-In no está configurado para esta versión de la app. '
+                'Registra el SHA del keystore de release en Firebase (ver docs/GOOGLE_SIGNIN_RELEASE.md).'
+            : 'Error de Google: ${e.message ?? e.code}',
+        code: isConfig ? 'auth.google_release_config' : 'auth.google_platform',
+      );
     } catch (error) {
       if (error is AuthException) rethrow;
-      throw AuthException('Error inesperado: $error');
+      final text = error.toString().toLowerCase();
+      if (text.contains('developer_error') || text.contains('sign_in_failed')) {
+        throw AuthException(
+          'Google Sign-In no está configurado para esta versión de la app. '
+              'Registra el SHA del keystore de release en Firebase.',
+          code: 'auth.google_release_config',
+        );
+      }
+      throw AuthException('Error inesperado: $error', code: 'auth.google_unknown');
     }
   }
 
@@ -610,19 +641,26 @@ class AuthService {
 
 class AuthException implements Exception {
   final String message;
-  AuthException(this.message);
+  final String code;
+  AuthException(this.message, {this.code = 'auth.unknown'});
   @override
   String toString() => message;
 }
 
 class AuthCancelledException extends AuthException {
   AuthCancelledException()
-      : super('Inicio de sesión cancelado por el usuario');
+      : super(
+          'Inicio de sesión cancelado por el usuario',
+          code: 'auth.cancelled',
+        );
 }
 
 /// Thrown when the API returns 429 (rate limit exceeded).
 /// Show only when attempts are exhausted, not "X attempts remaining".
 class AuthRateLimitException extends AuthException {
   AuthRateLimitException()
-      : super('Demasiados intentos. Intenta de nuevo en 1 minuto.');
+      : super(
+          'Demasiados intentos. Intenta de nuevo en 1 minuto.',
+          code: 'auth.rate_limited',
+        );
 }

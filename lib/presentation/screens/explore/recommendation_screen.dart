@@ -1,11 +1,15 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/motion/smartur_routes.dart';
+import '../../../core/theme/smartur_theme_extensions.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/constants/api_constants.dart';
@@ -16,7 +20,9 @@ import '../../../data/services/user_content_service.dart';
 import '../../../data/services/explore_service.dart';
 import '../../../data/models/place_model.dart';
 import '../../../core/utils/notifications.dart';
-import '../../widgets/smartur_background.dart';
+import '../../widgets/smartur_loader.dart';
+import '../../widgets/smartur_loading_overlay.dart';
+import '../../widgets/smartur_ui_kit.dart';
 import 'detail_view_page.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -35,36 +41,36 @@ class RecommendationScreen extends StatefulWidget {
 
 class _TourType {
   final String id;
-  final String label;
   final IconData icon;
-  const _TourType(this.id, this.label, this.icon);
+  final Color color;
+  const _TourType(this.id, this.icon, this.color);
 }
 
 const _tourTypes = [
-  _TourType('cultural',     'Cultural',     Icons.museum_outlined),
-  _TourType('naturaleza',   'Naturaleza',   Icons.forest_outlined),
-  _TourType('gastronomico', 'Gastronómico', Icons.restaurant_menu_outlined),
-  _TourType('aventura',     'Aventura',     Icons.hiking_outlined),
-  _TourType('descanso',     'Descanso',     Icons.self_improvement_outlined),
-  _TourType('nocturno',     'Nocturno',     Icons.nightlife_outlined),
+  _TourType('cultural',     Icons.museum_outlined,           Color(0xFF984EFD)),
+  _TourType('naturaleza',   Icons.forest_outlined,           Color(0xFF9CCC44)),
+  _TourType('gastronomico', Icons.restaurant_menu_outlined,  Color(0xFFFF7D1F)),
+  _TourType('aventura',     Icons.hiking_outlined,           Color(0xFF9CCC44)),
+  _TourType('descanso',     Icons.self_improvement_outlined, Color(0xFF4DB9CA)),
+  _TourType('nocturno',     Icons.nightlife_outlined,        Color(0xFFFC478E)),
 ];
 
 // ── Budget model ─────────────────────────────────────────────────────────────
 // Tuple: (id, icon, color, label, subtitle)
 
 const _budgets = [
-  ('bajo',  Icons.savings_outlined,                  Color(0xFF10B981), 'Económico', 'Máx. \$500/día'),
-  ('medio', Icons.account_balance_wallet_outlined,   Color(0xFFF59E0B), 'Moderado',  '\$500–1500/día'),
-  ('alto',  Icons.diamond_outlined,                  Color(0xFF8B5CF6), 'Premium',   '\$1500+/día'),
+  ('bajo',  Icons.savings_outlined,                SmarturStyle.green),
+  ('medio', Icons.account_balance_wallet_outlined, SmarturStyle.orange),
+  ('alto',  Icons.diamond_outlined,                SmarturStyle.purple),
 ];
 
 // ── Group model ──────────────────────────────────────────────────────────────
 
 const _groups = [
-  ('solo',    Icons.person_outline,           'Solo'),
-  ('pareja',  Icons.favorite_border_rounded,  'Pareja'),
-  ('familia', Icons.family_restroom_outlined, 'Familia'),
-  ('amigos',  Icons.people_outline,           'Amigos'),
+  ('solo',    Icons.person_outline),
+  ('pareja',  Icons.favorite_border_rounded),
+  ('familia', Icons.family_restroom_outlined),
+  ('amigos',  Icons.people_outline),
 ];
 
 // ── Age ranges ───────────────────────────────────────────────────────────────
@@ -74,14 +80,63 @@ const _ageRanges = ['18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _RecommendationScreenState extends State<RecommendationScreen> {
+  static const String _none = '__none__';
+
+  String _tourTypeLabel(AppLocalizations l10n, String id) {
+    switch (id) {
+      case 'cultural':
+        return l10n.recoTypeCultural;
+      case 'naturaleza':
+        return l10n.recoTypeNature;
+      case 'gastronomico':
+        return l10n.recoTypeGastronomy;
+      case 'aventura':
+        return l10n.recoTypeAdventure;
+      case 'descanso':
+        return l10n.recoTypeRelax;
+      case 'nocturno':
+        return l10n.recoTypeNight;
+      default:
+        return id;
+    }
+  }
+
+  (String, String) _budgetTexts(AppLocalizations l10n, String id) {
+    switch (id) {
+      case 'bajo':
+        return (l10n.recoBudgetLowLabel, l10n.recoBudgetLowSub);
+      case 'medio':
+        return (l10n.recoBudgetMediumLabel, l10n.recoBudgetMediumSub);
+      case 'alto':
+        return (l10n.recoBudgetHighLabel, l10n.recoBudgetHighSub);
+      default:
+        return (id, '');
+    }
+  }
+
+  String _groupLabel(AppLocalizations l10n, String id) {
+    switch (id) {
+      case 'solo':
+        return l10n.recoGroupSolo;
+      case 'pareja':
+        return l10n.recoGroupCouple;
+      case 'familia':
+        return l10n.recoGroupFamily;
+      case 'amigos':
+        return l10n.recoGroupFriends;
+      default:
+        return id;
+    }
+  }
+
   // ── Form state ────────────────────────────────────────────────────────────
-  final Set<String> _selectedTypes = {'cultural', 'gastronomico'};
-  String _budget = 'medio';
-  String _groupType = 'familia';
-  String _ageRange = '35-44';
+  final Set<String> _selectedTypes = <String>{};
+  String _budget = _none;
+  String _groupType = _none;
+  String _ageRange = _none;
   bool _wantsTours = false;
   bool _needsHotel = false;
-  bool _prefFood = true;
+  bool _prefFood = false;
   bool _reqAccesibilidad = false;
   bool _prefOutdoor = false;
 
@@ -91,6 +146,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   List<dynamic> _recommendations = [];
   int? _sessionId;
   bool _prefsWereLoaded = false; // true when profile pre-filled the form
+  bool _showSavedDiaryHint = false;
 
   // ── Place lookup map: item_id → Place ────────────────────────────────────
   Map<String, Place> _placesMap = {};
@@ -109,8 +165,12 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   Future<void> _loadProfile() async {
     try {
       final p = await ProfileService.fetchMyProfileForPreferences();
-      if (!mounted || p.isEmpty) return;
-      bool changed = false;
+      if (!mounted) return;
+      if (!_profileHasPreferences(p)) {
+        _clearFormSelections();
+        _prefsWereLoaded = false;
+        return;
+      }
       final age = p['age'] as int?;
       if (age != null) {
         String range;
@@ -120,19 +180,113 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         else if (age < 55) range = '45-54';
         else if (age < 65) range = '55-64';
         else               range = '65+';
-        if (range != _ageRange) { _ageRange = range; changed = true; }
+        if (range != _ageRange) _ageRange = range;
       }
       final interests = (p['interests'] as List?)?.cast<String>() ?? [];
-      final valid = interests.where((e) => _tourTypes.any((t) => t.id == e.toLowerCase())).toList();
-      if (valid.isNotEmpty) {
+      final mappedTypes = <String>{};
+      for (final interest in interests) {
+        final id = _mapInterestToTourId(interest);
+        if (id != null) mappedTypes.add(id);
+      }
+      if (mappedTypes.isNotEmpty) {
         _selectedTypes
           ..clear()
-          ..addAll(valid.map((e) => e.toLowerCase()));
-        changed = true;
+          ..addAll(mappedTypes);
       }
-      if (p['has_accessibility'] == true) { _reqAccesibilidad = true; changed = true; }
-      if (changed) _prefsWereLoaded = true;
-    } catch (_) {}
+      if (interests.any((e) => e.toLowerCase().contains('gastro'))) {
+        _prefFood = true;
+      }
+      if (interests.any((e) {
+        final v = e.toLowerCase();
+        return v.contains('natur') || v.contains('avent');
+      })) {
+        _prefOutdoor = true;
+      }
+      final budget = _mapActivityToBudget(p['activity_level'] as int?);
+      if (budget != null && budget != _budget) {
+        _budget = budget;
+      }
+      final group = _mapTravelTypeToGroup(p['travel_type']?.toString());
+      if (group != null && group != _groupType) {
+        _groupType = group;
+      }
+      final preferredPlace = p['preferred_place']?.toString().toLowerCase();
+      if (preferredPlace != null &&
+          (preferredPlace.contains('mont') ||
+              preferredPlace.contains('play') ||
+              preferredPlace.contains('bosq') ||
+              preferredPlace.contains('forest') ||
+              preferredPlace.contains('natur'))) {
+        _prefOutdoor = true;
+      }
+      if (p['has_accessibility'] == true) _reqAccesibilidad = true;
+      _prefsWereLoaded = true;
+    } catch (_) {
+      if (mounted) {
+        _clearFormSelections();
+        _prefsWereLoaded = false;
+      }
+    }
+  }
+
+  bool _profileHasPreferences(Map<String, dynamic> p) {
+    if (p.isEmpty) return false;
+    final interests = (p['interests'] as List?)?.cast<String>() ?? [];
+    return interests.isNotEmpty ||
+        p['travel_type'] != null ||
+        p['age'] != null ||
+        p['activity_level'] != null ||
+        p['preferred_place'] != null ||
+        p['has_accessibility'] == true;
+  }
+
+  String? _mapInterestToTourId(String raw) {
+    final v = raw.toLowerCase().trim();
+    for (final t in _tourTypes) {
+      if (v == t.id || v.contains(t.id)) return t.id;
+    }
+    if (v.contains('cultur') || v.contains('museum') || v.contains('histor')) {
+      return 'cultural';
+    }
+    if (v.contains('natur') || v.contains('forest') || v.contains('eco')) {
+      return 'naturaleza';
+    }
+    if (v.contains('gastro') || v.contains('food') || v.contains('restaur')) {
+      return 'gastronomico';
+    }
+    if (v.contains('avent') || v.contains('hik') || v.contains('trek')) {
+      return 'aventura';
+    }
+    if (v.contains('descans') || v.contains('relax') || v.contains('spa')) {
+      return 'descanso';
+    }
+    if (v.contains('nocturn') || v.contains('night') || v.contains('fiesta')) {
+      return 'nocturno';
+    }
+    return null;
+  }
+
+  bool get _isFormReady =>
+      _selectedTypes.isNotEmpty &&
+      _budget != _none &&
+      _groupType != _none &&
+      _ageRange != _none;
+
+  String? _mapTravelTypeToGroup(String? raw) {
+    if (raw == null) return null;
+    final v = raw.toLowerCase();
+    if (v.contains('familiar') || v.contains('family')) return 'familia';
+    if (v.contains('romantic')) return 'pareja';
+    if (v.contains('mochil') || v.contains('backpacker') || v.contains('business')) return 'solo';
+    if (v.contains('aventura') || v.contains('adventure')) return 'amigos';
+    return null;
+  }
+
+  String? _mapActivityToBudget(int? level) {
+    if (level == null) return null;
+    if (level <= 2) return 'bajo';
+    if (level == 3) return 'medio';
+    return 'alto';
   }
 
   Future<void> _loadPlaces() async {
@@ -169,8 +323,11 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   }
 
   Future<void> _fetchRecommendations() async {
-    if (_selectedTypes.isEmpty) {
-      SmarturNotifications.showError(context, AppLocalizations.of(context)!.recoSelectAtLeastOne);
+    if (!_isFormReady) {
+      SmarturNotifications.showError(
+        context,
+        AppLocalizations.of(context)!.recoSelectAtLeastOneToContinue,
+      );
       return;
     }
 
@@ -193,10 +350,10 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         'alpha': 0.2,
         'top_n': 6,
         'context': {
-          'presupuesto_bucket': _budget,
-          'edad_range': _ageRange,
+          'presupuesto_bucket': _budget == _none ? null : _budget,
+          'edad_range': _ageRange == _none ? null : _ageRange,
           'tiposTurismo': _selectedTypes.toList(),
-          'group_type': _groupType,
+          'group_type': _groupType == _none ? null : _groupType,
           'wants_tours': _wantsTours,
           'needs_hotel': _needsHotel,
           'pref_food': _prefFood,
@@ -219,8 +376,11 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
           setState(() {
             _recommendations = recs;
             _sessionId = sid;
+            _isFetching = false;
           });
-          if (recs.isNotEmpty) _showResults();
+          if (recs.isNotEmpty) {
+            unawaited(_showResults());
+          }
         }
       } else if (response.statusCode == 401) {
         if (mounted) SmarturNotifications.showError(context, AppLocalizations.of(context)!.sessionExpired);
@@ -235,6 +395,18 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     }
   }
 
+  void _clearFormSelections() {
+    _selectedTypes.clear();
+    _budget = _none;
+    _groupType = _none;
+    _ageRange = _none;
+    _wantsTours = false;
+    _needsHotel = false;
+    _prefFood = false;
+    _reqAccesibilidad = false;
+    _prefOutdoor = false;
+  }
+
   void _recordFeedback(String itemId, {required int rankPos, required bool clicked}) {
     final sid = _sessionId;
     if (sid == null) return;
@@ -246,10 +418,10 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     );
   }
 
-  void _showResults() {
+  Future<void> _showResults() async {
     // Capture context before opening sheet so navigation works after the sheet is dismissed
     final navContext = context;
-    showModalBottomSheet(
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -261,8 +433,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         onNavigateToPlace: (place, itemId) {
           Navigator.push(
             navContext,
-            MaterialPageRoute(
-              builder: (_) => DetailViewPage(
+            smarturDetailRoute(
+              DetailViewPage(
                 title: place.name,
                 heroTag: 'reco_$itemId',
                 heroImageUrl: place.imageUrl,
@@ -279,250 +451,324 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         },
       ),
     );
+    if (!navContext.mounted) return;
+    final hadSavedSession = _sessionId != null && _recommendations.isNotEmpty;
+    setState(() {
+      _clearFormSelections();
+      _recommendations = [];
+      _sessionId = null;
+    });
+    if (hadSavedSession) {
+      setState(() => _showSavedDiaryHint = true);
+      SmarturNotifications.showSuccess(
+        navContext,
+        AppLocalizations.of(navContext)!.recoSavedInDiary,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
+      backgroundColor: scheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        automaticallyImplyLeading: false,
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
         elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
+        scrolledUnderElevation: 0,
+        surfaceTintColor: scheme.surface,
+        centerTitle: true,
         title: Text(
           AppLocalizations.of(context)!.recoTitle,
-          style: const TextStyle(fontFamily: 'CalSans', color: Colors.white, fontSize: 20),
+          style: TextStyle(
+            fontFamily: 'CalSans',
+            color: scheme.onSurface,
+            fontSize: 20,
+          ),
         ),
       ),
-      body: SmarturBackgroundTop(
-        child: _isLoadingProfile
-            ? const Center(child: CircularProgressIndicator(color: Colors.white))
-            : _buildBody(scheme),
+      body: ColoredBox(
+        color: scheme.surface,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            SmarturLoadTransition(
+              loading: _isLoadingProfile,
+              loadingChild: const Center(
+                child: SmartURLoader(isMini: true, continuous: true),
+              ),
+              child: SmarturFadeIn(child: _buildBody(scheme)),
+            ),
+            SmarturLoadingOverlay(visible: _isFetching),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildBody(ColorScheme scheme) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, kToolbarHeight + 40, 16, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Header ────────────────────────────────────────────────
-          _GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: SmarturStyle.purple.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(14),
+    final l10n = AppLocalizations.of(context)!;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mq = MediaQuery.of(context);
+        final bottom = mq.padding.bottom + 24;
+        final maxW = constraints.maxWidth;
+        final hPad = maxW > 600 ? (maxW - 560) / 2 + 20 : 20.0;
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(hPad, 16, hPad, bottom),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+
+              // ── Banners condicionales ────────────────────────────────
+              if (_prefsWereLoaded) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: SmarturStyle.purple.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: SmarturStyle.purple.withValues(alpha: 0.20)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.auto_awesome_rounded,
+                          color: SmarturStyle.purple, size: 14),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(l10n.recoPreloadedBannerDesc,
+                          style: TextStyle(
+                            fontFamily: 'Outfit', fontSize: 11,
+                            color: scheme.onSurface.withValues(alpha: 0.75),
+                          )),
                       ),
-                      child: const Icon(Icons.auto_awesome_rounded,
-                          color: SmarturStyle.purple, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppLocalizations.of(context)!.recoDiscoverNext,
-                            style: SmarturStyle.calSansTitle.copyWith(
-                                fontSize: 18, color: scheme.onSurface),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (_showSavedDiaryHint) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: SmarturStyle.green.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: SmarturStyle.green.withValues(alpha: 0.28)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.bookmark_rounded,
+                          color: SmarturStyle.green, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(l10n.recoSavedInDiary,
+                          style: TextStyle(
+                            fontFamily: 'Outfit', fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface.withValues(alpha: 0.85),
+                          )),
+                      ),
+                      GestureDetector(
+                        onTap: () => setState(() => _showSavedDiaryHint = false),
+                        child: Icon(Icons.close_rounded, size: 17,
+                            color: scheme.onSurface.withValues(alpha: 0.4)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // ── Tipos de turismo — grid visual 3×2 ──────────────────
+              _InlineSection(
+                label: l10n.recoTourismType,
+                required: true,
+                child: GridView.count(
+                  crossAxisCount: 3,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 1.05,
+                  children: _tourTypes.map((t) {
+                    final sel = _selectedTypes.contains(t.id);
+                    return GestureDetector(
+                      onTap: () => setState(() {
+                        if (sel) _selectedTypes.remove(t.id);
+                        else _selectedTypes.add(t.id);
+                      }),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 170),
+                        curve: Curves.easeOut,
+                        decoration: BoxDecoration(
+                          color: sel
+                              ? t.color.withValues(alpha: 0.18)
+                              : scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: sel ? t.color : scheme.outlineVariant.withValues(alpha: 0.5),
+                            width: sel ? 1.5 : 1.0,
                           ),
-                          Text(
-                            AppLocalizations.of(context)!.recoAiPersonalizedFor,
-                            style: TextStyle(
-                              fontFamily: 'Outfit', fontSize: 11,
-                              color: scheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(t.icon,
+                                size: 26,
+                                color: sel ? t.color : scheme.onSurfaceVariant),
+                            const SizedBox(height: 6),
+                            Text(
+                              _tourTypeLabel(l10n, t.id),
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 11,
+                                fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+                                color: sel ? t.color : scheme.onSurface,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Presupuesto ─────────────────────────────────────────
+              _InlineSection(
+                label: l10n.recoBudget,
+                required: true,
+                child: Row(
+                  children: _budgets.map((b) {
+                    final sel = _budget == b.$1;
+                    final texts = _budgetTexts(l10n, b.$1);
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: _BudgetButton(
+                          icon: b.$2,
+                          iconColor: b.$3,
+                          label: texts.$1,
+                          sub: texts.$2,
+                          selected: sel,
+                          onTap: () => setState(() => _budget = b.$1),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── ¿Con quién? ─────────────────────────────────────────
+              _InlineSection(
+                label: l10n.recoWithWho,
+                required: true,
+                child: Row(
+                  children: _groups.map((g) {
+                    final sel = _groupType == g.$1;
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: _GroupButton(
+                          icon: g.$2,
+                          label: _groupLabel(l10n, g.$1),
+                          selected: sel,
+                          onTap: () => setState(() => _groupType = g.$1),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Rango de edad ───────────────────────────────────────
+              _InlineSection(
+                label: l10n.recoAgeRange,
+                required: true,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _ageRanges.map((a) {
+                      final sel = _ageRange == a;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _ageRange = a),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 160),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 18, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: sel
+                                  ? SmarturStyle.purple
+                                  : scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: sel
+                                    ? SmarturStyle.purple
+                                    : scheme.outlineVariant.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            child: Text(a,
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: sel ? Colors.white : scheme.onSurface,
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Preferencias adicionales ────────────────────────────
+              _InlineSection(
+                label: l10n.recoAdditionalPrefs,
+                subtitle: l10n.recoOptional,
+                child: Wrap(
+                  spacing: 8, runSpacing: 8,
+                  children: [
+                    _ToggleChip(icon: Icons.map_outlined,             label: l10n.recoGuidedTours, value: _wantsTours,       onChanged: (v) => setState(() => _wantsTours = v)),
+                    _ToggleChip(icon: Icons.hotel_outlined,           label: l10n.recoNeedHotel,   value: _needsHotel,       onChanged: (v) => setState(() => _needsHotel = v)),
+                    _ToggleChip(icon: Icons.restaurant_menu_outlined, label: l10n.recoFoodOptions, value: _prefFood,         onChanged: (v) => setState(() => _prefFood = v)),
+                    _ToggleChip(icon: Icons.accessible_outlined,      label: l10n.recoAccessible,  value: _reqAccesibilidad, onChanged: (v) => setState(() => _reqAccesibilidad = v)),
+                    _ToggleChip(icon: Icons.nature_outlined,          label: l10n.recoOutdoor,     value: _prefOutdoor,      onChanged: (v) => setState(() => _prefOutdoor = v)),
                   ],
                 ),
-              ],
-            ),
-          ),
-
-          // ── Preloaded preferences banner ──────────────────────────
-          if (_prefsWereLoaded) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-              decoration: BoxDecoration(
-                color: SmarturStyle.purple.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: SmarturStyle.purple.withValues(alpha: 0.20)),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.auto_awesome_rounded,
-                      color: SmarturStyle.purple, size: 14),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Precargamos respuestas basadas en tus preferencias guardadas',
-                      style: TextStyle(
-                        fontFamily: 'Outfit', fontSize: 11,
-                        color: scheme.onSurface.withValues(alpha: 0.75),
-                      ),
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 28),
+
+              // ── Progreso + CTA ──────────────────────────────────────
+              _FormProgress(
+                l10n: l10n,
+                typeDone: _selectedTypes.isNotEmpty,
+                budgetDone: _budget != _none,
+                groupDone: _groupType != _none,
+                ageDone: _ageRange != _none,
               ),
-            ),
-          ],
-          const SizedBox(height: 16),
-
-          // ── Tourism types ─────────────────────────────────────────
-          _SectionCard(
-            title: AppLocalizations.of(context)!.recoTourismType,
-            subtitle: AppLocalizations.of(context)!.recoChooseOneOrMore,
-            required: true,
-            child: Wrap(
-              spacing: 8, runSpacing: 8,
-              children: _tourTypes.map((t) {
-                final sel = _selectedTypes.contains(t.id);
-                return _SelectChip(
-                  label: t.label, icon: t.icon, selected: sel,
-                  onTap: () => setState(() {
-                    if (sel) _selectedTypes.remove(t.id);
-                    else _selectedTypes.add(t.id);
-                  }),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // ── Budget ────────────────────────────────────────────────
-          _SectionCard(
-            title: AppLocalizations.of(context)!.recoBudget,
-            child: Row(
-              children: _budgets.map((b) {
-                final sel = _budget == b.$1;
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    child: _BudgetButton(
-                      icon: b.$2,
-                      iconColor: b.$3,
-                      label: b.$4,
-                      sub: b.$5,
-                      selected: sel,
-                      onTap: () => setState(() => _budget = b.$1),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // ── Group type ────────────────────────────────────────────
-          _SectionCard(
-            title: AppLocalizations.of(context)!.recoWithWho,
-            child: Row(
-              children: _groups.map((g) {
-                final sel = _groupType == g.$1;
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    child: _GroupButton(
-                      icon: g.$2, label: g.$3, selected: sel,
-                      onTap: () => setState(() => _groupType = g.$1),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // ── Age range ─────────────────────────────────────────────
-          _SectionCard(
-            title: AppLocalizations.of(context)!.recoAgeRange,
-            child: Wrap(
-              spacing: 6, runSpacing: 6,
-              children: _ageRanges.map((a) {
-                final sel = _ageRange == a;
-                return GestureDetector(
-                  onTap: () => setState(() => _ageRange = a),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: sel
-                          ? SmarturStyle.purple
-                          : scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: sel ? SmarturStyle.purple : Colors.transparent),
-                    ),
-                    child: Text(a,
-                      style: TextStyle(
-                        fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.w600,
-                        color: sel ? Colors.white : scheme.onSurface,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // ── Preferences ───────────────────────────────────────────
-          _SectionCard(
-            title: AppLocalizations.of(context)!.recoAdditionalPrefs,
-            subtitle: AppLocalizations.of(context)!.recoOptional,
-            child: Wrap(
-              spacing: 8, runSpacing: 8,
-              children: [
-                _ToggleChip(icon: Icons.map_outlined,            label: AppLocalizations.of(context)!.recoGuidedTours,  value: _wantsTours,        onChanged: (v) => setState(() => _wantsTours = v)),
-                _ToggleChip(icon: Icons.hotel_outlined,          label: AppLocalizations.of(context)!.recoNeedHotel,    value: _needsHotel,        onChanged: (v) => setState(() => _needsHotel = v)),
-                _ToggleChip(icon: Icons.restaurant_menu_outlined,label: AppLocalizations.of(context)!.recoFoodOptions,  value: _prefFood,          onChanged: (v) => setState(() => _prefFood = v)),
-                _ToggleChip(icon: Icons.accessible_outlined,     label: AppLocalizations.of(context)!.recoAccessible,   value: _reqAccesibilidad,  onChanged: (v) => setState(() => _reqAccesibilidad = v)),
-                _ToggleChip(icon: Icons.nature_outlined,         label: AppLocalizations.of(context)!.recoOutdoor,      value: _prefOutdoor,       onChanged: (v) => setState(() => _prefOutdoor = v)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // ── CTA ───────────────────────────────────────────────────
-          _CTAButton(
-            loading: _isFetching,
-            disabled: _selectedTypes.isEmpty,
-            onTap: _fetchRecommendations,
-          ),
-          const SizedBox(height: 12),
-
-          if (_selectedTypes.isEmpty)
-            Center(
-              child: Text(
-                AppLocalizations.of(context)!.recoSelectAtLeastOneToContinue,
-                style: TextStyle(
-                  fontFamily: 'Outfit', fontSize: 11,
-                  color: Theme.of(context).colorScheme.error.withValues(alpha: 0.8),
-                ),
-                textAlign: TextAlign.center,
+              const SizedBox(height: 16),
+              _CTAButton(
+                loading: _isFetching,
+                disabled: false,
+                onTap: _fetchRecommendations,
               ),
-            ),
-        ],
-      ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -605,7 +851,8 @@ class _ResultsSheetState extends State<_ResultsSheet> {
       final place = _findPlace(id);
       return place?.name ?? r['title'] ?? r['name'] ?? id;
     }).join('\n• ');
-    final text = '🌿 Mis destinos recomendados en Altas Montañas de Veracruz:\n\n• $names\n\n📱 Descúbrelos con SMARTUR';
+    final l10n = AppLocalizations.of(ctx)!;
+    final text = l10n.recoShareList(names);
     SharePlus.instance.share(ShareParams(text: text));
   }
 
@@ -645,6 +892,7 @@ class _ResultsSheetState extends State<_ResultsSheet> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -655,116 +903,219 @@ class _ResultsSheetState extends State<_ResultsSheet> {
         }
       },
       child: DraggableScrollableSheet(
-      controller: _sheetCtrl,
-      initialChildSize: 0.92,
-      minChildSize: 0.45,
-      maxChildSize: 0.95,
-      builder: (ctx, controller) => ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        controller: _sheetCtrl,
+        initialChildSize: 0.92,
+        minChildSize: 0.45,
+        maxChildSize: 0.95,
+        builder: (ctx, controller) => ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           child: Container(
-            decoration: BoxDecoration(
-              color: scheme.surface.withValues(alpha: 0.96),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-              border: Border(top: BorderSide(color: scheme.outline.withValues(alpha: 0.15))),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 12),
-                Container(
-                  width: 36, height: 4,
-                  decoration: BoxDecoration(
-                    color: scheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border(
+                  top: BorderSide(color: scheme.outline.withValues(alpha: 0.12)),
                 ),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: SmarturStyle.purple.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.auto_awesome_rounded,
-                            color: SmarturStyle.purple, size: 18),
+                boxShadow: [
+                  BoxShadow(
+                    color: scheme.shadow.withValues(alpha: 0.15),
+                    blurRadius: 18,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: scheme.outlineVariant.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          SmarturStyle.purple.withValues(alpha: 0.14),
+                          SmarturStyle.orange.withValues(alpha: 0.08),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: SmarturStyle.purple.withValues(alpha: 0.18),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: scheme.surface.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.auto_awesome_rounded,
+                            color: SmarturStyle.purple,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.recoNDestinations(widget.recommendations.length),
+                                style: SmarturStyle.calSansTitle.copyWith(fontSize: 22),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                l10n.recoPersonalizedByAI,
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: scheme.onSurface.withValues(alpha: 0.55),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                l10n.recoResultsRankHint,
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 10,
+                                  color: scheme.onSurface.withValues(alpha: 0.42),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.share_outlined, size: 20),
+                          tooltip: l10n.recoShareButton,
+                          onPressed: () => _shareRecommendations(ctx),
+                          color: scheme.onSurface.withValues(alpha: 0.55),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: ListView.separated(
+                      controller: controller,
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      itemCount: widget.recommendations.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 4),
+                      itemBuilder: (c, i) {
+                        final rec = widget.recommendations[i] as Map<String, dynamic>;
+                        final itemId = (rec['item_id'] ?? '').toString();
+                        final place = _findPlace(itemId);
+                        return _RecommendationCard(
+                          index: i,
+                          rec: rec,
+                          place: place,
+                          onLike: () {
+                            setState(() => _ratings[itemId] = true);
+                            widget.onFeedback(itemId, rankPos: i, clicked: true);
+                          },
+                          onDislike: () {
+                            setState(() => _ratings[itemId] = false);
+                            widget.onFeedback(itemId, rankPos: i, clicked: false);
+                          },
+                          onViewDestination: () {
+                            if (place != null) {
+                              Navigator.pop(ctx);
+                              widget.onNavigateToPlace(place, itemId);
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  Container(
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      12,
+                      16,
+                      12 + MediaQuery.paddingOf(ctx).bottom,
+                    ),
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      border: Border(
+                        top: BorderSide(color: scheme.outline.withValues(alpha: 0.1)),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: scheme.shadow.withValues(alpha: 0.06),
+                          blurRadius: 12,
+                          offset: const Offset(0, -4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
                           children: [
-                            Text(
-                              AppLocalizations.of(ctx)!.recoNDestinations(widget.recommendations.length),
-                              style: SmarturStyle.calSansTitle.copyWith(fontSize: 20),
+                            Icon(
+                              Icons.bookmark_added_rounded,
+                              size: 18,
+                              color: SmarturStyle.green.withValues(alpha: 0.9),
                             ),
-                            Text(
-                              AppLocalizations.of(ctx)!.recoPersonalizedByAI,
-                              style: TextStyle(
-                                fontFamily: 'Outfit', fontSize: 11,
-                                color: scheme.onSurface.withValues(alpha: 0.5),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                l10n.recoSavedInDiary,
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: scheme.onSurface.withValues(alpha: 0.72),
+                                ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      // Share button
-                      IconButton(
-                        icon: const Icon(Icons.share_outlined),
-                        tooltip: AppLocalizations.of(ctx)!.recoShareButton,
-                        onPressed: () => _shareRecommendations(ctx),
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () => _tryClose(ctx),
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ],
+                        const SizedBox(height: 10),
+                        FilledButton.icon(
+                          onPressed: () => _tryClose(ctx),
+                          icon: const Icon(Icons.check_rounded, size: 18),
+                          label: Text(
+                            l10n.recoResultsDone,
+                            style: const TextStyle(
+                              fontFamily: 'Outfit',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: SmarturStyle.purple,
+                            foregroundColor: scheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ListView.builder(
-                    controller: controller,
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-                    itemCount: widget.recommendations.length,
-                    itemBuilder: (c, i) {
-                      final rec = widget.recommendations[i] as Map<String, dynamic>;
-                      final itemId = (rec['item_id'] ?? '').toString();
-                      final place = _findPlace(itemId);
-                      return _RecommendationCard(
-                        index: i,
-                        rec: rec,
-                        place: place,
-                        onLike: () {
-                          setState(() => _ratings[itemId] = true);
-                          widget.onFeedback(itemId, rankPos: i, clicked: true);
-                        },
-                        onDislike: () {
-                          setState(() => _ratings[itemId] = false);
-                          widget.onFeedback(itemId, rankPos: i, clicked: false);
-                        },
-                        onViewDestination: () {
-                          if (place != null) {
-                            Navigator.pop(ctx);
-                            widget.onNavigateToPlace(place, itemId);
-                          }
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-        ),   // DraggableScrollableSheet
-      ),     // PopScope
     );
   }
 }
@@ -841,7 +1192,7 @@ class _RatingBeforeCloseDialogState extends State<_RatingBeforeCloseDialog> {
               final rec = entry.value as Map<String, dynamic>;
               final itemId = (rec['item_id'] ?? '').toString();
               final place = widget.findPlace(itemId);
-              final name = place?.name ?? rec['title'] ?? rec['name'] ?? 'Destino ${i + 1}';
+              final name = place?.name ?? rec['title'] ?? rec['name'] ?? AppLocalizations.of(context)!.recommendationNumber(i + 1);
               final vote = _votes[itemId];
 
               return Padding(
@@ -1017,167 +1368,198 @@ class _RecommendationCardState extends State<_RecommendationCard> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     final place = widget.place;
     final rec = widget.rec;
-    final name = place?.name ?? rec['title'] ?? rec['name'] ?? 'Destino ${widget.index + 1}';
+    final name = place?.name ?? rec['title'] ?? rec['name'] ?? AppLocalizations.of(context)!.recommendationNumber(widget.index + 1);
     final score = (rec['score'] as num?)?.toDouble() ?? 0.0;
     final tags = (rec['reason_tags'] as List?)?.map((t) => t.toString()).toList() ?? [];
     final city = place?.city ?? '';
     final imageUrl = place?.imageUrl ?? '';
     final description = place?.shortDescription ?? '';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
+    final canOpen = widget.place != null;
+
+    return Material(
+      color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+      elevation: 0,
+      shadowColor: scheme.shadow.withValues(alpha: 0.12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: scheme.outline.withValues(alpha: 0.1)),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Image ──────────────────────────────────────────────────
-          if (imageUrl.isNotEmpty)
-            Stack(
-              children: [
-                SizedBox(
-                  height: 160, width: double.infinity,
-                  child: Image.network(
-                    imageUrl, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: SmarturStyle.purple.withValues(alpha: 0.12),
-                      child: const Icon(Icons.landscape_outlined, color: Colors.white38, size: 40),
-                    ),
-                  ),
-                ),
-                Positioned(top: 10, right: 10, child: _ScoreBadge(score: score)),
-                Positioned(
-                  top: 10, left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text('#${widget.index + 1}',
-                      style: const TextStyle(fontFamily: 'CalSans', fontSize: 13, color: Colors.white)),
-                  ),
-                ),
-              ],
-            )
-          else
-            Container(
-              height: 80, width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [
-                  SmarturStyle.purple.withValues(alpha: 0.35),
-                  SmarturStyle.orange.withValues(alpha: 0.15),
-                ]),
-              ),
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _ScoreBadge(score: score),
-                    const SizedBox(width: 8),
-                    Text('#${widget.index + 1}',
-                      style: const TextStyle(fontFamily: 'CalSans', fontSize: 18, color: Colors.white70)),
-                  ],
-                ),
-              ),
-            ),
-
-          // ── Content ────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name,
-                  style: SmarturStyle.calSansTitle.copyWith(fontSize: 15),
-                  maxLines: 2),
-
-                if (city.isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Row(children: [
-                    Icon(Icons.place_outlined, size: 12, color: scheme.onSurface.withValues(alpha: 0.4)),
-                    const SizedBox(width: 3),
-                    Text(city,
-                      style: TextStyle(fontFamily: 'Outfit', fontSize: 11,
-                          color: scheme.onSurface.withValues(alpha: 0.5))),
-                  ]),
-                ],
-
-                if (description.isNotEmpty) ...[
-                  const SizedBox(height: 5),
-                  Text(description,
-                    style: TextStyle(fontFamily: 'Outfit', fontSize: 12, height: 1.4,
-                        color: scheme.onSurface.withValues(alpha: 0.65)),
-                    maxLines: 2, overflow: TextOverflow.ellipsis),
-                ],
-
-                if (tags.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Wrap(spacing: 5, runSpacing: 4,
-                    children: tags.take(4).map((t) => _TagChip(label: t)).toList()),
-                ],
-
-                const SizedBox(height: 10),
-
-                // ── Action row: like / dislike / ver destino ────────
-                Row(
-                  children: [
-                    // Thumbs up
-                    _FeedbackBtn(
-                      icon: Icons.thumb_up_rounded,
-                      active: _liked,
-                      activeColor: SmarturStyle.green,
-                      onTap: _handleLike,
-                    ),
-                    const SizedBox(width: 8),
-                    // Thumbs down
-                    _FeedbackBtn(
-                      icon: Icons.thumb_down_rounded,
-                      active: _disliked,
-                      activeColor: scheme.error,
-                      onTap: _handleDislike,
-                    ),
-                    const Spacer(),
-                    // Ver destino
-                    GestureDetector(
-                      onTap: widget.place != null ? widget.onViewDestination : null,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 160),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: widget.place != null
-                              ? SmarturStyle.purple
-                              : scheme.outlineVariant,
-                          borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: canOpen ? widget.onViewDestination : null,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (imageUrl.isNotEmpty)
+              Stack(
+                children: [
+                  SizedBox(
+                    height: 176,
+                    width: double.infinity,
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(
+                        color: SmarturStyle.purple.withValues(alpha: 0.08),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: SmarturStyle.purple.withValues(alpha: 0.5),
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(AppLocalizations.of(context)!.recoViewDestination,
-                              style: TextStyle(
-                                fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w700,
-                                color: widget.place != null ? Colors.white : scheme.onSurface.withValues(alpha: 0.4),
-                              )),
-                            const SizedBox(width: 4),
-                            Icon(Icons.chevron_right_rounded,
-                              color: widget.place != null ? Colors.white : scheme.onSurface.withValues(alpha: 0.3),
-                              size: 16),
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        color: SmarturStyle.purple.withValues(alpha: 0.12),
+                        child: Icon(
+                          Icons.landscape_outlined,
+                          color: semantic.onImageMuted,
+                          size: 40,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            semantic.imageScrimStrong.withValues(alpha: 0.55),
                           ],
                         ),
                       ),
                     ),
+                  ),
+                  Positioned(top: 12, left: 12, child: _RankBadge(rank: widget.index + 1)),
+                  Positioned(top: 12, right: 12, child: _ScoreBadge(score: score)),
+                ],
+              )
+            else
+              Container(
+                height: 88,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      SmarturStyle.purple.withValues(alpha: 0.32),
+                      SmarturStyle.orange.withValues(alpha: 0.14),
+                    ],
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _RankBadge(rank: widget.index + 1),
+                    const SizedBox(width: 10),
+                    _ScoreBadge(score: score),
                   ],
                 ),
-              ],
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: SmarturStyle.calSansTitle.copyWith(fontSize: 16),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (city.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.place_outlined,
+                          size: 13,
+                          color: scheme.onSurface.withValues(alpha: 0.45),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            city,
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 11,
+                              color: scheme.onSurface.withValues(alpha: 0.55),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (description.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 12,
+                        height: 1.45,
+                        color: scheme.onSurface.withValues(alpha: 0.68),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  if (tags.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 5,
+                      children: tags.take(4).map((t) => _TagChip(label: t)).toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _FeedbackBtn(
+                        icon: Icons.thumb_up_rounded,
+                        active: _liked,
+                        activeColor: SmarturStyle.green,
+                        onTap: _handleLike,
+                      ),
+                      const SizedBox(width: 8),
+                      _FeedbackBtn(
+                        icon: Icons.thumb_down_rounded,
+                        active: _disliked,
+                        activeColor: scheme.error,
+                        onTap: _handleDislike,
+                      ),
+                      const Spacer(),
+                      if (canOpen)
+                        TextButton.icon(
+                          onPressed: widget.onViewDestination,
+                          icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                          label: Text(
+                            AppLocalizations.of(context)!.recoViewDestination,
+                            style: const TextStyle(
+                              fontFamily: 'Outfit',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            foregroundColor: SmarturStyle.purple,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1228,33 +1610,130 @@ class _FeedbackBtn extends StatelessWidget {
 // Reusable UI components
 // ═══════════════════════════════════════════════════════════════════════════
 
-class _GlassCard extends StatelessWidget {
-  final Widget child;
-  const _GlassCard({required this.child});
+// ── Form progress indicator ────────────────────────────────────────────────
+
+class _FormProgress extends StatelessWidget {
+  final AppLocalizations l10n;
+  final bool typeDone;
+  final bool budgetDone;
+  final bool groupDone;
+  final bool ageDone;
+
+  const _FormProgress({
+    required this.l10n,
+    required this.typeDone,
+    required this.budgetDone,
+    required this.groupDone,
+    required this.ageDone,
+  });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final steps = [
+      (typeDone, l10n.recoTourismType),
+      (budgetDone, l10n.recoBudget),
+      (groupDone, l10n.recoWithWho),
+      (ageDone, l10n.recoAgeRange),
+    ];
+    final doneCount = steps.where((s) => s.$1).length;
+    final progress = doneCount / steps.length;
+    final allDone = doneCount == steps.length;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
+        color: allDone
+            ? SmarturStyle.purple.withValues(alpha: 0.08)
+            : scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: allDone
+              ? SmarturStyle.purple.withValues(alpha: 0.25)
+              : scheme.outlineVariant.withValues(alpha: 0.4),
+        ),
       ),
-      child: child,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                allDone ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+                size: 15,
+                color: allDone ? SmarturStyle.purple : scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                allDone ? '¡Todo listo! Puedes generar tu ruta' : '$doneCount / ${steps.length} campos completados',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: allDone ? SmarturStyle.purple : scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 5,
+              backgroundColor: scheme.outlineVariant.withValues(alpha: 0.3),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                allDone ? SmarturStyle.purple : SmarturStyle.orange,
+              ),
+            ),
+          ),
+          if (!allDone) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: steps.map((s) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      s.$1 ? Icons.check_circle_outline : Icons.circle_outlined,
+                      size: 13,
+                      color: s.$1
+                          ? SmarturStyle.green
+                          : scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      s.$2,
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 11,
+                        color: s.$1
+                            ? scheme.onSurface
+                            : scheme.onSurfaceVariant.withValues(alpha: 0.55),
+                        decoration: s.$1 ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  final String title;
+class _InlineSection extends StatelessWidget {
+  final String label;
   final String? subtitle;
   final bool required;
   final Widget child;
 
-  const _SectionCard({
-    required this.title,
+  const _InlineSection({
+    required this.label,
     this.subtitle,
     this.required = false,
     required this.child,
@@ -1263,74 +1742,56 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(title,
-                style: TextStyle(fontFamily: 'Outfit', fontSize: 13, fontWeight: FontWeight.w700,
-                    color: scheme.onSurface)),
-              if (required) ...[
-                const SizedBox(width: 4),
-                const Text('*', style: TextStyle(color: SmarturStyle.orange, fontSize: 14)),
-              ],
-              if (subtitle != null) ...[
-                const SizedBox(width: 6),
-                Text(subtitle!,
-                  style: TextStyle(fontFamily: 'Outfit', fontSize: 11,
-                      color: scheme.onSurface.withValues(alpha: 0.4))),
-              ],
-            ],
-          ),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _SelectChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _SelectChip({required this.label, required this.icon, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? SmarturStyle.purple : scheme.surfaceContainerHighest.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? SmarturStyle.purple : scheme.outline.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(icon, size: 14,
-                color: selected ? Colors.white : scheme.onSurface.withValues(alpha: 0.6)),
-            const SizedBox(width: 6),
-            Text(label,
-              style: TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : scheme.onSurface)),
+            Container(
+              width: 3,
+              height: 14,
+              decoration: BoxDecoration(
+                color: SmarturStyle.purple,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6,
+                color: scheme.onSurface,
+              ),
+            ),
+            if (required) ...[
+              const SizedBox(width: 4),
+              Container(
+                width: 5, height: 5,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: SmarturStyle.orange,
+                ),
+              ),
+            ],
+            if (subtitle != null) ...[
+              const SizedBox(width: 8),
+              Text(
+                subtitle!,
+                style: TextStyle(
+                  fontFamily: 'Outfit', fontSize: 10,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ],
         ),
-      ),
+        const SizedBox(height: 12),
+        child,
+      ],
     );
   }
 }
@@ -1355,6 +1816,7 @@ class _BudgetButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -1370,14 +1832,14 @@ class _BudgetButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 22,
-                color: selected ? Colors.white : iconColor),
+                color: selected ? semantic.onImageText : iconColor),
             const SizedBox(height: 4),
             Text(label,
               style: TextStyle(fontFamily: 'Outfit', fontSize: 12, fontWeight: FontWeight.w700,
-                  color: selected ? Colors.white : scheme.onSurface)),
+                  color: selected ? semantic.onImageText : scheme.onSurface)),
             Text(sub,
               style: TextStyle(fontFamily: 'Outfit', fontSize: 9,
-                  color: selected ? Colors.white.withValues(alpha: 0.7) : scheme.onSurface.withValues(alpha: 0.4)),
+                  color: selected ? semantic.onImageText.withValues(alpha: 0.7) : scheme.onSurface.withValues(alpha: 0.4)),
               textAlign: TextAlign.center),
           ],
         ),
@@ -1397,6 +1859,7 @@ class _GroupButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -1412,11 +1875,11 @@ class _GroupButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 20,
-                color: selected ? Colors.white : scheme.onSurface.withValues(alpha: 0.7)),
+                color: selected ? semantic.onImageText : scheme.onSurface.withValues(alpha: 0.7)),
             const SizedBox(height: 3),
             Text(label,
               style: TextStyle(fontFamily: 'Outfit', fontSize: 11, fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : scheme.onSurface)),
+                  color: selected ? semantic.onImageText : scheme.onSurface)),
           ],
         ),
       ),
@@ -1508,31 +1971,32 @@ class _CTAButtonState extends State<_CTAButton> with SingleTickerProviderStateMi
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     return AnimatedBuilder(
       animation: _gradCtrl,
       builder: (context, child) {
         final loading = widget.loading;
         final disabled = widget.disabled;
         final ca = _colorA.evaluate(_gradCtrl) ?? SmarturStyle.purple;
-        final cb = _colorB.evaluate(_gradCtrl) ?? const Color(0xFF9333EA);
+        final cb = _colorB.evaluate(_gradCtrl) ?? SmarturStyle.purple;
         Widget content;
         if (loading) {
-          content = const SizedBox(
+          content = SizedBox(
             width: 22, height: 22,
-            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+            child: CircularProgressIndicator(color: semantic.onImageText, strokeWidth: 2.5),
           );
         } else {
           content = Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.auto_awesome_rounded,
-                color: disabled ? scheme.onSurface.withValues(alpha: 0.3) : Colors.white,
+                color: disabled ? scheme.onSurface.withValues(alpha: 0.3) : semantic.onImageText,
                 size: 20),
               const SizedBox(width: 10),
-              Text('Descubrir mis destinos',
+              Text(AppLocalizations.of(context)!.recoTitle,
                 style: TextStyle(
                   fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w700,
-                  color: disabled ? scheme.onSurface.withValues(alpha: 0.3) : Colors.white,
+                  color: disabled ? scheme.onSurface.withValues(alpha: 0.3) : semantic.onImageText,
                 )),
             ],
           );
@@ -1563,12 +2027,50 @@ class _CTAButtonState extends State<_CTAButton> with SingleTickerProviderStateMi
   }
 }
 
+class _RankBadge extends StatelessWidget {
+  final int rank;
+  const _RankBadge({required this.rank});
+
+  @override
+  Widget build(BuildContext context) {
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            SmarturStyle.purple.withValues(alpha: 0.92),
+            SmarturStyle.pink.withValues(alpha: 0.85),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: SmarturStyle.purple.withValues(alpha: 0.25),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        '#$rank',
+        style: TextStyle(
+          fontFamily: 'CalSans',
+          fontSize: 14,
+          color: semantic.onImageText,
+        ),
+      ),
+    );
+  }
+}
+
 class _ScoreBadge extends StatelessWidget {
   final double score;
   const _ScoreBadge({required this.score});
 
   @override
   Widget build(BuildContext context) {
+    final semantic = Theme.of(context).extension<SmarturSemanticColors>()!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -1578,11 +2080,11 @@ class _ScoreBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 11),
+          Icon(Icons.auto_awesome_rounded, color: semantic.onImageText, size: 11),
           const SizedBox(width: 3),
           Text(score.toStringAsFixed(2),
-            style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800,
-                color: Colors.white, fontSize: 11)),
+            style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w800,
+                color: semantic.onImageText, fontSize: 11)),
         ],
       ),
     );

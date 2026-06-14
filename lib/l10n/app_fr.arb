@@ -58,10 +58,38 @@
   "start": "Commencer",
   "loginWithBiometrics": "Se connecter avec empreinte",
   "navHome": "Accueil",
+  "navExplore": "Explorer",
+  "navRoutes": "Mes Itinéraires",
   "navDiary": "Journal",
   "navRecommend": "Recommander",
   "navCommunity": "Communauté",
   "navUser": "Profil",
+  "exploreTitle": "Explorer",
+  "routesSectionLabel": "Itinéraires",
+  "routesSectionCertified": "Itinéraires certifiés SMARTUR",
+  "routesSectionMostCopied": "Les plus copiés",
+  "routesSectionFollowing": "De personnes que vous suivez",
+  "routesSectionNoItems": "Bientôt disponible par ici",
+  "routesFollowingEmpty": "Suivez des voyageurs pour voir leurs itinéraires ici",
+  "searchRoutesHint": "Rechercher des itinéraires ou des utilisateurs...",
+  "seeAll": "Voir tout",
+  "misRutasTitle": "Mes Itinéraires",
+  "misRutasEmptyTitle": "Pas encore d'itinéraires",
+  "misRutasEmptySubtitle": "Créez votre premier itinéraire et commencez à planifier votre prochaine aventure",
+  "misRutasCreate": "Nouvel itinéraire",
+  "profileTabProfile": "Profil",
+  "addToRoute": "Ajouter à l'itinéraire",
+  "createNewRoute": "Nouvel itinéraire",
+  "genrePickerTitle": "Qu'aimez-vous explorer?",
+  "genrePickerSubtitle": "Choisissez jusqu'à 3 thèmes qui vous intéressent le plus",
+  "genrePickerContinue": "Continuer",
+  "genrePickerSkip": "Passer pour l'instant",
+  "genreNature": "Nature",
+  "genreAdventure": "Aventure",
+  "genreGastronomy": "Gastronomie",
+  "genreCulture": "Culture",
+  "genreRelax": "Détente",
+  "genreHistory": "Histoire",
   "communityTitle": "Communauté",
   "uploadPhotoAction": "Ajouter une photo",
   "communityCreatePost": "Créer une publication",
@@ -132,6 +160,7 @@
   "exploreHighMountains": "Explorez les Hautes Montagnes",
   "recommendationsForYou": "Recommandations pour vous, {name}",
   "@recommendationsForYou": { "placeholders": { "name": {} } },
+  "forYouLabel": "Pour vous",
   "weatherNow": "Météo actuelle",
   "notAvailable": "Non disponible",
   "allCategories": "Tous",
@@ -146,7 +175,6 @@
   "tabAiSummary": "Résumé IA",
   "fromPrice": "Depuis",
   "free": "Gratuit",
-  "createOneDayRoute": "Créer un itinéraire d'1 jour",
   "openInMaps": "Ouvrir dans Google Maps",
   "locationNoCoords": "Lieu : {city}",
   "@locationNoCoords": { "placeholders": { "city": { "type": "String" } } },
@@ -361,10 +389,152 @@
   "@latencyMs": { "placeholders": { "ms": {} } },
 
   "homeOfflineBanner": "Pas de connexion. Activez Internet pour voir la carte.",
+  "welcomeGreeting": "Bienvenue",
+  "recoPreloadedBannerDesc": "Pré-rempli selon vos préférences enregistrées",
   "onboardingTitle1": "Votre aventure commence ici",
   "onboardingDesc1": "Explorez les coins les plus magiques des Hautes Montagnes avec des itinéraires conçus pour l'explorateur moderne.",
   "onboardingTitle2": "L'intelligence qui vous connaît",
   "onboardingDesc2": "Nous analysons vos préférences pour que chaque recommandation vous soit personnellement destinée.",
   "onboardingTitle3": "Vivez l'authentique",
-  "onboardingDesc3": "Connectez-vous avec des guides locaux et soutenez le tourisme régional tout en créant des souvenirs inoubliables."
+  "onboardingDesc3": "Connectez-vous avec des guides locaux et soutenez le tourisme régional tout en créant des souvenirs inoubliables.",
+  "errorTitle": "Erreur",
+  "settingsCheckUpdate": "Rechercher une mise à jour",
+  "settingsAppUpToDate": "SMARTUR v{version} est à jour.",
+  "@settingsAppUpToDate": { "placeholders": { "version": {} } },
+  "languageSpanish": "Espagnol",
+  "languageEnglish": "Anglais",
+  "languageFrench": "Français",
+  "languagePortuguese": "Portugais",
+  "themeLight": "Clair",
+  "themeDark": "Sombre",
+  "navAiShort": "IA",
+  "diaryAiSessionsEmptyTitle": "Aucune session de recommandations",
+  "diaryAiSessionsEmptySubtitle": "Les sessions générées depuis l'application ou la plateforme web apparaîtront ici.",
+  "diaryMoreCount": "+{count} de plus",
+  "@diaryMoreCount": { "placeholders": { "count": {} } },
+  "diarySessionDestinationsCount": "{count} destinations dans cette session",
+  "@diarySessionDestinationsCount": { "placeholders": { "count": {} } },
+  "diaryTapDestinationHint": "Touchez une destination pour en voir plus",
+  "mapRetry": "Réessayer",
+  "updateTitle": "Nouvelle version disponible",
+  "updateBody": "La version {version} de SMARTUR est disponible.\nElle sera téléchargée et installée depuis l'application.",
+  "@updateBody": { "placeholders": { "version": {} } },
+  "updateDownloading": "Téléchargement... {progress}%",
+  "@updateDownloading": { "placeholders": { "progress": {} } },
+  "updatePreparingInstaller": "Préparation de l'installateur...",
+  "updateDownloadError": "Erreur de téléchargement. Vérifiez votre connexion et réessayez.",
+  "updateLater": "Plus tard",
+  "updateRetry": "Réessayer",
+  "updateNow": "Mettre à jour",
+  "updateConfirmInstall": "Sur l'écran système, appuyez sur Installer pour terminer la mise à jour. Si vous annulez, vous resterez sur l'ancienne version.",
+  "updateInstallPermission": "Autorisez l'installation depuis cette source dans les Réglages, puis réessayez.",
+  "updateInstallDone": "Compris",
+  "imageShareTitle": "Mes recommandations à {city}",
+  "@imageShareTitle": { "placeholders": { "city": {} } },
+  "imageShareSubtitle": "Basé sur mon profil de voyageur intelligent",
+  "imageShareGeneratedBy": "Généré par SMARTUR AI",
+  "imageShareMessage": "Regardez ce que SMARTUR me recommande à {city} !",
+  "@imageShareMessage": { "placeholders": { "city": {} } },
+  "commonPlaceFallback": "Lieu",
+  "recoTypeCultural":"Culturel",
+  "recoTypeNature":"Nature",
+  "recoTypeGastronomy":"Gastronomique",
+  "recoTypeAdventure":"Aventure",
+  "recoTypeRelax":"Détente",
+  "recoTypeNight":"Nocturne",
+  "recoBudgetLowLabel":"Économique",
+  "recoBudgetLowSub":"Max. $500/jour",
+  "recoBudgetMediumLabel":"Modéré",
+  "recoBudgetMediumSub":"$500–1500/jour",
+  "recoBudgetHighLabel":"Premium",
+  "recoBudgetHighSub":"$1500+/jour",
+  "recoGroupSolo":"Solo",
+  "recoGroupCouple":"Couple",
+  "recoGroupFamily":"Famille",
+  "recoGroupFriends":"Amis",
+  "recoShareList":"🌿 Mes destinations recommandées à Altas Montañas, Veracruz :\n\n• {items}\n\n📱 Découvrez-les avec SMARTUR",
+  "@recoShareList":{"placeholders":{"items":{}}},
+  "detailShareMessage":"Découvrez {title} à {location} ! 📍{description}\nVoir sur Maps : {mapsUrl}\n\nDécouvert avec SMARTUR — Altas Montañas, Veracruz",
+  "@detailShareMessage":{"placeholders":{"title":{},"location":{},"description":{},"mapsUrl":{}}},
+  "mapsLabel":"Maps",
+  "youAreHere":"← Vous êtes ici",
+  "recoSavedInDiary":"Recommandations enregistrées. Vous pouvez les consulter dans Journal.",
+  "recoResultsDone":"Terminé",
+  "recoResultsRankHint":"Classés selon la compatibilité avec votre profil",
+  "googleSignInReleaseConfig":"Google Sign-In n'est pas configuré pour cette version. Enregistrez l'empreinte SHA du keystore release dans Firebase."
+  ,"communityEmpty":"Aucune publication pour l'instant"
+  ,"communityEmptyHint":"Soyez le premier à partager votre expérience"
+  ,"communityFirstPost":"Créer une publication"
+  ,"communityPostHint":"Que voulez-vous partager?"
+  ,"communityReport":"Signaler"
+  ,"communityReportTitle":"Pourquoi signalez-vous cette publication?"
+  ,"communityReportOther":"Autre motif"
+  ,"plannerTitle":"Planificateur"
+  ,"plannerDelete":"Supprimer l'itinéraire"
+  ,"plannerDeleteConfirm":"Supprimer cet itinéraire définitivement?"
+  ,"plannerAddStop":"Ajouter un arrêt"
+  ,"plannerNoStops":"Aucun arrêt"
+  ,"plannerNoStopsSubtitle":"Appuyez sur + partout pour ajouter des arrêts"
+  ,"plannerOptimize":"Améliorer mon itinéraire"
+  ,"plannerOptimizeComingSoon":"Bientôt disponible sur SMARTUR"
+  ,"plannerRouteName":"Nom de l'itinéraire"
+  ,"plannerRouteNameHint":"Ex.: Mon itinéraire à Xalapa"
+  ,"plannerMakePublic":"Rendre l'itinéraire public"
+  ,"plannerStopDate":"Date de visite"
+  ,"plannerStopNotes":"Notes"
+  ,"plannerStopDelete":"Retirer l'arrêt"
+  ,"itineraryNStops":"{n} arrêts"
+  ,"@itineraryNStops":{"placeholders":{"n":{"type":"int"}}}
+  ,"itineraryCertified":"Certifié SMARTUR"
+  ,"itineraryCopy":"Copier l'itinéraire"
+  ,"itineraryCopied":"Itinéraire copié"
+  ,"itineraryDetail":"Détail de l'itinéraire"
+  ,"itineraryPublic":"Public"
+  ,"itineraryPrivate":"Privé"
+  ,"itineraryStops":"Arrêts"
+  ,"routesLoadError":"Erreur de chargement des itinéraires"
+  ,"socialFollow":"Suivre"
+  ,"socialFollowing":"Suivi"
+  ,"socialUnfollow":"Ne plus suivre"
+  ,"socialFollowers":"Abonnés"
+  ,"socialFollowersCount":"{n} abonnés"
+  ,"@socialFollowersCount":{"placeholders":{"n":{"type":"int"}}}
+  ,"socialFollowingCount":"{n} abonnements"
+  ,"@socialFollowingCount":{"placeholders":{"n":{"type":"int"}}}
+  ,"socialSearchUsers":"Rechercher des utilisateurs..."
+  ,"socialNoResults":"Aucun utilisateur trouvé"
+  ,"publicRoutes":"Itinéraires publics"
+  ,"noPublicRoutes":"Pas encore d'itinéraires publics"
+  ,"copyToMyRoutes":"Copier dans mes itinéraires"
+  ,"routeCopied":"Itinéraire copié dans Mes Routes"
+  ,"viewProfile":"Voir le profil"
+  ,"compareTitle":"Comparer les Itinéraires"
+  ,"compareYourRoute":"Votre itinéraire"
+  ,"compareOptimized":"Itinéraire optimisé"
+  ,"compareDistanceLabel":"Distance"
+  ,"compareSavingsLabel":"Économie"
+  ,"compareMoreEfficient":"plus efficace"
+  ,"compareKeep":"Garder mon itinéraire"
+  ,"compareApply":"Utiliser l'itinéraire optimisé"
+  ,"compareLoading":"Optimisation en cours..."
+  ,"compareApplied":"Itinéraire optimisé appliqué"
+  ,"compareMinStops":"Vous avez besoin d'au moins 2 arrêts avec une localisation"
+  ,"bookingTitle":"Réserver le service"
+  ,"bookingDate":"Date de visite"
+  ,"bookingTime":"Heure (facultatif)"
+  ,"bookingGuests":"Personnes"
+  ,"bookingNotes":"Notes (facultatif)"
+  ,"bookingConfirm":"Confirmer la réservation"
+  ,"bookingSuccess":"Réservation envoyée avec succès"
+  ,"bookingStatusPending":"En attente"
+  ,"bookingStatusConfirmed":"Confirmée"
+  ,"bookingStatusCancelled":"Annulée"
+  ,"bookingMyBookings":"Mes réservations"
+  ,"bookingNoBookings":"Pas encore de réservations"
+  ,"bookingCancel":"Annuler la réservation"
+  ,"chatTitle":"Messages"
+  ,"chatSend":"Envoyer"
+  ,"chatNoConversations":"Pas encore de conversations"
+  ,"chatTypeHere":"Écrire un message..."
+  ,"chatContact":"Contacter l'entreprise"
 }

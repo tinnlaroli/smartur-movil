@@ -3,6 +3,7 @@ import 'package:smartur/l10n/app_localizations.dart';
 import '../../widgets/smartur_background.dart';
 import '../../widgets/smartur_skeleton.dart';
 
+import '../../../core/motion/smartur_routes.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../data/services/auth_service.dart';
@@ -86,7 +87,9 @@ class _PreferencesScreenState extends State<PreferencesScreen>
         return;
       }
 
-      final success = await ProfileService.savePreferences(token, _data);
+      // Limpiar campos derivados que el endpoint no espera
+      _data.remove('age_range');
+      final success = await ProfileService.savePreferences(_data);
       if (!mounted) return;
 
       if (success) {
@@ -95,7 +98,7 @@ class _PreferencesScreenState extends State<PreferencesScreen>
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => MainScreen(userName: widget.userName, isNewLogin: true)),
+          smarturFadeRoute(MainScreen(userName: widget.userName, isNewLogin: true)),
           (_) => false,
         );
       } else {

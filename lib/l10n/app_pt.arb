@@ -58,10 +58,38 @@
   "start": "Começar",
   "loginWithBiometrics": "Entrar com impressão digital",
   "navHome": "Início",
+  "navExplore": "Explorar",
+  "navRoutes": "Minhas Rotas",
   "navDiary": "Diário",
   "navRecommend": "Recomendar",
   "navCommunity": "Comunidade",
   "navUser": "Usuário",
+  "exploreTitle": "Explorar",
+  "routesSectionLabel": "Rotas",
+  "routesSectionCertified": "Rotas certificadas SMARTUR",
+  "routesSectionMostCopied": "Mais copiadas",
+  "routesSectionFollowing": "De pessoas que você segue",
+  "routesSectionNoItems": "Em breve disponível por aqui",
+  "routesFollowingEmpty": "Siga viajantes para ver suas rotas aqui",
+  "searchRoutesHint": "Buscar rotas ou usuários...",
+  "seeAll": "Ver tudo",
+  "misRutasTitle": "Minhas Rotas",
+  "misRutasEmptyTitle": "Ainda sem rotas",
+  "misRutasEmptySubtitle": "Crie sua primeira rota e comece a planejar sua próxima aventura",
+  "misRutasCreate": "Nova rota",
+  "profileTabProfile": "Perfil",
+  "addToRoute": "Adicionar à rota",
+  "createNewRoute": "Nova rota",
+  "genrePickerTitle": "O que você gosta de explorar?",
+  "genrePickerSubtitle": "Escolha até 3 temas que mais lhe interessam",
+  "genrePickerContinue": "Continuar",
+  "genrePickerSkip": "Pular por agora",
+  "genreNature": "Natureza",
+  "genreAdventure": "Aventura",
+  "genreGastronomy": "Gastronomia",
+  "genreCulture": "Cultura",
+  "genreRelax": "Relaxar",
+  "genreHistory": "História",
   "communityTitle": "Comunidade",
   "uploadPhotoAction": "Adicionar foto",
   "communityCreatePost": "Criar publicação",
@@ -132,6 +160,7 @@
   "exploreHighMountains": "Explore as Altas Montanhas",
   "recommendationsForYou": "Recomendações para você, {name}",
   "@recommendationsForYou": { "placeholders": { "name": {} } },
+  "forYouLabel": "Para você",
   "weatherNow": "Clima agora",
   "notAvailable": "Não disponível",
   "allCategories": "Todos",
@@ -146,7 +175,6 @@
   "tabAiSummary": "Resumo IA",
   "fromPrice": "A partir de",
   "free": "Grátis",
-  "createOneDayRoute": "Criar Rota de 1 Dia",
   "openInMaps": "Abrir no Google Maps",
   "locationNoCoords": "Localização: {city}",
   "@locationNoCoords": { "placeholders": { "city": { "type": "String" } } },
@@ -361,10 +389,152 @@
   "@latencyMs": { "placeholders": { "ms": {} } },
 
   "homeOfflineBanner": "Sem conexão. Ative a internet para ver o mapa.",
+  "welcomeGreeting": "Bem-vindo",
+  "recoPreloadedBannerDesc": "Pré-preenchido com base nas suas preferências salvas",
   "onboardingTitle1": "Sua aventura começa aqui",
   "onboardingDesc1": "Explore os cantos mais mágicos das Altas Montanhas com rotas projetadas para o explorador moderno.",
   "onboardingTitle2": "Inteligência que te conhece",
   "onboardingDesc2": "Analisamos suas preferências para que cada recomendação pareça escrita só para você.",
   "onboardingTitle3": "Viva o autêntico",
-  "onboardingDesc3": "Conecte-se com guias locais e apoie o turismo regional enquanto cria memórias inesquecíveis."
+  "onboardingDesc3": "Conecte-se com guias locais e apoie o turismo regional enquanto cria memórias inesquecíveis.",
+  "errorTitle": "Erro",
+  "settingsCheckUpdate": "Buscar atualização",
+  "settingsAppUpToDate": "SMARTUR v{version} está atualizado.",
+  "@settingsAppUpToDate": { "placeholders": { "version": {} } },
+  "languageSpanish": "Espanhol",
+  "languageEnglish": "Inglês",
+  "languageFrench": "Francês",
+  "languagePortuguese": "Português",
+  "themeLight": "Claro",
+  "themeDark": "Escuro",
+  "navAiShort": "IA",
+  "diaryAiSessionsEmptyTitle": "Sem sessões de recomendações",
+  "diaryAiSessionsEmptySubtitle": "As sessões geradas no app ou na plataforma web aparecerão aqui.",
+  "diaryMoreCount": "+{count} mais",
+  "@diaryMoreCount": { "placeholders": { "count": {} } },
+  "diarySessionDestinationsCount": "{count} destinos nesta sessão",
+  "@diarySessionDestinationsCount": { "placeholders": { "count": {} } },
+  "diaryTapDestinationHint": "Toque em um destino para ver mais",
+  "mapRetry": "Tentar novamente",
+  "updateTitle": "Nova versão disponível",
+  "updateBody": "A versão {version} do SMARTUR está disponível.\nEla será baixada e instalada pelo app.",
+  "@updateBody": { "placeholders": { "version": {} } },
+  "updateDownloading": "Baixando... {progress}%",
+  "@updateDownloading": { "placeholders": { "progress": {} } },
+  "updatePreparingInstaller": "Preparando instalador...",
+  "updateDownloadError": "Erro ao baixar. Verifique sua conexão e tente novamente.",
+  "updateLater": "Depois",
+  "updateRetry": "Tentar novamente",
+  "updateNow": "Atualizar agora",
+  "updateConfirmInstall": "Na tela do sistema, toque em Instalar para concluir a atualização. Se cancelar, permanecerá na versão anterior.",
+  "updateInstallPermission": "Permita instalar apps desta fonte nas Configurações e tente novamente.",
+  "updateInstallDone": "Entendi",
+  "imageShareTitle": "Minhas recomendações em {city}",
+  "@imageShareTitle": { "placeholders": { "city": {} } },
+  "imageShareSubtitle": "Baseado no meu perfil de viajante inteligente",
+  "imageShareGeneratedBy": "Gerado por SMARTUR AI",
+  "imageShareMessage": "Veja o que o SMARTUR recomenda para mim em {city}!",
+  "@imageShareMessage": { "placeholders": { "city": {} } },
+  "commonPlaceFallback": "Lugar",
+  "recoTypeCultural":"Cultural",
+  "recoTypeNature":"Natureza",
+  "recoTypeGastronomy":"Gastronômico",
+  "recoTypeAdventure":"Aventura",
+  "recoTypeRelax":"Descanso",
+  "recoTypeNight":"Noturno",
+  "recoBudgetLowLabel":"Econômico",
+  "recoBudgetLowSub":"Máx. $500/dia",
+  "recoBudgetMediumLabel":"Moderado",
+  "recoBudgetMediumSub":"$500–1500/dia",
+  "recoBudgetHighLabel":"Premium",
+  "recoBudgetHighSub":"$1500+/dia",
+  "recoGroupSolo":"Solo",
+  "recoGroupCouple":"Casal",
+  "recoGroupFamily":"Família",
+  "recoGroupFriends":"Amigos",
+  "recoShareList":"🌿 Meus destinos recomendados em Altas Montañas de Veracruz:\n\n• {items}\n\n📱 Descubra com SMARTUR",
+  "@recoShareList":{"placeholders":{"items":{}}},
+  "detailShareMessage":"Descubra {title} em {location}! 📍{description}\nVer no Maps: {mapsUrl}\n\nDescoberto com SMARTUR — Altas Montañas, Veracruz",
+  "@detailShareMessage":{"placeholders":{"title":{},"location":{},"description":{},"mapsUrl":{}}},
+  "mapsLabel":"Maps",
+  "youAreHere":"← Você está aqui",
+  "recoSavedInDiary":"Recomendações salvas. Você pode revisá-las no Diário.",
+  "recoResultsDone":"Concluir",
+  "recoResultsRankHint":"Ordenados por compatibilidade com o seu perfil",
+  "googleSignInReleaseConfig":"O Google Sign-In não está configurado nesta versão. Registre o SHA do keystore de release no Firebase."
+  ,"communityEmpty":"Nenhuma publicação ainda"
+  ,"communityEmptyHint":"Seja o primeiro a compartilhar sua experiência"
+  ,"communityFirstPost":"Criar publicação"
+  ,"communityPostHint":"O que você quer compartilhar?"
+  ,"communityReport":"Denunciar"
+  ,"communityReportTitle":"Por que você está denunciando esta publicação?"
+  ,"communityReportOther":"Outro motivo"
+  ,"plannerTitle":"Planejador"
+  ,"plannerDelete":"Excluir rota"
+  ,"plannerDeleteConfirm":"Excluir esta rota permanentemente?"
+  ,"plannerAddStop":"Adicionar parada"
+  ,"plannerNoStops":"Sem paradas"
+  ,"plannerNoStopsSubtitle":"Toque em + em qualquer lugar para adicionar paradas"
+  ,"plannerOptimize":"Melhorar minha rota"
+  ,"plannerOptimizeComingSoon":"Em breve no SMARTUR"
+  ,"plannerRouteName":"Nome da rota"
+  ,"plannerRouteNameHint":"Ex.: Minha rota em Xalapa"
+  ,"plannerMakePublic":"Tornar a rota pública"
+  ,"plannerStopDate":"Data da visita"
+  ,"plannerStopNotes":"Notas"
+  ,"plannerStopDelete":"Remover parada"
+  ,"itineraryNStops":"{n} paradas"
+  ,"@itineraryNStops":{"placeholders":{"n":{"type":"int"}}}
+  ,"itineraryCertified":"Certificado SMARTUR"
+  ,"itineraryCopy":"Copiar rota"
+  ,"itineraryCopied":"Rota copiada"
+  ,"itineraryDetail":"Detalhe da rota"
+  ,"itineraryPublic":"Público"
+  ,"itineraryPrivate":"Privado"
+  ,"itineraryStops":"Paradas"
+  ,"routesLoadError":"Erro ao carregar rotas"
+  ,"socialFollow":"Seguir"
+  ,"socialFollowing":"Seguindo"
+  ,"socialUnfollow":"Deixar de seguir"
+  ,"socialFollowers":"Seguidores"
+  ,"socialFollowersCount":"{n} seguidores"
+  ,"@socialFollowersCount":{"placeholders":{"n":{"type":"int"}}}
+  ,"socialFollowingCount":"{n} seguindo"
+  ,"@socialFollowingCount":{"placeholders":{"n":{"type":"int"}}}
+  ,"socialSearchUsers":"Buscar usuários..."
+  ,"socialNoResults":"Nenhum usuário encontrado"
+  ,"publicRoutes":"Rotas públicas"
+  ,"noPublicRoutes":"Sem rotas públicas ainda"
+  ,"copyToMyRoutes":"Copiar para minhas rotas"
+  ,"routeCopied":"Rota copiada para Minhas Rotas"
+  ,"viewProfile":"Ver perfil"
+  ,"compareTitle":"Comparar Rotas"
+  ,"compareYourRoute":"Sua rota"
+  ,"compareOptimized":"Rota otimizada"
+  ,"compareDistanceLabel":"Distância"
+  ,"compareSavingsLabel":"Economia"
+  ,"compareMoreEfficient":"mais eficiente"
+  ,"compareKeep":"Manter minha rota"
+  ,"compareApply":"Usar rota otimizada"
+  ,"compareLoading":"Otimizando com IA..."
+  ,"compareApplied":"Rota otimizada aplicada"
+  ,"compareMinStops":"Você precisa de pelo menos 2 paradas com localização"
+  ,"bookingTitle":"Reservar serviço"
+  ,"bookingDate":"Data da visita"
+  ,"bookingTime":"Hora (opcional)"
+  ,"bookingGuests":"Pessoas"
+  ,"bookingNotes":"Notas (opcional)"
+  ,"bookingConfirm":"Confirmar reserva"
+  ,"bookingSuccess":"Reserva enviada com sucesso"
+  ,"bookingStatusPending":"Pendente"
+  ,"bookingStatusConfirmed":"Confirmada"
+  ,"bookingStatusCancelled":"Cancelada"
+  ,"bookingMyBookings":"Minhas reservas"
+  ,"bookingNoBookings":"Sem reservas ainda"
+  ,"bookingCancel":"Cancelar reserva"
+  ,"chatTitle":"Mensagens"
+  ,"chatSend":"Enviar"
+  ,"chatNoConversations":"Sem conversas ainda"
+  ,"chatTypeHere":"Escreva uma mensagem..."
+  ,"chatContact":"Contatar empresa"
 }
