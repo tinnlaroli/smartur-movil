@@ -1,0 +1,14 @@
+{
+  "version": 3,
+  "skills": {
+    "lightweight-flutter-animations": {
+      "source": "rodydavis/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/rodydavis/skills.git",
+      "skillFolderHash": "",
+      "installedAt": "2026-05-30T05:26:39.440Z",
+      "updatedAt": "2026-05-30T05:26:39.440Z"
+    }
+  },
+  "dismissed": {}
+}
