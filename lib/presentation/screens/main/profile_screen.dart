@@ -396,7 +396,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     color: scheme.surface,
                     border: Border.all(color: scheme.outlineVariant),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.camera_alt_rounded,
                     size: 14,
                     color: scheme.primary,

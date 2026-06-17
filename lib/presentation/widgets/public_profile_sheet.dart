@@ -110,7 +110,7 @@ class PublicProfileSheet extends StatelessWidget {
                 ),
                 child: Text(
                   l10n.memberSince(memberSince),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Outfit',
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

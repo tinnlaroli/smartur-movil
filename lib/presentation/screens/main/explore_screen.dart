@@ -922,6 +922,7 @@ class _CommunityTabState extends State<_CommunityTab>
   Widget build(BuildContext context) {
     super.build(context);
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: _error != null && !_loading
@@ -1293,7 +1294,7 @@ class _CommunityPostCardState extends State<_CommunityPostCard> {
                       Flexible(
                         child: Text(
                           placeTitle,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Outfit',
                             fontSize: 12,
                             color: scheme.primary,

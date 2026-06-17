@@ -446,6 +446,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
   }
 
   Widget _buildOptimizeButton(AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
     final canOptimize = _stops.length >= 2 && !_optimizing && !_loading;
     return Padding(
       padding: EdgeInsets.only(

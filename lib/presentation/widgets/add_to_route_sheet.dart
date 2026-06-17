@@ -124,40 +124,43 @@ class _AddToRouteSheetState extends State<_AddToRouteSheet> {
     );
     final name = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.plannerRouteName,
-            style: SmarturStyle.calSansTitle.copyWith(fontSize: 18)),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-          decoration:
-              InputDecoration(hintText: l10n.plannerRouteNameHint),
-          style: const TextStyle(fontFamily: 'Outfit'),
-          onSubmitted: (v) {
-            if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.cancel,
-                style: const TextStyle(fontFamily: 'Outfit')),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (ctrl.text.trim().isNotEmpty) {
-                Navigator.pop(ctx, ctrl.text.trim());
-              }
+      builder: (ctx) {
+        final scheme = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          title: Text(l10n.plannerRouteName,
+              style: SmarturStyle.calSansTitle.copyWith(fontSize: 18)),
+          content: TextField(
+            controller: ctrl,
+            autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
+            decoration:
+                InputDecoration(hintText: l10n.plannerRouteNameHint),
+            style: const TextStyle(fontFamily: 'Outfit'),
+            onSubmitted: (v) {
+              if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
             },
-            style:
-                FilledButton.styleFrom(backgroundColor: scheme.primary),
-            child: Text(l10n.misRutasCreate,
-                style: const TextStyle(
-                    fontFamily: 'Outfit', fontWeight: FontWeight.w700)),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel,
+                  style: const TextStyle(fontFamily: 'Outfit')),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (ctrl.text.trim().isNotEmpty) {
+                  Navigator.pop(ctx, ctrl.text.trim());
+                }
+              },
+              style:
+                  FilledButton.styleFrom(backgroundColor: scheme.primary),
+              child: Text(l10n.misRutasCreate,
+                  style: const TextStyle(
+                      fontFamily: 'Outfit', fontWeight: FontWeight.w700)),
+            ),
+          ],
+        );
+      },
     );
 
     if (name == null || name.isEmpty || !mounted) return;

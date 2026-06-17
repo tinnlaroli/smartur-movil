@@ -78,7 +78,9 @@ class _MisRutasScreenState extends State<MisRutasScreen> {
     final ctrl = TextEditingController();
     final name = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) {
+        final scheme = Theme.of(ctx).colorScheme;
+        return AlertDialog(
         title: Text(l10n.plannerRouteName,
             style: SmarturStyle.calSansTitle.copyWith(fontSize: 18)),
         content: TextField(
@@ -109,7 +111,8 @@ class _MisRutasScreenState extends State<MisRutasScreen> {
                     fontFamily: 'Outfit', fontWeight: FontWeight.w700)),
           ),
         ],
-      ),
+        );
+      },
     );
     if (name == null || name.isEmpty || !mounted) return;
     try {
