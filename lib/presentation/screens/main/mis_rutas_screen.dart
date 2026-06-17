@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../../core/motion/smartur_routes.dart';
+import '../../../core/theme/smartur_theme_extensions.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../core/utils/notifications.dart';
 import '../../../data/local/itinerary_db.dart';
@@ -102,7 +103,7 @@ class _MisRutasScreenState extends State<MisRutasScreen> {
                 Navigator.pop(ctx, ctrl.text.trim());
               }
             },
-            style: FilledButton.styleFrom(backgroundColor: SmarturStyle.purple),
+            style: FilledButton.styleFrom(backgroundColor: scheme.primary),
             child: Text(l10n.misRutasCreate,
                 style: const TextStyle(
                     fontFamily: 'Outfit', fontWeight: FontWeight.w700)),
@@ -152,7 +153,7 @@ class _MisRutasScreenState extends State<MisRutasScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _createItinerary,
-        backgroundColor: SmarturStyle.purple,
+        backgroundColor: scheme.primary,
         icon: const Icon(Icons.add_rounded, color: Colors.white),
         label: Text(
           l10n.misRutasCreate,
@@ -215,7 +216,7 @@ class _MisRutasScreenState extends State<MisRutasScreen> {
         subtitle: l10n.misRutasEmptySubtitle,
         action: FilledButton.icon(
           onPressed: _createItinerary,
-          style: FilledButton.styleFrom(backgroundColor: SmarturStyle.purple),
+          style: FilledButton.styleFrom(backgroundColor: scheme.primary),
           icon: const Icon(Icons.add_rounded, size: 18),
           label: Text(l10n.misRutasCreate,
               style: const TextStyle(
@@ -229,7 +230,7 @@ class _MisRutasScreenState extends State<MisRutasScreen> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      color: SmarturStyle.purple,
+      color: scheme.primary,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
@@ -406,7 +407,7 @@ class _ItineraryCard extends StatelessWidget {
                       if (itinerary.isCertified) ...[
                         const SizedBox(width: 6),
                         Icon(Icons.verified_rounded,
-                            size: 16, color: SmarturStyle.purple),
+                            size: 16, color: scheme.primary),
                       ],
                     ],
                   ),
@@ -446,14 +447,14 @@ class _ItineraryCard extends StatelessWidget {
                 margin: const EdgeInsets.only(right: 4),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: SmarturStyle.green.withValues(alpha: 0.12),
+                  color: SmarturSemanticColors.of(context).leaf.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.public_rounded,
-                        size: 12, color: SmarturStyle.green),
+                        size: 12, color: SmarturSemanticColors.of(context).leaf),
                     const SizedBox(width: 4),
                     Text(
                       'Pública',
@@ -461,7 +462,7 @@ class _ItineraryCard extends StatelessWidget {
                         fontFamily: 'Outfit',
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: SmarturStyle.green,
+                        color: SmarturSemanticColors.of(context).leaf,
                       ),
                     ),
                   ],

@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
+import '../../../core/theme/smartur_theme_extensions.dart';
 import '../../../core/theme/style_guide.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/profile_service.dart';
@@ -302,7 +303,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               // ── Tab 0: Mi Perfil ──
               RefreshIndicator(
-                color: SmarturStyle.purple,
+                color: scheme.primary,
                 onRefresh: _loadProfile,
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
@@ -355,7 +356,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: SmarturStyle.purple.withValues(alpha: 0.35),
+                color: scheme.primary.withValues(alpha: 0.35),
                 width: 3,
               ),
             ),
@@ -364,7 +365,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               photoUrl: _photoUrl,
               avatarIconKey: _avatarIconKey,
               displayName: _name,
-              backgroundColor: SmarturStyle.purple.withValues(alpha: 0.12),
+              backgroundColor: scheme.primary.withValues(alpha: 0.12),
               foregroundColor: scheme.onSurface,
             ),
           ),
@@ -398,7 +399,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: const Icon(
                     Icons.camera_alt_rounded,
                     size: 14,
-                    color: SmarturStyle.purple,
+                    color: scheme.primary,
                   ),
                 ),
               ),
@@ -521,7 +522,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final modo = last?['modo_viaje'] as String?;
     final createdAt = last != null ? DateTime.tryParse(last['created_at']?.toString() ?? '') : null;
     final modoLabel = modo != null ? (_modoLabels[modo] ?? modo) : null;
-    final modoColor = modo != null ? (_modoColors[modo] ?? SmarturStyle.green) : SmarturStyle.green;
+    final modoColor = modo != null ? (_modoColors[modo] ?? SmarturSemanticColors.of(context).leaf) : SmarturSemanticColors.of(context).leaf;
     final modoIcon  = modo != null ? (_modoIcons[modo]  ?? Icons.eco_outlined) : Icons.eco_outlined;
 
     return Column(
@@ -698,12 +699,14 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildInterestChips() {
+    final scheme = Theme.of(context).colorScheme;
+    final sem = SmarturSemanticColors.of(context);
     final colors = [
-      SmarturStyle.purple,
-      SmarturStyle.blue,
-      SmarturStyle.pink,
-      SmarturStyle.green,
-      SmarturStyle.orange,
+      scheme.primary,
+      sem.sea,
+      sem.altAccent,
+      sem.leaf,
+      sem.ember,
     ];
     return Wrap(
       spacing: 8,
@@ -757,7 +760,7 @@ class _StatTile extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(icon, size: 20, color: SmarturStyle.purple),
+          Icon(icon, size: 20, color: scheme.primary),
           const SizedBox(height: 6),
           Text(
             value,
@@ -807,10 +810,10 @@ class _ProfileActionTile extends StatelessWidget {
         height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: SmarturStyle.purple.withValues(alpha: 0.12),
+          color: scheme.primary.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: SmarturStyle.purple, size: 22),
+        child: Icon(icon, color: scheme.primary, size: 22),
       ),
       title: Text(
         title,
@@ -874,7 +877,7 @@ class _DiaryFavoritesTab extends StatelessWidget {
     }
     if (items.isEmpty) {
       return RefreshIndicator(
-        color: SmarturStyle.purple,
+        color: scheme.primary,
         onRefresh: onRefresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -883,14 +886,14 @@ class _DiaryFavoritesTab extends StatelessWidget {
               icon: Icons.favorite_border_rounded,
               title: l10n.favoritesTab,
               subtitle: l10n.noCategoryPlaces,
-              iconColor: SmarturStyle.pink,
+              iconColor: SmarturSemanticColors.of(context).altAccent,
             ),
           ],
         ),
       );
     }
     return RefreshIndicator(
-      color: SmarturStyle.purple,
+      color: scheme.primary,
       onRefresh: onRefresh,
       child: GridView.builder(
         physics: const AlwaysScrollableScrollPhysics(),

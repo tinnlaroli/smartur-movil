@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smartur/l10n/app_localizations.dart';
 
 import '../../core/motion/smartur_routes.dart';
+import '../../core/theme/smartur_theme_extensions.dart';
 import '../../core/theme/style_guide.dart';
 import '../../core/utils/notifications.dart';
 import '../../data/local/itinerary_db.dart';
@@ -150,7 +151,7 @@ class _AddToRouteSheetState extends State<_AddToRouteSheet> {
               }
             },
             style:
-                FilledButton.styleFrom(backgroundColor: SmarturStyle.purple),
+                FilledButton.styleFrom(backgroundColor: scheme.primary),
             child: Text(l10n.misRutasCreate,
                 style: const TextStyle(
                     fontFamily: 'Outfit', fontWeight: FontWeight.w700)),
@@ -269,7 +270,7 @@ class _AddToRouteSheetState extends State<_AddToRouteSheet> {
                       child: Row(
                         children: [
                           Icon(Icons.route_rounded,
-                              size: 18, color: SmarturStyle.purple),
+                              size: 18, color: scheme.primary),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -294,7 +295,7 @@ class _AddToRouteSheetState extends State<_AddToRouteSheet> {
                           else
                             Icon(Icons.add_circle_outline_rounded,
                                 size: 20,
-                                color: SmarturStyle.purple),
+                                color: scheme.primary),
                         ],
                       ),
                     ),
@@ -309,7 +310,7 @@ class _AddToRouteSheetState extends State<_AddToRouteSheet> {
           FilledButton.icon(
             onPressed: _loading || _addingTo != null ? null : _createAndAdd,
             style: FilledButton.styleFrom(
-              backgroundColor: SmarturStyle.purple,
+              backgroundColor: scheme.primary,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
