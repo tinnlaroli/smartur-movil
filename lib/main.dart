@@ -90,7 +90,7 @@ class SmarturApp extends StatelessWidget {
           return AppSettingsScope(
             notifier: settings,
             child: MaterialApp(
-              title: 'SMARTUR',
+              title: 'Welltur',
               debugShowCheckedModeBanner: false,
               themeMode: flutterThemeMode,
               theme: isWelltur ? buildWellturTheme() : _buildLightTheme(),

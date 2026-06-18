@@ -529,259 +529,156 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildWellnessSection(BuildContext context, ColorScheme scheme) {
     final sem = SmarturSemanticColors.of(context);
-    final last   = _wellnessHistory.isNotEmpty ? _wellnessHistory.first : null;
-    final modo   = last?['modo_viaje'] as String?;
+    final last = _wellnessHistory.isNotEmpty ? _wellnessHistory.first : null;
+    final modo = last?['modo_viaje'] as String?;
     final modoLabel = modo != null ? (_modoLabels[modo] ?? modo) : null;
-    final modoDesc  = modo != null ? (_modoDescriptions[modo] ?? '') : '';
-    final modoColor = modo != null ? (_modoColors[modo] ?? sem.leaf) : sem.leaf;
-    final modoIcon  = modo != null ? (_modoIcons[modo]  ?? Icons.eco_outlined) : Icons.eco_outlined;
-    final lastDate  = last != null ? DateTime.tryParse(last['created_at']?.toString() ?? '') : null;
+    final modoDesc = modo != null
+        ? (_modoDescriptions[modo] ?? '')
+        : 'Descubre tu modo de viaje';
+    final modoColor = modo != null ? (_modoColors[modo] ?? sem.leaf) : const Color(0xFF10B981);
+    final modoIcon = modo != null ? (_modoIcons[modo] ?? Icons.eco_outlined) : Icons.eco_outlined;
 
-    // Historial compacto: entradas 1..N (la primera ya es el "actual")
-    final prevHistory = _wellnessHistory.length > 1 ? _wellnessHistory.skip(1).take(4).toList() : <Map<String,dynamic>>[];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Header ──
-        Row(
-          children: [
-            const Icon(Icons.eco_outlined, size: 18, color: Color(0xFF254117)),
-            const SizedBox(width: 6),
-            Text('WellTur',
-                style: SmarturStyle.calSansTitle.copyWith(fontSize: 18, color: const Color(0xFF254117))),
-          ],
-        ),
-        const SizedBox(height: 10),
-
-        // ── Card principal ──
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Header: título + chip de modo actual ──
+          Row(
             children: [
-
-              // ── Estado actual ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: last != null && modoLabel != null
-                    ? Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Ícono grande con fondo
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: modoColor.withValues(alpha: 0.14),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(modoIcon, color: modoColor, size: 24),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      modoLabel,
-                                      style: TextStyle(
-                                        fontFamily: 'CalSans',
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: modoColor,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    if (lastDate != null)
-                                      Text(
-                                        _formatDate(lastDate),
-                                        style: TextStyle(
-                                          fontFamily: 'Outfit',
-                                          fontSize: 11,
-                                          color: scheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  modoDesc,
-                                  style: TextStyle(
-                                    fontFamily: 'Outfit',
-                                    fontSize: 12,
-                                    color: scheme.onSurfaceVariant,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      )
-                    : Text(
-                        'Descubre tu modo de viaje',
-                        style: TextStyle(fontFamily: 'Outfit', fontSize: 13,
-                            color: scheme.onSurface.withValues(alpha: 0.7)),
-                      ),
+              const Icon(Icons.eco_outlined, size: 14, color: Color(0xFF254117)),
+              const SizedBox(width: 5),
+              Text(
+                'WellTur',
+                style: SmarturStyle.calSansTitle.copyWith(
+                    fontSize: 14, color: const Color(0xFF254117)),
               ),
-
-              // ── Historial previo ──
-              if (prevHistory.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                  child: Text(
-                    'Historial',
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurfaceVariant,
-                      letterSpacing: 0.8,
-                    ),
+              const Spacer(),
+              if (modoLabel != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: modoColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                ),
-                const SizedBox(height: 6),
-                ...prevHistory.map((entry) {
-                  final m    = entry['modo_viaje'] as String?;
-                  final lbl  = m != null ? (_modoLabels[m]  ?? m) : '—';
-                  final col  = m != null ? (_modoColors[m]  ?? sem.leaf) : sem.leaf;
-                  final ico  = m != null ? (_modoIcons[m]   ?? Icons.eco_outlined) : Icons.eco_outlined;
-                  final date = DateTime.tryParse(entry['created_at']?.toString() ?? '');
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Row(
-                      children: [
-                        // Mini línea de tiempo
-                        Column(
-                          children: [
-                            Container(
-                              width: 2,
-                              height: 8,
-                              color: scheme.outlineVariant,
-                            ),
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: col.withValues(alpha: 0.6),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 10),
-                        if (date != null)
-                          SizedBox(
-                            width: 44,
-                            child: Text(
-                              _formatDate(date),
-                              style: TextStyle(fontFamily: 'Outfit', fontSize: 11,
-                                  color: scheme.onSurfaceVariant),
-                            ),
-                          ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: col.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(ico, size: 11, color: col),
-                              const SizedBox(width: 4),
-                              Text(lbl,
-                                  style: TextStyle(fontFamily: 'Outfit', fontSize: 11,
-                                      fontWeight: FontWeight.w600, color: col)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              ],
-
-              // ── Botones ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          await Navigator.push(context,
-                              smarturFadeRoute(const WellnessAssessmentScreen()));
-                          _loadWellnessHistory();
-                        },
-                        icon: const Icon(Icons.refresh_rounded, size: 16),
-                        label: Text(last != null ? 'Actualizar estado' : 'Comenzar'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF254117),
-                          side: const BorderSide(color: Color(0xFF254117)),
-                          textStyle: const TextStyle(fontFamily: 'Outfit', fontSize: 12,
-                              fontWeight: FontWeight.w600),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                      ),
-                    ),
-                    if (_wellnessHistory.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: _deletingWellness ? null : () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Borrar historial',
-                                  style: TextStyle(fontFamily: 'Outfit')),
-                              content: const Text(
-                                'Se eliminará todo tu historial de bienestar. Esta acción no se puede deshacer.',
-                                style: TextStyle(fontFamily: 'Outfit'),
-                              ),
-                              actions: [
-                                TextButton(
-                                    onPressed: () => Navigator.pop(ctx, false),
-                                    child: const Text('Cancelar')),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  child: const Text('Eliminar',
-                                      style: TextStyle(color: Colors.red)),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (confirm == true) _deleteWellnessHistory();
-                        },
-                        icon: _deletingWellness
-                            ? const SizedBox(width: 14, height: 14,
-                                child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.delete_outline, size: 16),
-                        label: const Text('Borrar'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                          textStyle: const TextStyle(fontFamily: 'Outfit', fontSize: 12,
-                              fontWeight: FontWeight.w600),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(modoIcon, size: 11, color: modoColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        modoLabel,
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: modoColor,
                         ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 7),
+          // ── Descripción: 1 línea fija ──
+          Text(
+            modoDesc,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 12,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          // ── Botones ──
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 34,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await Navigator.push(context,
+                          smarturFadeRoute(const WellnessAssessmentScreen()));
+                      _loadWellnessHistory();
+                    },
+                    icon: const Icon(Icons.refresh_rounded, size: 14),
+                    label: Text(last != null ? 'Actualizar' : 'Comenzar'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF254117),
+                      side: const BorderSide(color: Color(0xFF254117)),
+                      textStyle: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                  ),
+                ),
+              ),
+              if (_wellnessHistory.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 34,
+                  child: OutlinedButton.icon(
+                    onPressed: _deletingWellness
+                        ? null
+                        : () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Borrar historial',
+                                    style: TextStyle(fontFamily: 'Outfit')),
+                                content: const Text(
+                                  'Se eliminará todo tu historial de bienestar. Esta acción no se puede deshacer.',
+                                  style: TextStyle(fontFamily: 'Outfit'),
+                                ),
+                                actions: [
+                                  TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      child: const Text('Cancelar')),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: const Text('Eliminar',
+                                        style: TextStyle(color: Colors.red)),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true) _deleteWellnessHistory();
+                          },
+                    icon: _deletingWellness
+                        ? const SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.delete_outline, size: 14),
+                    label: const Text('Borrar'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      textStyle: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 
