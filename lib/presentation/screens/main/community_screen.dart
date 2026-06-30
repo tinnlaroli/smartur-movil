@@ -11,6 +11,7 @@ import '../../../data/services/explore_service.dart';
 import '../../../data/services/user_content_service.dart';
 import '../../../data/services/auth_service.dart';
 import '../../widgets/smartur_background.dart';
+import '../../widgets/smartur_image.dart';
 import '../../widgets/smartur_skeleton.dart';
 import '../../widgets/public_profile_sheet.dart';
 import '../../widgets/smartur_user_avatar.dart';
@@ -615,30 +616,16 @@ class _PostCard extends StatelessWidget {
           children: [
             // ── Imagen arriba (si existe) ──
             if (imageUrl.isNotEmpty)
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (_, child, progress) => progress == null
-                        ? child
-                        : Container(
-                            color: scheme.outlineVariant.withValues(alpha: 0.3),
-                            child: const Center(
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            ),
-                          ),
-                    errorBuilder: (_, __, ___) => Container(
-                      color: scheme.outlineVariant.withValues(alpha: 0.3),
-                      child: Icon(Icons.broken_image_outlined,
-                          size: 40, color: scheme.onSurfaceVariant),
-                    ),
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: SmarturImage.hero(
+                  url: imageUrl,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
+                  errorWidget: Container(
+                    color: scheme.outlineVariant.withValues(alpha: 0.3),
+                    child: Icon(Icons.broken_image_outlined,
+                        size: 40, color: scheme.onSurfaceVariant),
                   ),
                 ),
               ),

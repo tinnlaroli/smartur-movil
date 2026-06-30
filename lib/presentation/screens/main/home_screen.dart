@@ -1836,7 +1836,8 @@ class _PlaceCardState extends State<_PlaceCard>
                         imageUrl: place.imageUrl,
                         fit: BoxFit.cover,
                         filterQuality: FilterQuality.medium,
-                        fadeInDuration: const Duration(milliseconds: 400),
+                        memCacheWidth: 400,
+                        fadeInDuration: const Duration(milliseconds: 250),
                         placeholder: (_, __) => Container(
                           color: scheme.outlineVariant.withValues(alpha: 0.3),
                         ),
@@ -2353,7 +2354,7 @@ class _WellnessBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'WellTur · Descubre tu modo de viaje',
+                    'SMARTUR · Descubre tu modo de viaje',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
