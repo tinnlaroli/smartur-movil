@@ -5,7 +5,6 @@ import 'package:latlong2/latlong.dart';
 import '../../../core/motion/smartur_routes.dart';
 import '../../../core/theme/smartur_theme_extensions.dart';
 import '../../../core/theme/style_guide.dart';
-import '../../../core/utils/notifications.dart';
 import '../../../data/local/itinerary_db.dart';
 import '../../../data/models/itinerary_model.dart';
 import '../../../data/services/ai_route_service.dart';
@@ -67,8 +66,7 @@ class _AiRouteResultScreenState extends State<AiRouteResultScreen> {
   }
 
   Future<void> _save() async {
-    SmarturNotifications.showSuccess(context, 'Ruta guardada en Mis Rutas');
-    Navigator.of(context).pop(true);
+    Navigator.of(context).pop();
   }
 
   Future<void> _edit() async {
@@ -441,13 +439,13 @@ class _AiRouteResultScreenState extends State<AiRouteResultScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          // Save
+          // Done — route is already saved server-side and locally
           Expanded(
             child: FilledButton.icon(
               onPressed: _save,
               icon: const Icon(Icons.check_rounded, color: Colors.white, size: 18),
               label: const Text(
-                'Guardar ruta',
+                'Listo',
                 style: TextStyle(
                   fontFamily: 'Outfit',
                   fontWeight: FontWeight.w700,

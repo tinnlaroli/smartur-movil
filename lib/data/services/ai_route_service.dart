@@ -35,6 +35,7 @@ class AiRouteConfig {
   final List<String> tourTypes;
   final String budget;
   final int stopsPerDay;
+  final String? city;
 
   const AiRouteConfig({
     this.startDate,
@@ -44,6 +45,7 @@ class AiRouteConfig {
     this.tourTypes = const [],
     this.budget = 'medio',
     this.stopsPerDay = 3,
+    this.city,
   });
 
   int get totalStops => nDays * stopsPerDay;
@@ -196,6 +198,7 @@ class AiRouteService {
         // Location context
         if (pos != null) 'lat': pos.latitude,
         if (pos != null) 'lon': pos.longitude,
+        if (config.city != null) 'ciudad': config.city,
       },
     };
 

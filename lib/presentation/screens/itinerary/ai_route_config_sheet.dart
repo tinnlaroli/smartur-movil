@@ -2,21 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/motion/smartur_routes.dart';
 import '../../../core/theme/smartur_theme_extensions.dart';
 import '../../../core/theme/style_guide.dart';
+import '../../../data/models/place_model.dart';
 import '../../../data/services/ai_route_service.dart';
+import '../../../data/services/explore_service.dart';
 import '../../../data/services/profile_service.dart';
+import '../../widgets/smartur_loader.dart';
 import '../preferences/preferences_screen.dart';
-import 'ai_route_result_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public entry point
 // ─────────────────────────────────────────────────────────────────────────────
 
-Future<bool> showAiRouteConfigSheet(BuildContext context) async {
+Future<AiRouteResult?> showAiRouteConfigSheet(BuildContext context) async {
   final hasPref = await ProfileService.hasPreferencesSaved();
-  if (!context.mounted) return false;
+  if (!context.mounted) return null;
 
   if (!hasPref) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -31,21 +32,20 @@ Future<bool> showAiRouteConfigSheet(BuildContext context) async {
           label: 'Ir',
           textColor: Colors.white,
           onPressed: () => Navigator.of(context)
-              .push(smarturFadeRoute(const PreferencesScreen())),
+              .push(MaterialPageRoute(builder: (_) => const PreferencesScreen())),
         ),
       ),
     );
-    return false;
+    return null;
   }
 
-  final result = await showModalBottomSheet<bool>(
+  return showModalBottomSheet<AiRouteResult>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     useSafeArea: true,
     builder: (_) => const _AiRouteConfigSheet(),
   );
-  return result == true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,6 +63,8 @@ class _AiRouteConfigSheetState extends State<_AiRouteConfigSheet> {
   int _nDays = 1;
   int _nPersonas = 2;
   String _groupType = 'familia';
+  String? _selectedCity;
+  List<CityData> _cities = [];
 
   // ── Preferences ──
   final Set<String> _tourTypes = {};
@@ -108,6 +110,14 @@ class _AiRouteConfigSheetState extends State<_AiRouteConfigSheet> {
     super.initState();
     _startDate = DateTime.now().add(const Duration(days: 1));
     _inferGroupFromDays();
+    _loadCities();
+  }
+
+  Future<void> _loadCities() async {
+    try {
+      final cities = await ExploreService().fetchCities();
+      if (mounted) setState(() => _cities = cities);
+    } catch (_) {}
   }
 
   void _inferGroupFromDays() {
@@ -162,6 +172,7 @@ class _AiRouteConfigSheetState extends State<_AiRouteConfigSheet> {
           tourTypes: _tourTypes.toList(),
           budget: _budget,
           stopsPerDay: _stopsPerDay,
+          city: _selectedCity,
         ),
         onProgress: (step) {
           final idx = _steps.indexWhere((s) => s == step);
@@ -170,10 +181,7 @@ class _AiRouteConfigSheetState extends State<_AiRouteConfigSheet> {
       );
 
       if (!mounted) return;
-      final nav = Navigator.of(context);
-      nav.pop();
-      await nav.push(smarturDetailRoute(AiRouteResultScreen(result: result)));
-      if (mounted) nav.pop(true);
+      Navigator.of(context).pop(result);
     } on AiRouteException catch (e) {
       if (mounted) setState(() { _loading = false; _error = e.message; });
     } catch (_) {
@@ -351,6 +359,99 @@ class _AiRouteConfigSheetState extends State<_AiRouteConfigSheet> {
 
         const SizedBox(height: 24),
 
+        // ─────────────────────── SECCIÓN: Ciudad ─────────────────────────
+        if (_cities.isNotEmpty) ...[
+          _sectionLabel(scheme, Icons.location_city_outlined, 'Ciudad'),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              // "Cualquier ciudad" chip
+              GestureDetector(
+                onTap: () => setState(() => _selectedCity = null),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _selectedCity == null
+                        ? scheme.primary.withValues(alpha: 0.12)
+                        : scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _selectedCity == null
+                          ? scheme.primary
+                          : scheme.outlineVariant.withValues(alpha: 0.4),
+                      width: _selectedCity == null ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Text(
+                    'Cualquiera',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 13,
+                      fontWeight: _selectedCity == null
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                      color: _selectedCity == null
+                          ? scheme.primary
+                          : scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+              ..._cities.map((c) {
+                final sel = _selectedCity == c.name;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedCity = c.name),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: sel
+                          ? scheme.primary.withValues(alpha: 0.12)
+                          : scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: sel
+                            ? scheme.primary
+                            : scheme.outlineVariant.withValues(alpha: 0.4),
+                        width: sel ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(c.chipIcon,
+                            size: 14,
+                            color: sel
+                                ? scheme.primary
+                                : scheme.onSurfaceVariant),
+                        const SizedBox(width: 6),
+                        Text(
+                          c.name,
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 13,
+                            fontWeight:
+                                sel ? FontWeight.w600 : FontWeight.w400,
+                            color: sel
+                                ? scheme.primary
+                                : scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          const SizedBox(height: 24),
+        ],
+
         // ─────────────────────── SECCIÓN 2: Quién ────────────────────────
         _sectionLabel(scheme, Icons.people_outline, '¿Con quién viajas?'),
         const SizedBox(height: 12),
@@ -387,7 +488,15 @@ class _AiRouteConfigSheetState extends State<_AiRouteConfigSheet> {
           children: _groups.map((g) {
             final sel = _groupType == g.$1;
             return GestureDetector(
-              onTap: () => setState(() => _groupType = g.$1),
+              onTap: () => setState(() {
+                _groupType = g.$1;
+                _nPersonas = switch (g.$1) {
+                  'solo'   => 1,
+                  'pareja' => 2,
+                  'amigos' => 3,
+                  _        => 4, // familia
+                };
+              }),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -630,7 +739,7 @@ class _AiRouteConfigSheetState extends State<_AiRouteConfigSheet> {
             icon: const Icon(Icons.auto_awesome_rounded,
                 color: Colors.white, size: 18),
             label: Text(
-              '✨ Generar mi ruta — ${_nDays * _stopsPerDay} lugares',
+              'Generar mi ruta — ${_nDays * _stopsPerDay} lugares',
               style: const TextStyle(
                 fontFamily: 'Outfit',
                 fontWeight: FontWeight.w700,
@@ -702,40 +811,7 @@ class _AiRouteConfigSheetState extends State<_AiRouteConfigSheet> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Pulsing icon
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.9, end: 1.05),
-            duration: const Duration(milliseconds: 900),
-            curve: Curves.easeInOut,
-            builder: (_, scale, child) => Transform.scale(
-              scale: scale,
-              child: child,
-            ),
-            child: Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    SmarturStyle.purple,
-                    SmarturSemanticColors.of(context).sea,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: SmarturStyle.purple.withValues(alpha: 0.35),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.auto_awesome_rounded,
-                  color: Colors.white, size: 34),
-            ),
-          ),
+          const SmartURLoader(isMini: true, continuous: true),
           const SizedBox(height: 32),
 
           // Steps

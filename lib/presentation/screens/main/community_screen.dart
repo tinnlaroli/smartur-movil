@@ -554,7 +554,8 @@ class _PostCard extends StatelessWidget {
     final imageUrl = data['image_url']?.toString() ?? '';
     final placeName = data['place_name']?.toString() ?? '';
     final author = data['author'] as Map<String, dynamic>? ?? {};
-    final name = author['name']?.toString() ?? 'Usuario';
+    final rawName = author['name']?.toString() ?? '';
+    final name = (rawName.isEmpty || rawName == '-' || rawName == '?') ? 'Usuario' : rawName;
     final photoUrl = author['photo_url'] as String?;
     final iconKey = author['avatar_icon_key'] as String?;
     final postUserId = data['user_id'] is int ? data['user_id'] as int : int.tryParse(data['user_id']?.toString() ?? '');
