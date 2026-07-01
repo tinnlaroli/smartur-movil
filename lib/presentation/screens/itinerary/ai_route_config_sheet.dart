@@ -8,7 +8,6 @@ import '../../../data/models/place_model.dart';
 import '../../../data/services/ai_route_service.dart';
 import '../../../data/services/explore_service.dart';
 import '../../../data/services/profile_service.dart';
-import '../../widgets/smartur_loader.dart';
 import '../preferences/preferences_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -64,6 +63,7 @@ class _AiRouteConfigSheetState extends State<_AiRouteConfigSheet> {
   int _nPersonas = 2;
   String _groupType = 'familia';
   String? _selectedCity;
+  CityData? _selectedCityData;
   List<CityData> _cities = [];
 
   // ── Preferences ──
@@ -173,6 +173,7 @@ class _AiRouteConfigSheetState extends State<_AiRouteConfigSheet> {
           budget: _budget,
           stopsPerDay: _stopsPerDay,
           city: _selectedCity,
+          cityData: _selectedCityData,
         ),
         onProgress: (step) {
           final idx = _steps.indexWhere((s) => s == step);
@@ -369,7 +370,7 @@ class _AiRouteConfigSheetState extends State<_AiRouteConfigSheet> {
             children: [
               // "Cualquier ciudad" chip
               GestureDetector(
-                onTap: () => setState(() => _selectedCity = null),
+                onTap: () => setState(() { _selectedCity = null; _selectedCityData = null; }),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   padding:
@@ -404,7 +405,7 @@ class _AiRouteConfigSheetState extends State<_AiRouteConfigSheet> {
               ..._cities.map((c) {
                 final sel = _selectedCity == c.name;
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedCity = c.name),
+                  onTap: () => setState(() { _selectedCity = c.name; _selectedCityData = c; }),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
                     padding:
@@ -811,9 +812,6 @@ class _AiRouteConfigSheetState extends State<_AiRouteConfigSheet> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SmartURLoader(isMini: true, continuous: true),
-          const SizedBox(height: 32),
-
           // Steps
           ...List.generate(_steps.length, (i) {
             final done = i < _stepIndex;

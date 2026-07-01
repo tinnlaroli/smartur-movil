@@ -11,7 +11,6 @@ import '../../../data/services/itinerary_service.dart';
 import '../../widgets/smartur_background.dart';
 import '../../widgets/smartur_ui_kit.dart';
 import '../itinerary/ai_route_config_sheet.dart';
-import '../itinerary/ai_route_result_screen.dart';
 import '../itinerary/itinerary_detail_screen.dart';
 import '../itinerary/planner_screen.dart';
 import 'main_screen.dart' show routeStopCount;
@@ -138,8 +137,15 @@ class _MisRutasScreenState extends State<MisRutasScreen> {
     setState(() => _fabExpanded = false);
     final result = await showAiRouteConfigSheet(context);
     if (result != null && mounted) {
-      await Navigator.of(context)
-          .push(smarturDetailRoute(AiRouteResultScreen(result: result)));
+      // Show immediately in list before server refresh
+      setState(() {
+        _itineraries.insert(0, result.itinerary);
+      });
+      await Navigator.of(context).push(
+        smarturDetailRoute(
+          ItineraryDetailScreen(itinerary: result.itinerary, isOwner: true),
+        ),
+      );
       _load();
     }
   }

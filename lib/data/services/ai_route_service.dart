@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../../core/constants/api_constants.dart';
 import '../models/itinerary_model.dart';
+import '../models/place_model.dart';
 import 'api_client.dart';
 import 'auth_service.dart';
 import 'itinerary_service.dart';
@@ -36,6 +37,7 @@ class AiRouteConfig {
   final String budget;
   final int stopsPerDay;
   final String? city;
+  final CityData? cityData;
 
   const AiRouteConfig({
     this.startDate,
@@ -46,6 +48,7 @@ class AiRouteConfig {
     this.budget = 'medio',
     this.stopsPerDay = 3,
     this.city,
+    this.cityData,
   });
 
   int get totalStops => nDays * stopsPerDay;
@@ -215,7 +218,18 @@ class AiRouteService {
         ? data
         : (data['recommendations'] as List? ?? []);
 
-    return list.whereType<Map<String, dynamic>>().toList();
+    var results = list.whereType<Map<String, dynamic>>().toList();
+
+    // Client-side filter: keep only places that belong to the selected city
+    if (config.cityData != null) {
+      final validIds = config.cityData!.places.map((p) => p.id).toSet();
+      results = results.where((r) {
+        final itemId = r['item_id']?.toString() ?? '';
+        return validIds.contains(itemId);
+      }).toList();
+    }
+
+    return results;
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
