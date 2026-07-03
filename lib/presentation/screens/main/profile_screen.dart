@@ -213,128 +213,124 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Scaffold(
       backgroundColor: scheme.surface,
       body: SmarturBackground(
-        child: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) => [
-            SliverAppBar(
-              pinned: true,
-              automaticallyImplyLeading: false,
-              backgroundColor: Colors.transparent,
-              surfaceTintColor: Colors.transparent,
-              elevation: 0,
-              forceElevated: innerBoxIsScrolled,
-              flexibleSpace: smarturHeaderGlass(context),
-              title: SmarturAccentTitle(l10n.myProfile),
-              actions: [
-                IconButton(
-                  icon: Icon(Icons.settings_outlined, color: scheme.onSurface),
-                  onPressed: () async {
-                    await Navigator.push(context, smarturFadeRoute(const SettingsScreen()));
-                    _loadProfile(); _loadWellnessHistory();
-                  },
-                ),
-              ],
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(224),
-                child: Column(
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // Cabecera fija: título + ajustes
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
+                child: Row(
                   children: [
-                    // Avatar + name block
-                    if (_loading)
-                      SmarturShimmer(
-                        enabled: true,
-                        child: Column(
-                          children: const [
-                            SizedBox(height: 8),
-                            Center(child: SkeletonCircle(size: 80)),
-                            SizedBox(height: 10),
-                            Center(child: SkeletonText(width: 160, height: 18)),
-                            SizedBox(height: 6),
-                            Center(child: SkeletonText(width: 200, height: 12)),
-                            SizedBox(height: 16),
-                          ],
-                        ),
-                      )
-                    else
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 4),
-                            _buildAvatarHeader(context, scheme),
-                            const SizedBox(height: 10),
-                            Text(
-                              _name,
-                              textAlign: TextAlign.center,
-                              style: SmarturStyle.calSansTitle.copyWith(
-                                  fontSize: 20, color: scheme.onSurface),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _email,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'Outfit',
-                                fontSize: 13,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-                        ),
-                      ),
-                    // Tab bar
-                    smarturTabBar(
-                      context,
-                      tabs: [
-                        Tab(text: l10n.profileTabProfile),
-                        Tab(text: l10n.favoritesTab),
-
-                      ],
-                      controller: _tabCtrl,
+                    SmarturAccentTitle(l10n.myProfile),
+                    const Spacer(),
+                    IconButton(
+                      icon:
+                          Icon(Icons.settings_outlined, color: scheme.onSurface),
+                      onPressed: () async {
+                        await Navigator.push(
+                            context, smarturFadeRoute(const SettingsScreen()));
+                        _loadProfile();
+                        _loadWellnessHistory();
+                      },
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
-          body: TabBarView(
-            controller: _tabCtrl,
-            children: [
-              // ── Tab 0: Mi Perfil ──
-              RefreshIndicator(
-                color: scheme.primary,
-                onRefresh: _loadProfile,
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
-                  children: [
-                    _buildWellnessSection(context, scheme),
-                    const SizedBox(height: 24),
-                    if (_interests.isNotEmpty) ...[
-                      _buildSection(l10n.myInterests),
-                      const SizedBox(height: 12),
-                      _buildInterestChips(),
-                    ] else ...[
-                      _buildSection(l10n.myInterests),
-                      const SizedBox(height: 12),
-                      _buildEmptyInterestsHint(context, l10n),
+              // Avatar + nombre (fijo)
+              if (_loading)
+                SmarturShimmer(
+                  enabled: true,
+                  child: Column(
+                    children: const [
+                      SizedBox(height: 8),
+                      Center(child: SkeletonCircle(size: 80)),
+                      SizedBox(height: 10),
+                      Center(child: SkeletonText(width: 160, height: 18)),
+                      SizedBox(height: 6),
+                      Center(child: SkeletonText(width: 200, height: 12)),
+                      SizedBox(height: 16),
                     ],
-                    const SizedBox(height: 24),
-                    _buildSection(l10n.manageAccount),
-                    const SizedBox(height: 12),
-                    _buildStatsRow(context, scheme, l10n),
-                    const SizedBox(height: 16),
-                    _buildQuickActions(context, scheme, l10n),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 4),
+                      _buildAvatarHeader(context, scheme),
+                      const SizedBox(height: 10),
+                      Text(
+                        _name,
+                        textAlign: TextAlign.center,
+                        style: SmarturStyle.calSansTitle
+                            .copyWith(fontSize: 20, color: scheme.onSurface),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _email,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 13,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  ),
+                ),
+              // Tab bar
+              smarturTabBar(
+                context,
+                tabs: [
+                  Tab(text: l10n.profileTabProfile),
+                  Tab(text: l10n.favoritesTab),
+                ],
+                controller: _tabCtrl,
+              ),
+              // Cuerpos: cada tab con su propio scroll independiente
+              Expanded(
+                child: TabBarView(
+                  controller: _tabCtrl,
+                  children: [
+                    // ── Tab 0: Mi Perfil ──
+                    RefreshIndicator(
+                      color: scheme.primary,
+                      onRefresh: _loadProfile,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                        children: [
+                          _buildWellnessSection(context, scheme),
+                          const SizedBox(height: 24),
+                          if (_interests.isNotEmpty) ...[
+                            _buildSection(l10n.myInterests),
+                            const SizedBox(height: 12),
+                            _buildInterestChips(),
+                          ] else ...[
+                            _buildSection(l10n.myInterests),
+                            const SizedBox(height: 12),
+                            _buildEmptyInterestsHint(context, l10n),
+                          ],
+                          const SizedBox(height: 24),
+                          _buildSection(l10n.manageAccount),
+                          const SizedBox(height: 12),
+                          _buildStatsRow(context, scheme, l10n),
+                          const SizedBox(height: 16),
+                          _buildQuickActions(context, scheme, l10n),
+                        ],
+                      ),
+                    ),
+                    // ── Tab 1: Favoritos ──
+                    _DiaryFavoritesTab(
+                      loading: _diaryLoading,
+                      items: _favorites,
+                      onRefresh: _loadDiary,
+                    ),
                   ],
                 ),
               ),
-
-              // ── Tab 1: Favoritos ──
-              _DiaryFavoritesTab(
-                loading: _diaryLoading,
-                items: _favorites,
-                onRefresh: _loadDiary,
-              ),
-
-
             ],
           ),
         ),
