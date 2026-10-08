@@ -32,6 +32,7 @@ import '../settings/settings_screen.dart';
 import '../auth/welcome_screen.dart';
 import '../../widgets/add_to_route_sheet.dart';
 import '../explore/detail_view_page.dart';
+import 'wellness_trip_preferences_screen.dart';
 import 'wellness_assessment_screen.dart';
 
 /// Module-level like cache — liked state persists across widget rebuilds and scroll recycling.
@@ -1598,7 +1599,7 @@ class HomeScreenState extends State<HomeScreen> {
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.only(right: 20),
                     itemCount: _recommendedPlaces.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    separatorBuilder: (_, _) => const SizedBox(width: 12),
                     itemBuilder: (ctx, i) => SizedBox(
                       width: 140,
                       child: _PlaceCard(
@@ -1626,7 +1627,7 @@ class HomeScreenState extends State<HomeScreen> {
           child: _WellnessBanner(
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => const WellnessAssessmentScreen(),
+                builder: (_) => const WellnessTripPreferencesScreen(),
               ),
             ),
           ),
@@ -1926,10 +1927,10 @@ class _PlaceCardState extends State<_PlaceCard>
                         filterQuality: FilterQuality.high,
                         memCacheWidth: cacheW,
                         fadeInDuration: const Duration(milliseconds: 200),
-                        placeholder: (_, __) => Container(
+                        placeholder: (_, _) => Container(
                           color: scheme.outlineVariant.withValues(alpha: 0.3),
                         ),
-                        errorWidget: (_, __, ___) => Container(
+                        errorWidget: (_, _, _) => Container(
                           color: scheme.outlineVariant,
                           child: Icon(Icons.image_not_supported_outlined,
                               color: semantic.onImageMuted, size: 36),
@@ -2065,7 +2066,7 @@ class _PlaceCardState extends State<_PlaceCard>
                 // ── Double-tap heart burst animation ──
                 AnimatedBuilder(
                   animation: _heartCtrl,
-                  builder: (_, __) {
+                  builder: (_, _) {
                     if (_heartCtrl.value == 0.0) return const SizedBox.shrink();
                     return Center(
                       child: Opacity(
@@ -2247,8 +2248,11 @@ class _HomePlaceSwipeViewState extends State<_HomePlaceSwipeView> {
     HapticFeedback.lightImpact();
     setState(() { _favs[place.id] = !was; _favBusy[place.id] = true; });
     try {
-      if (was) await UserContentService().removeFavorite(ref.$1, ref.$2);
-      else     await UserContentService().addFavorite(ref.$1, ref.$2);
+      if (was) {
+        await UserContentService().removeFavorite(ref.$1, ref.$2);
+      } else {
+        await UserContentService().addFavorite(ref.$1, ref.$2);
+      }
     } catch (_) {
       if (mounted) setState(() => _favs[place.id] = was);
     } finally {
