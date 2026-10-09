@@ -2455,7 +2455,7 @@ class _WellnessBanner extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '8 preguntas rápidas · recomendaciones de bienestar',
+                    'Personaliza tus recomendaciones de bienestar',
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.white.withValues(alpha: 0.8),

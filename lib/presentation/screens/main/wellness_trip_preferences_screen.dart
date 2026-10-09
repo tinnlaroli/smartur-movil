@@ -7,6 +7,41 @@ import '../../widgets/smartur_app_bar.dart';
 
 const _wellturPurple = Color(0xFF7C3AED);
 
+const _mexicanStates = <String>[
+  'Aguascalientes',
+  'Baja California',
+  'Baja California Sur',
+  'Campeche',
+  'Chiapas',
+  'Chihuahua',
+  'Ciudad de México',
+  'Coahuila',
+  'Colima',
+  'Durango',
+  'Estado de México',
+  'Guanajuato',
+  'Guerrero',
+  'Hidalgo',
+  'Jalisco',
+  'Michoacán',
+  'Morelos',
+  'Nayarit',
+  'Nuevo León',
+  'Oaxaca',
+  'Puebla',
+  'Querétaro',
+  'Quintana Roo',
+  'San Luis Potosí',
+  'Sinaloa',
+  'Sonora',
+  'Tabasco',
+  'Tamaulipas',
+  'Tlaxcala',
+  'Veracruz',
+  'Yucatán',
+  'Zacatecas',
+];
+
 const _motiveChoices = <({String code, String title, String detail})>[
   (
     code: 'M1',
@@ -197,6 +232,21 @@ class _WellnessTripPreferencesScreenState
         );
       }
     }
+  }
+
+  Future<void> _chooseRegion(ColorScheme scheme) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => _MexicanStatePicker(initialValue: _region),
+    );
+    if (!mounted || selected == null) return;
+    setState(() {
+      _region = selected;
+      _error = null;
+    });
   }
 
   Future<void> _open(WellnessTripDestination place) async {
@@ -505,23 +555,23 @@ class _WellnessTripPreferencesScreenState
         ),
       ),
       const SizedBox(height: 8),
-      const Text('Región', style: TextStyle(fontWeight: FontWeight.w600)),
-      RadioGroup<String>(
-        groupValue: _region,
-        onChanged: (value) => setState(() => _region = value ?? ''),
-        child: const Column(
-          children: [
-            RadioListTile<String>(
-              value: '',
-              title: Text('Todos los estados'),
-              dense: true,
-            ),
-            RadioListTile<String>(
-              value: 'Veracruz',
-              title: Text('Veracruz'),
-              dense: true,
-            ),
-          ],
+      Text('Destino', style: TextStyle(fontWeight: FontWeight.w600)),
+      const SizedBox(height: 6),
+      Card(
+        color: scheme.surfaceContainerLow,
+        child: ListTile(
+          leading: const Icon(
+            Icons.location_on_outlined,
+            color: _wellturPurple,
+          ),
+          title: Text(_region.isEmpty ? 'Todo México' : _region),
+          subtitle: Text(
+            _region.isEmpty
+                ? 'Buscar en los estados con lugares revisados'
+                : 'Filtrar recomendaciones por estado',
+          ),
+          trailing: const Icon(Icons.expand_more),
+          onTap: () => _chooseRegion(scheme),
         ),
       ),
     ],
@@ -775,4 +825,102 @@ class _WellnessTripPreferencesScreenState
       child: Text(title),
     ),
   );
+}
+
+class _MexicanStatePicker extends StatefulWidget {
+  const _MexicanStatePicker({required this.initialValue});
+
+  final String initialValue;
+
+  @override
+  State<_MexicanStatePicker> createState() => _MexicanStatePickerState();
+}
+
+class _MexicanStatePickerState extends State<_MexicanStatePicker> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final query = _query.trim().toLowerCase();
+    final states = _mexicanStates
+        .where((state) => state.toLowerCase().contains(query))
+        .toList(growable: false);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        4,
+        20,
+        16 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * .72,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Elige dónde buscar',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _searchController,
+              autofocus: false,
+              onChanged: (value) => setState(() => _query = value),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: 'Buscar estado',
+                filled: true,
+                fillColor: scheme.surfaceContainerLow,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.public_outlined),
+                    title: const Text('Todo México'),
+                    trailing: widget.initialValue.isEmpty
+                        ? const Icon(Icons.check, color: _wellturPurple)
+                        : null,
+                    onTap: () => Navigator.pop(context, ''),
+                  ),
+                  ...states.map(
+                    (state) => ListTile(
+                      title: Text(state),
+                      trailing: widget.initialValue == state
+                          ? const Icon(Icons.check, color: _wellturPurple)
+                          : null,
+                      onTap: () => Navigator.pop(context, state),
+                    ),
+                  ),
+                  if (states.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text('No encontramos ese estado.'),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
