@@ -2,6 +2,12 @@ import 'dart:convert';
 import '../../core/constants/api_constants.dart';
 import 'api_client.dart';
 
+// El API puede mandar números como texto (p. ej. columnas NUMERIC de PostgreSQL).
+// Leer con tolerancia evita que un solo campo tumbe toda la recomendación.
+double? _aDouble(Object? v) => v is num ? v.toDouble() : (v is String ? double.tryParse(v) : null);
+String? _aTexto(Object? v) => v?.toString();
+bool? _aBool(Object? v) => v is bool ? v : (v is String ? v == 'true' : (v is num ? v != 0 : null));
+
 /// Lugar ordenado por coincidencia con preferencias explícitas de viaje.
 class WellnessDestination {
   final String idDestino;
@@ -55,22 +61,22 @@ class WellnessDestination {
 
   factory WellnessDestination.fromJson(Map<String, dynamic> j) {
     return WellnessDestination(
-      idDestino:              j['id_destino'] as String? ?? '',
-      nombreLugar:            j['nombre_lugar'] as String? ?? '',
-      estado:                 j['estado'] as String? ?? '',
-      categoriaWellness:      j['categoria_wellness'] as String? ?? '',
-      matchPct:               (j['match_pct'] as num?)?.toDouble() ?? 0,
-      rank:                   (j['rank'] as num?)?.toInt() ?? 0,
+      idDestino:              _aTexto(j['id_destino']) ?? '',
+      nombreLugar:            _aTexto(j['nombre_lugar']) ?? '',
+      estado:                 _aTexto(j['estado']) ?? '',
+      categoriaWellness:      _aTexto(j['categoria_wellness']) ?? '',
+      matchPct:               _aDouble(j['match_pct']) ?? 0,
+      rank:                   _aDouble(j['rank'])?.toInt() ?? 0,
       wellnessDimensions:     ((j['wellness_dimensions'] as List<dynamic>?) ?? const []).whereType<String>().toList(),
-      imageUrl:               j['image_url'] as String?,
-      lat:                    (j['lat'] as num?)?.toDouble(),
-      lon:                    (j['lon'] as num?)?.toDouble(),
-      descripcionBienestar:   j['descripcion_bienestar'] as String? ?? '',
-      municipio:              j['municipio'] as String? ?? '',
-      explicacion:            j['explicacion'] as String? ?? '',
-      esMipyme:               j['es_mipyme'] as bool? ?? false,
-      coincidencia:           j['coincidencia'] as String? ?? 'alta',
-      motivoCoincidencia:     j['motivo_coincidencia'] as String?,
+      imageUrl:               _aTexto(j['image_url']),
+      lat:                    _aDouble(j['lat']),
+      lon:                    _aDouble(j['lon']),
+      descripcionBienestar:   _aTexto(j['descripcion_bienestar']) ?? '',
+      municipio:              _aTexto(j['municipio']) ?? '',
+      explicacion:            _aTexto(j['explicacion']) ?? '',
+      esMipyme:               _aBool(j['es_mipyme']) ?? false,
+      coincidencia:           _aTexto(j['coincidencia']) ?? 'alta',
+      motivoCoincidencia:     _aTexto(j['motivo_coincidencia']),
     );
   }
 }
@@ -95,13 +101,13 @@ class WellnessRecommendationResult {
 
   factory WellnessRecommendationResult.fromJson(Map<String, dynamic> j) {
     return WellnessRecommendationResult(
-      title:                j['modo_viaje_label'] as String? ?? 'Lugares para ti',
-      description:          j['modo_viaje_description'] as String? ?? '',
+      title:                _aTexto(j['modo_viaje_label']) ?? 'Lugares para ti',
+      description:          _aTexto(j['modo_viaje_description']) ?? '',
       destinations: ((j['destinations'] as List<dynamic>?) ?? [])
           .map((d) => WellnessDestination.fromJson(d as Map<String, dynamic>))
           .toList(),
-      sessionId:    (j['session_id'] as num?)?.toInt(),
-      avisoCoincidencia: j['aviso_coincidencia'] as String?,
+      sessionId:    _aDouble(j['session_id'])?.toInt(),
+      avisoCoincidencia: _aTexto(j['aviso_coincidencia']),
     );
   }
 }
