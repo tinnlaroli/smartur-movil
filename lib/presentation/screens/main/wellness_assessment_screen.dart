@@ -295,7 +295,8 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
         const SizedBox(height: 6),
         Text(hints[_step]!, style: TextStyle(fontSize: 13, height: 1.4, color: scheme.onSurfaceVariant)),
       ])),
-      Expanded(child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 16), child: body)),
+      // La llave por paso hace que cada paso empiece arriba (no hereda el scroll de la PSS-10).
+      Expanded(child: SingleChildScrollView(key: ValueKey('paso_$_step'), padding: const EdgeInsets.fromLTRB(20, 0, 20, 16), child: body)),
       if (_formError != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: Text(_formError!, style: TextStyle(color: scheme.error, fontSize: 12))),
       Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 18), child: Row(children: [
         Expanded(child: OutlinedButton(onPressed: _back, child: const Text('Atrás'))),
