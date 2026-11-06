@@ -4,8 +4,8 @@ import '../../../data/services/wellness_trip_service.dart';
 import '../explore/detail_view_page.dart';
 import 'wellness_assessment_screen.dart';
 import '../../widgets/smartur_app_bar.dart';
+import '../../../core/theme/welltur_theme.dart';
 
-const _wellturPurple = Color(0xFF7C3AED);
 
 const _mexicanStates = <String>[
   'Aguascalientes',
@@ -138,6 +138,9 @@ class WellnessTripPreferencesScreen extends StatefulWidget {
 
 class _WellnessTripPreferencesScreenState
     extends State<WellnessTripPreferencesScreen> {
+  // Acento de la paleta WELLTUR, legible en modo claro y oscuro.
+  Color get _acento => WellturPalette.acento(context);
+  Color get _sobreAcento => WellturPalette.sobreAcento(context);
   final WellnessTripService _service = WellnessTripService();
   final List<String> _motives = [];
   final List<String> _modalities = [];
@@ -289,8 +292,8 @@ class _WellnessTripPreferencesScreenState
         ),
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: _wellturPurple),
+          ? Center(
+              child: CircularProgressIndicator(color: _acento),
             )
           : _step == 3
           ? _results(scheme)
@@ -304,7 +307,7 @@ class _WellnessTripPreferencesScreenState
     child: ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const Icon(Icons.spa_outlined, color: _wellturPurple, size: 42),
+        Icon(Icons.spa_outlined, color: _acento, size: 42),
         const SizedBox(height: 16),
         Text(
           'Busca una experiencia a tu manera',
@@ -356,7 +359,7 @@ class _WellnessTripPreferencesScreenState
               builder: (_) => const WellnessAssessmentScreen(),
             ),
           ),
-          child: const Text('Explorar también con las dimensiones GWI'),
+          child: const Text('Ajustar por tu nivel de estrés (WELLTUR)'),
         ),
       ],
     ),
@@ -388,7 +391,7 @@ class _WellnessTripPreferencesScreenState
                             margin: const EdgeInsets.only(right: 6),
                             decoration: BoxDecoration(
                               color: _step >= number
-                                  ? _wellturPurple
+                                  ? _acento
                                   : scheme.outlineVariant,
                               borderRadius: BorderRadius.circular(4),
                             ),
@@ -400,8 +403,8 @@ class _WellnessTripPreferencesScreenState
                 const SizedBox(height: 18),
                 Text(
                   'PASO $_step DE 3',
-                  style: const TextStyle(
-                    color: _wellturPurple,
+                  style: TextStyle(
+                    color: _acento,
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.2,
@@ -438,11 +441,11 @@ class _WellnessTripPreferencesScreenState
                         return Card(
                           margin: const EdgeInsets.only(bottom: 8),
                           color: index >= 0
-                              ? _wellturPurple.withValues(alpha: .08)
+                              ? _acento.withValues(alpha: .08)
                               : scheme.surfaceContainerLow,
                           child: CheckboxListTile(
                             value: index >= 0,
-                            activeColor: _wellturPurple,
+                            activeColor: _acento,
                             controlAffinity: ListTileControlAffinity.leading,
                             title: Text(
                               '${option.code} · ${option.title}',
@@ -500,7 +503,8 @@ class _WellnessTripPreferencesScreenState
                       }
                     },
                     style: FilledButton.styleFrom(
-                      backgroundColor: _wellturPurple,
+                      backgroundColor: _acento,
+                      foregroundColor: _sobreAcento,
                     ),
                     child: Text(_step == 3 ? 'Ver lugares' : 'Continuar'),
                   ),
@@ -560,9 +564,9 @@ class _WellnessTripPreferencesScreenState
       Card(
         color: scheme.surfaceContainerLow,
         child: ListTile(
-          leading: const Icon(
+          leading: Icon(
             Icons.location_on_outlined,
-            color: _wellturPurple,
+            color: _acento,
           ),
           title: Text(_region.isEmpty ? 'Todo México' : _region),
           subtitle: Text(
@@ -768,7 +772,7 @@ class _WellnessTripPreferencesScreenState
                             value <= (_ratings[place.id] ?? 0)
                                 ? Icons.star
                                 : Icons.star_border,
-                            color: _wellturPurple,
+                            color: _acento,
                             size: 19,
                           ),
                           tooltip: '$value de 5',
@@ -787,7 +791,7 @@ class _WellnessTripPreferencesScreenState
   Widget _tag(String text, ColorScheme scheme) => Chip(
     visualDensity: VisualDensity.compact,
     label: Text(text, style: const TextStyle(fontSize: 9)),
-    backgroundColor: _wellturPurple.withValues(alpha: .08),
+    backgroundColor: _acento.withValues(alpha: .08),
     side: BorderSide.none,
     labelPadding: const EdgeInsets.symmetric(horizontal: 3),
   );
@@ -801,7 +805,7 @@ class _WellnessTripPreferencesScreenState
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: _wellturPurple, size: 18),
+        Icon(icon, color: _acento, size: 18),
         const SizedBox(width: 9),
         Expanded(
           child: Text(
@@ -821,7 +825,7 @@ class _WellnessTripPreferencesScreenState
     height: 48,
     child: FilledButton(
       onPressed: onPressed,
-      style: FilledButton.styleFrom(backgroundColor: _wellturPurple),
+      style: FilledButton.styleFrom(backgroundColor: _acento, foregroundColor: _sobreAcento),
       child: Text(title),
     ),
   );
@@ -837,6 +841,8 @@ class _MexicanStatePicker extends StatefulWidget {
 }
 
 class _MexicanStatePickerState extends State<_MexicanStatePicker> {
+  // Acento de la paleta WELLTUR, legible en modo claro y oscuro.
+  Color get _acento => WellturPalette.acento(context);
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
 
@@ -897,7 +903,7 @@ class _MexicanStatePickerState extends State<_MexicanStatePicker> {
                     leading: const Icon(Icons.public_outlined),
                     title: const Text('Todo México'),
                     trailing: widget.initialValue.isEmpty
-                        ? const Icon(Icons.check, color: _wellturPurple)
+                        ? Icon(Icons.check, color: _acento)
                         : null,
                     onTap: () => Navigator.pop(context, ''),
                   ),
@@ -905,7 +911,7 @@ class _MexicanStatePickerState extends State<_MexicanStatePicker> {
                     (state) => ListTile(
                       title: Text(state),
                       trailing: widget.initialValue == state
-                          ? const Icon(Icons.check, color: _wellturPurple)
+                          ? Icon(Icons.check, color: _acento)
                           : null,
                       onTap: () => Navigator.pop(context, state),
                     ),

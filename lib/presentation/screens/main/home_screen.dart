@@ -13,6 +13,7 @@ import '../../../core/motion/smartur_motion.dart';
 import '../../../core/motion/smartur_routes.dart';
 import '../../../core/theme/smartur_theme_extensions.dart';
 import '../../../core/theme/style_guide.dart';
+import '../../../core/theme/welltur_theme.dart';
 import '../../../core/constants/env_config.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/utils/notifications.dart';
@@ -32,7 +33,6 @@ import '../settings/settings_screen.dart';
 import '../auth/welcome_screen.dart';
 import '../../widgets/add_to_route_sheet.dart';
 import '../explore/detail_view_page.dart';
-import 'wellness_trip_preferences_screen.dart';
 import 'wellness_assessment_screen.dart';
 
 /// Module-level like cache — liked state persists across widget rebuilds and scroll recycling.
@@ -1627,7 +1627,7 @@ class HomeScreenState extends State<HomeScreen> {
           child: _WellnessBanner(
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => const WellnessTripPreferencesScreen(),
+                builder: (_) => const WellnessAssessmentScreen(),
               ),
             ),
           ),
@@ -2418,12 +2418,12 @@ class _WellnessBanner extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF254117), Color(0xFF1a3010)],
+            colors: [WellturPalette.pino, WellturPalette.botanicoProfundo],
           ),
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF254117).withValues(alpha: 0.30),
+              color: WellturPalette.pino.withValues(alpha: 0.30),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),

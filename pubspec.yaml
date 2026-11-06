@@ -2,7 +2,7 @@
 name: smartur
 description: "A new Flutter project."
 publish_to: 'none'
-version: 3.3.18+30318
+version: 3.4.0+30400
 
 environment:
   sdk: ^3.11.1
@@ -59,6 +59,7 @@ flutter:
     - assets/lottie/
     - assets/svg/
     - assets/fonts/
+    - assets/instrumentos/
 
   fonts:
       - family: CalSans
