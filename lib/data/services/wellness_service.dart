@@ -141,14 +141,16 @@ class WellnessService {
     return WellnessRecommendationResult.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
-  /// WELLTUR v2: las respuestas de estrés (opcionales) ajustan qué modalidades se
-  /// priorizan según el modelo calibrado con la encuesta; no es un diagnóstico.
+  /// WELLTUR: un solo formulario. PSS-10 (opcional), motivos M, modalidades W, esfuerzo y
+  /// zona (`altas_montanas` o `mexico`) se ponderan juntos; no es un diagnóstico.
   Future<WellnessRecommendationResult> recommendV2({
     Map<String, int>? stressItems,
     List<int?>? pssItems,
+    List<String> motives = const [],
     required List<String> modalities,
     required int maxEffort,
     required bool saveHistory,
+    String scope = 'altas_montanas',
     String? regionFilter,
     int topN = 5,
   }) async {
@@ -156,8 +158,10 @@ class WellnessService {
       _uri('/ml/wellness/recommend-v2'),
       body: jsonEncode({
         'preferences': {
+          'motive_priorities': motives,
           'modality_preferences': modalities,
           'max_effort': maxEffort,
+          'scope': scope,
           if (regionFilter != null && regionFilter.isNotEmpty) 'region_filter': regionFilter,
         },
         'pss_items': ?pssItems,
