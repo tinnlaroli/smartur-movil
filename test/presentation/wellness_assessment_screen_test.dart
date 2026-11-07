@@ -84,10 +84,10 @@ void main() {
     final datos = jsonDecode(File('assets/instrumentos/pss10_es_mx.json').readAsStringSync()) as Map<String, dynamic>;
     final instruccion = find.text(datos['instruccion'] as String);
     expect(instruccion, findsNothing);
-    await tester.tap(find.text('Instrucciones de la escala'));
+    await tester.tap(find.byTooltip('Instrucciones de la escala'));
     await tester.pumpAndSettle();
     expect(instruccion, findsOneWidget);
-    await tester.tap(find.text('Ocultar instrucciones'));
+    await tester.tap(find.byTooltip('Ocultar instrucciones'));
     await tester.pumpAndSettle();
     expect(instruccion, findsNothing);
 
