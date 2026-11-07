@@ -9,6 +9,7 @@ import '../../../data/services/wellness_service.dart';
 import '../explore/detail_view_page.dart';
 import '../../widgets/smartur_app_bar.dart';
 import '../../widgets/wellness_poi_card.dart';
+import '../../../core/feedback/toque_suave.dart';
 import '../../../core/theme/welltur_theme.dart';
 
 /// Preguntas propias de la encuesta WELLTUR (oct-2026): respaldo solo si la compilación no
@@ -115,6 +116,7 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
   bool _consentGiven = false;
   bool _omitirEstres = false;
   int _pregunta = 0; // ítem visible del cuestionario de estrés
+  bool _verInstruccion = false; // instrucción oficial de la PSS-10, plegable
   final Map<String, int> _respuestas = {};
   final List<String> _motivosElegidos = [];
   final List<String> _seleccion = [];
@@ -162,7 +164,7 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
       : _preguntasEstres.every((p) => _respuestas.containsKey(p.key));
 
   void _responder(int i, int valor) {
-    HapticFeedback.selectionClick();
+    ToqueSuave.elegir();
     setState(() {
       _formError = null;
       if (_usarPss) {
@@ -188,7 +190,7 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
           : 'Responde las seis preguntas o elige "Prefiero no responder".');
       return;
     }
-    HapticFeedback.lightImpact();
+    ToqueSuave.avanzar();
     setState(() { _formError = null; _loadError = null; _step = (_step + 1).clamp(0, _pasos + 1); });
     if (_step == _pasos + 1) _submit();
   }
@@ -263,7 +265,7 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
   Future<void> _sendFeedback(int rating) async {
     final session = _result?.sessionId;
     if (_feedbackSent || session == null) return;
-    HapticFeedback.selectionClick();
+    ToqueSuave.elegir();
     setState(() => _fitRating = rating);
     try {
       await _service.submitSatisfaction(sessionId: session, fitRating: rating);
@@ -458,23 +460,41 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
           subtitle: _omitirEstres
               ? const Text('Usaremos lo que la mayoría prefiere en la región.', style: TextStyle(fontSize: 12))
               : null,
-          onChanged: (v) { HapticFeedback.selectionClick(); setState(() { _omitirEstres = v; _formError = null; }); },
+          onChanged: (v) { ToqueSuave.elegir(); setState(() { _omitirEstres = v; _formError = null; }); },
         ),
       ),
       if (!_omitirEstres) ...[
-        // La instrucción oficial va completa al inicio; después basta con recordar el periodo.
-        if (_usarPss && i == 0) ...[
-          const SizedBox(height: 14),
-          Text(_pss!.instruccion, style: TextStyle(fontSize: 12, height: 1.4, color: scheme.onSurfaceVariant)),
+        // La instrucción oficial completa se muestra u oculta con el botón de información.
+        if (_usarPss) ...[
+          const SizedBox(height: 6),
+          Align(alignment: Alignment.centerLeft, child: TextButton.icon(
+            onPressed: () { HapticFeedback.selectionClick(); setState(() => _verInstruccion = !_verInstruccion); },
+            style: TextButton.styleFrom(foregroundColor: _green, padding: const EdgeInsets.symmetric(horizontal: 4)),
+            icon: Icon(_verInstruccion ? Icons.info_rounded : Icons.info_outline_rounded, size: 18),
+            label: Text(_verInstruccion ? 'Ocultar instrucciones' : 'Instrucciones de la escala',
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+          )),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topLeft,
+            child: _verInstruccion
+                ? Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: _green.withValues(alpha: .07), borderRadius: BorderRadius.circular(12)),
+                    child: Text(_pss!.instruccion, style: TextStyle(fontSize: 12, height: 1.4, color: scheme.onSurfaceVariant)))
+                : const SizedBox(width: double.infinity),
+          ),
         ],
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
           transitionBuilder: (child, anim) => FadeTransition(opacity: anim,
             child: SlideTransition(position: Tween(begin: const Offset(0.12, 0), end: Offset.zero).animate(anim), child: child)),
           child: Column(key: ValueKey('pregunta_$i'), crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(_usarPss ? '${i + 1}. ${_textoPregunta(i)}' : _textoPregunta(i),
-              style: TextStyle(fontSize: 18, height: 1.35, fontWeight: FontWeight.w700, color: scheme.onSurface)),
+            _preguntaAltoFijo(scheme, i),
             const SizedBox(height: 16),
             ...List.generate(opciones.length, (v) => Padding(
               padding: const EdgeInsets.only(bottom: 9),
@@ -521,6 +541,33 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
     ]);
   }
 
+  String _rotuloPregunta(int i) => _usarPss ? '${i + 1}. ${_textoPregunta(i)}' : _textoPregunta(i);
+
+  /// La pregunta ocupa siempre el alto de la más larga (para este ancho y tamaño de letra),
+  /// así las respuestas quedan en el mismo lugar en todas las preguntas.
+  Widget _preguntaAltoFijo(ColorScheme scheme, int i) {
+    final estilo = TextStyle(fontSize: 18, height: 1.35, fontWeight: FontWeight.w700, color: scheme.onSurface);
+    return LayoutBuilder(builder: (context, c) {
+      final escala = MediaQuery.textScalerOf(context);
+      final direccion = Directionality.of(context);
+      var alto = 0.0;
+      for (var k = 0; k < _totalPreguntas; k++) {
+        final medidor = TextPainter(
+          text: TextSpan(text: _rotuloPregunta(k), style: DefaultTextStyle.of(context).style.merge(estilo)),
+          textDirection: direccion,
+          textScaler: escala,
+        )..layout(maxWidth: c.maxWidth);
+        alto = math.max(alto, medidor.height);
+        medidor.dispose();
+      }
+      return SizedBox(
+        height: alto,
+        width: double.infinity,
+        child: Align(alignment: Alignment.topLeft, child: Text(_rotuloPregunta(i), style: estilo)),
+      );
+    });
+  }
+
   /// Tarjetas en cuadrícula con prioridad (1, 2, 3) para motivos M y modalidades W.
   Widget _grid(ColorScheme scheme, List<_Opcion> opciones, List<String> elegidas) => LayoutBuilder(builder: (context, c) {
     final columnas = c.maxWidth >= 560 ? 3 : 2;
@@ -536,10 +583,10 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
         onTap: () => setState(() {
           _formError = null;
           if (index >= 0) {
-            HapticFeedback.selectionClick();
+            ToqueSuave.elegir();
             elegidas.remove(m.key);
           } else if (elegidas.length < 3) {
-            HapticFeedback.lightImpact();
+            ToqueSuave.elegir();
             elegidas.add(m.key);
           } else {
             HapticFeedback.heavyImpact();
@@ -589,7 +636,7 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
           semanticFormatterCallback: (v) => _esfuerzos[v.round() - 1].titulo,
           onChanged: (v) {
             if (v.round() != _maxEffort) {
-              HapticFeedback.selectionClick();
+              ToqueSuave.elegir();
               setState(() => _maxEffort = v.round());
             }
           },
@@ -598,7 +645,7 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
       // Alineado con los extremos del slider (su relleno interno es de ~24 px).
       Padding(padding: const EdgeInsets.symmetric(horizontal: 14), child: Row(
         children: _esfuerzos.map((e) => Expanded(child: GestureDetector(
-          onTap: () { HapticFeedback.selectionClick(); setState(() => _maxEffort = e.nivel); },
+          onTap: () { ToqueSuave.elegir(); setState(() => _maxEffort = e.nivel); },
           child: Text(e.titulo, maxLines: 1, overflow: TextOverflow.ellipsis,
             textAlign: e.nivel == 1 ? TextAlign.start : (e.nivel == 3 ? TextAlign.end : TextAlign.center),
             style: TextStyle(
@@ -631,7 +678,7 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
           selectedColor: _green.withValues(alpha: .16),
           side: BorderSide(color: sel ? _green : scheme.outlineVariant),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          onSelected: (_) { HapticFeedback.selectionClick(); setState(() => _region = r); },
+          onSelected: (_) { ToqueSuave.elegir(); setState(() => _region = r); },
         );
       }).toList()),
     ] else ...[
@@ -646,13 +693,13 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
           const DropdownMenuItem(value: '', child: Text('Todo México')),
           ..._estadosMexico.map((e) => DropdownMenuItem(value: e, child: Text(e))),
         ],
-        onChanged: (v) { HapticFeedback.selectionClick(); setState(() => _region = v ?? ''); },
+        onChanged: (v) { ToqueSuave.elegir(); setState(() => _region = v ?? ''); },
       ),
     ],
   ]);
 
   Widget _zonaCard(ColorScheme scheme, String label, String detalle, IconData icon, bool selected, VoidCallback onTap) => InkWell(
-    onTap: () { HapticFeedback.lightImpact(); onTap(); },
+    onTap: () { ToqueSuave.elegir(); onTap(); },
     borderRadius: BorderRadius.circular(20),
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 240),
@@ -927,8 +974,8 @@ class _OrbeWellturState extends State<_OrbeWelltur> with SingleTickerProviderSta
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Respeta "reducir movimiento" del sistema: el orbe se queda quieto.
-    if (MediaQuery.of(context).disableAnimations) {
+    // Fijo en reposo; solo se anima mientras "piensa". También respeta "reducir movimiento".
+    if (!widget.pensando || MediaQuery.of(context).disableAnimations) {
       _c.stop();
     } else if (!_c.isAnimating) {
       _c.repeat();
@@ -948,7 +995,7 @@ class _OrbeWellturState extends State<_OrbeWelltur> with SingleTickerProviderSta
       animation: _c,
       builder: (context, _) {
         final fase = _c.value * 2 * math.pi;
-        final respiro = 1 + .06 * math.sin(fase);
+        final respiro = widget.pensando ? 1 + .06 * math.sin(fase) : 1.0;
         return Stack(alignment: Alignment.center, children: [
           if (widget.pensando)
             for (var k = 0; k < 2; k++)
