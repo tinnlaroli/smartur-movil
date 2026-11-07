@@ -409,10 +409,9 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
         })),
         const SizedBox(height: 16),
         Row(children: [
-          Flexible(child: Text('PASO $_step DE $_pasos', maxLines: 1, overflow: TextOverflow.ellipsis,
+          Expanded(child: Text('PASO $_step DE $_pasos', maxLines: 1, overflow: TextOverflow.ellipsis,
             style: TextStyle(color: _green, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.2))),
           const SizedBox(width: 8),
-          const Spacer(),
           if (_step == 1 && !_omitirEstres)
             Flexible(child: Text('Pregunta ${_pregunta + 1} de $_totalPreguntas', maxLines: 1, overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.end,
@@ -446,22 +445,29 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
     final i = _pregunta.clamp(0, _totalPreguntas - 1);
     final opciones = _opcionesPregunta(i);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // Compacto para que la pregunta sea lo principal en cada pantalla.
       Material(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         child: SwitchListTile(
           value: _omitirEstres,
+          dense: true,
           activeThumbColor: _green,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Prefiero no responder', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-          subtitle: const Text('Usaremos lo que la mayoría prefiere en la región.', style: TextStyle(fontSize: 12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: const Text('Prefiero no responder', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
+          subtitle: _omitirEstres
+              ? const Text('Usaremos lo que la mayoría prefiere en la región.', style: TextStyle(fontSize: 12))
+              : null,
           onChanged: (v) { HapticFeedback.selectionClick(); setState(() { _omitirEstres = v; _formError = null; }); },
         ),
       ),
       if (!_omitirEstres) ...[
-        const SizedBox(height: 14),
-        if (_usarPss) Text(_pss!.instruccion, style: TextStyle(fontSize: 12, height: 1.4, color: scheme.onSurfaceVariant)),
-        const SizedBox(height: 12),
+        // La instrucción oficial va completa al inicio; después basta con recordar el periodo.
+        if (_usarPss && i == 0) ...[
+          const SizedBox(height: 14),
+          Text(_pss!.instruccion, style: TextStyle(fontSize: 12, height: 1.4, color: scheme.onSurfaceVariant)),
+        ],
+        const SizedBox(height: 16),
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
           transitionBuilder: (child, anim) => FadeTransition(opacity: anim,
@@ -589,7 +595,8 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
           },
         ),
       ),
-      Row(
+      // Alineado con los extremos del slider (su relleno interno es de ~24 px).
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 14), child: Row(
         children: _esfuerzos.map((e) => Expanded(child: GestureDetector(
           onTap: () { HapticFeedback.selectionClick(); setState(() => _maxEffort = e.nivel); },
           child: Text(e.titulo, maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -598,7 +605,7 @@ class _WellnessAssessmentScreenState extends State<WellnessAssessmentScreen> {
               fontSize: 12, fontWeight: e.nivel == _maxEffort ? FontWeight.w800 : FontWeight.w500,
               color: e.nivel == _maxEffort ? _green : scheme.onSurfaceVariant)),
         ))).toList(),
-      ),
+      )),
     ]);
   }
 
@@ -822,7 +829,7 @@ class _OpcionRespuesta extends StatelessWidget {
             Row(children: List.generate(niveles - 1, (k) => Container(
               width: 4, height: 8.0 + k * 3, margin: const EdgeInsets.only(right: 3),
               decoration: BoxDecoration(
-                color: k < nivel ? acento.withValues(alpha: seleccionada ? 1 : .5) : scheme.outlineVariant.withValues(alpha: .6),
+                color: k < nivel ? acento.withValues(alpha: seleccionada ? 1 : .8) : scheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2)),
             ))),
             const SizedBox(width: 12),
